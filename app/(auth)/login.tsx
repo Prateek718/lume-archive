@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
@@ -54,6 +55,47 @@ export default function LoginScreen() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+      if (!idToken) throw new Error('No ID token received');
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (error) throw error;
+
+      const userId = data.user?.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('onboarding_complete')
+          .eq('id', userId)
+          .single();
+
+        if (!profile || !profile.onboarding_complete) {
+          await supabase.from('users').upsert({
+            id: userId,
+            onboarding_complete: false,
+            created_at: new Date().toISOString(),
+          });
+          router.replace('/(auth)/onboarding');
+        } else {
+          router.replace('/(tabs)/scan');
+        }
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Google Sign In failed';
+      Alert.alert('Error', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const canSubmit = email.trim().length > 0 && password.length >= 6;
 
   return (
@@ -70,6 +112,24 @@ export default function LoginScreen() {
 
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in to your Lumé account</Text>
+
+        {/* Google Sign In */}
+        <TouchableOpacity
+          style={styles.googleBtn}
+          onPress={handleGoogleSignIn}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.googleIcon}>G</Text>
+          <Text style={styles.googleText}>Continue with Google</Text>
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerLabel}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
         <TextInput
           style={styles.input}
@@ -133,6 +193,14 @@ export default function LoginScreen() {
             New to Lumé?{' '}
             <Text style={styles.switchTextBold}>Create account</Text>
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.guestLink}
+          onPress={() => router.replace('/(tabs)/scan')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.guestText}>Continue as guest</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -224,9 +292,33 @@ const styles = StyleSheet.create({
     color:    Colors.gold,
   },
 
+  googleBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius:    12,
+    paddingVertical: 14,
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'center',
+    gap:             10,
+    marginBottom:    16,
+    width:           '100%',
+  },
+  googleIcon: { fontSize: 18, color: '#4285F4', fontWeight: '700' },
+  googleText: { color: '#0A0A0A', fontWeight: '600', fontSize: 15 },
+
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    marginBottom:  Spacing.xl,
+    gap:           Spacing.sm,
+  },
+  dividerLine:  { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerLabel: { fontSize: Typography.size.sm, color: Colors.textTertiary },
+
   switchLink: {
     alignItems:      'center',
     paddingVertical: Spacing.sm,
+    marginBottom:    Spacing.sm,
   },
   switchText: {
     fontSize: Typography.size.base,
@@ -236,4 +328,11 @@ const styles = StyleSheet.create({
     color:      Colors.cream,
     fontWeight: '600',
   },
+
+  guestLink: {
+    alignItems:      'center',
+    paddingVertical: Spacing.sm,
+    marginTop:       Spacing.sm,
+  },
+  guestText: { fontSize: Typography.size.base, color: Colors.textTertiary },
 });

@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Switch, ActivityIndicator, RefreshControl,
+  Switch, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
@@ -15,7 +16,9 @@ const GUEST_PROFILE_KEY = '@lume/guest_profile';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [user, setUser]           = useState<User | null>(null);
+  const [isGuest, setIsGuest]     = useState(false);
   const [scanCount, setScanCount] = useState(0);
   const [topScore,  setTopScore]  = useState<number | null>(null);
   const [loading,   setLoading]   = useState(true);
@@ -30,6 +33,9 @@ export default function ProfileScreen() {
       setUser(profile);
       setNotifReminders(profile.notification_reminders ?? true);
       setNotifRoutine(profile.notification_routine ?? true);
+      setIsGuest(!profile || profile.id === 'guest');
+    } else {
+      setIsGuest(true);
     }
     setLoading(false);
     setRefreshing(false);
@@ -74,6 +80,21 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />}
       >
+        {/* Guest sign-in banner */}
+        {isGuest && (
+          <TouchableOpacity
+            onPress={() => router.push('/(auth)/signup')}
+            style={s.guestBanner}
+            activeOpacity={0.8}
+          >
+            <Text style={s.guestBannerTitle}>Sign in to save your results</Text>
+            <Text style={s.guestBannerBody}>
+              Create an account to keep your scan history{'\n'}
+              and access Lumé from any device
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Avatar + name */}
         <View style={s.avatarSection}>
           <View style={s.avatar}>
@@ -185,6 +206,28 @@ const s = StyleSheet.create({
   screen:  { flex: 1, backgroundColor: Colors.background },
   centre:  { alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg },
+
+  // Guest banner
+  guestBanner: {
+    backgroundColor: 'rgba(201,168,76,0.1)',
+    borderRadius:    12,
+    borderWidth:     1,
+    borderColor:     '#C9A84C',
+    padding:         16,
+    marginBottom:    20,
+    alignItems:      'center',
+  },
+  guestBannerTitle: {
+    color:        '#C9A84C',
+    fontWeight:   '600',
+    fontSize:     15,
+    marginBottom: 4,
+  },
+  guestBannerBody: {
+    color:     '#8A7A6A',
+    fontSize:  13,
+    textAlign: 'center',
+  },
 
   // Avatar
   avatarSection: { alignItems: 'center', marginBottom: Spacing.xl },

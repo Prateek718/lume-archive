@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export const GUEST_PROFILE_KEY = '@lume/guest_profile';
 
@@ -29,6 +30,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     const init = async () => {
+      GoogleSignin.configure({
+        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+        webClientId:     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+        scopes:          ['profile', 'email'],
+      });
+
       const existing = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
       if (!existing) {
         await AsyncStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify(DEFAULT_GUEST));

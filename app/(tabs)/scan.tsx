@@ -49,17 +49,34 @@ function HomeScreen({ onStart, gender, onGenderChange }: {
   gender: string;
   onGenderChange: (g: string) => void;
 }) {
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,    duration: 1500, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
   return (
     <SafeAreaView style={s.fill}>
       <StatusBar style="light" />
-      <View style={s.homeInner}>
+      <Animated.View style={[s.homeInner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         <Text style={s.brand}>Lumé</Text>
-        <Text style={s.homeTagline}>be you</Text>
-        <View style={s.scanRing}>
+        <Animated.View style={[s.scanRing, { transform: [{ scale: pulseAnim }] }]}>
           <View style={s.scanRingInner}>
             <Text style={s.scanRingLabel}>SCAN</Text>
           </View>
-        </View>
+        </Animated.View>
         <Text style={s.homeHint}>
           Point your front camera at your face.{'\n'}
           We'll analyse it in under 30 seconds.
@@ -97,7 +114,7 @@ function HomeScreen({ onStart, gender, onGenderChange }: {
         <TouchableOpacity style={s.ctaButton} onPress={onStart} activeOpacity={0.8}>
           <Text style={s.ctaText}>Scan your face</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -161,38 +178,32 @@ function CameraScreen({ onCapture, onCancel, error }: {
       <SafeAreaView style={s.cameraTopBar} pointerEvents="none">
         <Text style={s.cameraHint}>Position your face in the oval</Text>
       </SafeAreaView>
-      <TouchableOpacity
-        onPress={() => setFacing(f => f === 'front' ? 'back' : 'front')}
-        style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          borderRadius: 20,
-          padding: 8,
-        }}
-      >
-        <Text style={{ color: 'white', fontSize: 20 }}>🔄</Text>
-      </TouchableOpacity>
       {error && (
         <View style={s.errorBanner}>
           <Text style={s.errorText}>{error}</Text>
         </View>
       )}
-      <SafeAreaView style={s.cameraControls}>
-        <TouchableOpacity style={s.cancelLink} onPress={onCancel}>
-          <Text style={s.cancelLinkText}>Cancel</Text>
+      <View style={s.cameraBottomBar}>
+        <TouchableOpacity onPress={onCancel} style={s.cameraTextBtn}>
+          <Text style={s.cameraTextBtnLabel}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.captureBtn, capturing && s.captureBtnDisabled]}
           onPress={handleCapture}
-          activeOpacity={0.8}
           disabled={capturing}
+          activeOpacity={0.8}
+          style={s.captureOuter}
         >
-          <View style={s.captureBtnInner} />
+          <Animated.View style={[s.captureInner, capturing && { opacity: 0.5 }]} />
         </TouchableOpacity>
-        <View style={{ width: 60 }} />
-      </SafeAreaView>
+        <TouchableOpacity
+          onPress={() => setFacing(f => f === 'front' ? 'back' : 'front')}
+          style={s.cameraIconBtn}
+        >
+          <View style={s.flipIconCircle}>
+            <Text style={s.flipIconText}>⟳</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -398,8 +409,7 @@ const s = StyleSheet.create({
   // Home
   homeInner:    { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   brand:        { fontFamily: Typography.serif, fontSize: Typography.size.xxxl, color: Colors.cream, letterSpacing: 2 },
-  homeTagline:  { fontSize: Typography.size.sm, color: Colors.textSecondary, letterSpacing: 6, textTransform: 'uppercase', marginTop: 4, marginBottom: Spacing.xxxl },
-  scanRing:     { width: 180, height: 180, borderRadius: 90, borderWidth: 2, borderColor: Colors.gold, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xxxl },
+  scanRing:     { width: 180, height: 180, borderRadius: 90, borderWidth: 2, borderColor: Colors.gold, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xxxl, marginTop: Spacing.xl },
   scanRingInner:{ width: 140, height: 140, borderRadius: 70, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
   scanRingLabel:{ fontSize: Typography.size.xs, color: Colors.gold, letterSpacing: 6, textTransform: 'uppercase' },
   homeHint:     { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xl },
@@ -415,11 +425,29 @@ const s = StyleSheet.create({
   ovalGuide:    { position: 'absolute', borderRadius: 999, borderWidth: 2, borderColor: Colors.gold },
   cameraTopBar: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', paddingTop: Spacing.lg },
   cameraHint:   { fontSize: Typography.size.sm, color: Colors.cream, letterSpacing: 0.3, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radius.pill, overflow: 'hidden' },
-  cameraControls:{ position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xl },
-  captureBtn:   { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: Colors.cream, alignItems: 'center', justifyContent: 'center' },
-  captureBtnDisabled: { opacity: 0.5 },
-  captureBtnInner:    { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.cream },
-  errorBanner:  { position: 'absolute', bottom: 140, left: Spacing.lg, right: Spacing.lg, backgroundColor: Colors.danger, borderRadius: Radius.input, padding: Spacing.md },
+  cameraBottomBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 32, paddingBottom: 48, paddingTop: 24,
+    backgroundColor: 'rgba(10,10,10,0.6)',
+  },
+  cameraTextBtn:      { width: 72, alignItems: 'flex-start' },
+  cameraTextBtnLabel: { color: '#C9A84C', fontSize: 16, fontWeight: '500' },
+  captureOuter: {
+    width: 80, height: 80, borderRadius: 40,
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.8)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  captureInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFFFFF' },
+  cameraIconBtn:  { width: 72, alignItems: 'flex-end' },
+  flipIconCircle: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  flipIconText: { color: '#FFFFFF', fontSize: 22, fontWeight: '300' },
+  errorBanner:  { position: 'absolute', bottom: 160, left: Spacing.lg, right: Spacing.lg, backgroundColor: Colors.danger, borderRadius: Radius.input, padding: Spacing.md },
   errorText:    { color: Colors.cream, fontSize: Typography.size.base, textAlign: 'center' },
   permissionBox:{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   permissionTitle:{ fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, marginBottom: Spacing.md, textAlign: 'center' },
