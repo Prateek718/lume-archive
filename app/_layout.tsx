@@ -53,8 +53,10 @@ export default function RootLayout() {
       'skin-detail', 'beard-detail', 'makeup-detail'
     ];
     if (safeRoutes.includes(root)) return;
-    if (root !== '(tabs)') router.replace('/(tabs)/scan');
-  }, [ready, segments]);
+    if (root === '(tabs)') return;
+    // Always route to tabs on launch
+    router.replace('/(tabs)/scan');
+  }, [ready]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
