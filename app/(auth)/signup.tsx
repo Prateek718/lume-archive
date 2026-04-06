@@ -6,9 +6,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { FIRST_LAUNCH_KEY, GUEST_PROFILE_KEY, DEFAULT_GUEST } from '../_layout';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -34,6 +36,8 @@ export default function SignupScreen() {
 
       const userId = data.user?.id;
       if (userId) {
+        await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
+
         const { data: profile } = await supabase
           .from('users')
           .select('onboarding_complete')
@@ -100,8 +104,18 @@ export default function SignupScreen() {
       console.error('[signup] upsert error:', upsertError.message);
     }
 
+    await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
     setLoading(false);
     router.replace('/(auth)/onboarding');
+  };
+
+  const handleContinueAsGuest = async () => {
+    await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
+    const existing = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
+    if (!existing) {
+      await AsyncStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify(DEFAULT_GUEST));
+    }
+    router.replace('/(tabs)/scan');
   };
 
   const canSubmit = email.trim().length > 0 && password.length >= 6;
@@ -198,10 +212,10 @@ export default function SignupScreen() {
 
           <TouchableOpacity
             style={styles.skipLink}
-            onPress={() => router.replace('/(tabs)/scan')}
+            onPress={handleContinueAsGuest}
             activeOpacity={0.7}
           >
-            <Text style={styles.skipText}>Skip for now</Text>
+            <Text style={styles.skipText}>Continue as guest</Text>
           </TouchableOpacity>
 
         </ScrollView>

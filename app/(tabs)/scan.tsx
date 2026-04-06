@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../../lib/supabase';
 import { useScan } from '../../hooks/useScan';
 import { GUEST_PROFILE_KEY } from '../_layout';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
@@ -44,10 +45,11 @@ const ARC_LEN   = CIRCUM * 0.75;   // 270°
 const AnimatedCircle = Animated.createAnimatedComponent(Circle as React.ComponentType<any>);
 
 // ─── HOME ────────────────────────────────────────────────────────────────────
-function HomeScreen({ onStart, gender, onGenderChange }: {
+function HomeScreen({ onStart, gender, onGenderChange, isGuest }: {
   onStart: () => void;
   gender: string;
   onGenderChange: (g: string) => void;
+  isGuest: boolean;
 }) {
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -81,36 +83,38 @@ function HomeScreen({ onStart, gender, onGenderChange }: {
           Point your front camera at your face.{'\n'}
           We'll analyse it in under 30 seconds.
         </Text>
-        <View style={{
-          flexDirection: 'row',
-          gap: 12,
-          marginBottom: 24,
-          justifyContent: 'center',
-        }}>
-          {(['man', 'woman'] as const).map((g) => (
-            <TouchableOpacity
-              key={g}
-              onPress={() => onGenderChange(g)}
-              style={{
-                paddingHorizontal: 24,
-                paddingVertical: 10,
-                borderRadius: 24,
-                borderWidth: 1,
-                borderColor: gender === g ? '#C9A84C' : '#2A2420',
-                backgroundColor: gender === g ? 'rgba(201,168,76,0.1)' : 'transparent',
-              }}
-            >
-              <Text style={{
-                color: gender === g ? '#C9A84C' : '#8A7A6A',
-                fontSize: 14,
-                fontWeight: gender === g ? '600' : '400',
-                textTransform: 'capitalize',
-              }}>
-                {g === 'man' ? '👨 Man' : '👩 Woman'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {isGuest && (
+          <View style={{
+            flexDirection: 'row',
+            gap: 12,
+            marginBottom: 24,
+            justifyContent: 'center',
+          }}>
+            {(['man', 'woman'] as const).map((g) => (
+              <TouchableOpacity
+                key={g}
+                onPress={() => onGenderChange(g)}
+                style={{
+                  paddingHorizontal: 24,
+                  paddingVertical: 10,
+                  borderRadius: 24,
+                  borderWidth: 1,
+                  borderColor: gender === g ? '#C9A84C' : '#2A2420',
+                  backgroundColor: gender === g ? 'rgba(201,168,76,0.1)' : 'transparent',
+                }}
+              >
+                <Text style={{
+                  color: gender === g ? '#C9A84C' : '#8A7A6A',
+                  fontSize: 14,
+                  fontWeight: gender === g ? '600' : '400',
+                  textTransform: 'capitalize',
+                }}>
+                  {g === 'man' ? '👨 Man' : '👩 Woman'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         <TouchableOpacity style={s.ctaButton} onPress={onStart} activeOpacity={0.8}>
           <Text style={s.ctaText}>Scan your face</Text>
         </TouchableOpacity>
@@ -361,10 +365,15 @@ function ResultScreen({ scan, gender, onScanAgain }: {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function ScanScreen() {
   const { phase, processingStep, result, error, openCamera, reset, processPhoto } = useScan();
-  const [gender, setGender] = useState<string>('man');
+  const [gender,  setGender]  = useState<string>('man');
+  const [isGuest, setIsGuest] = useState<boolean>(true);
 
   useEffect(() => {
     const loadGender = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const guestMode = !session;
+      setIsGuest(guestMode);
+
       const profileStr = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
       const profile = profileStr ? JSON.parse(profileStr) as { gender?: string } : { gender: 'man' };
       setGender(profile.gender ?? 'man');
@@ -399,7 +408,7 @@ export default function ScanScreen() {
   if (phase === 'camera')     return <CameraScreen onCapture={handleCapture} onCancel={reset} error={error} />;
   if (phase === 'processing') return <ProcessingScreen step={processingStep} />;
   if (phase === 'result' && result) return <ResultScreen scan={result} gender={gender} onScanAgain={reset} />;
-  return <HomeScreen onStart={openCamera} gender={gender} onGenderChange={handleGenderChange} />;
+  return <HomeScreen onStart={openCamera} gender={gender} onGenderChange={handleGenderChange} isGuest={isGuest} />;
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────

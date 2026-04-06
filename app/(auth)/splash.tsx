@@ -2,7 +2,10 @@ import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing } from '../../constants/theme';
+import { FIRST_LAUNCH_KEY } from '../_layout';
 
 export default function SplashScreen() {
   const router   = useRouter();
@@ -10,21 +13,40 @@ export default function SplashScreen() {
   const riseAnim = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
-    // Fade + rise in together
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1, duration: 900, useNativeDriver: true,
-      }),
-      Animated.timing(riseAnim, {
-        toValue: 0, duration: 900, useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.timing(riseAnim, { toValue: 0, duration: 900, useNativeDriver: true }),
     ]).start();
 
-    // Auto-advance to signup after 2.4 s
-    const timer = setTimeout(() => {
-      router.replace('/(auth)/signup');
-    }, 2400);
+    const navigate = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
 
+      if (session) {
+        // Signed in — check if onboarding is complete
+        const { data: profile } = await supabase
+          .from('users')
+          .select('onboarding_complete')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!profile?.onboarding_complete) {
+          router.replace('/(auth)/onboarding');
+        } else {
+          router.replace('/(tabs)/scan');
+        }
+        return;
+      }
+
+      // Not signed in — first launch or returning guest?
+      const firstLaunchDone = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
+      if (!firstLaunchDone) {
+        router.replace('/(auth)/signup');
+      } else {
+        router.replace('/(tabs)/scan');
+      }
+    };
+
+    const timer = setTimeout(navigate, 2400);
     return () => clearTimeout(timer);
   }, []);
 
@@ -60,8 +82,6 @@ const styles = StyleSheet.create({
   inner: {
     alignItems: 'center',
   },
-
-  // Diamond shape — a rotated square with rounded corners
   diamondWrapper: {
     width:          80,
     height:         80,
@@ -76,7 +96,6 @@ const styles = StyleSheet.create({
     borderRadius:    10,
     transform:       [{ rotate: '45deg' }],
   },
-
   brand: {
     fontFamily:    Typography.serif,
     fontSize:      42,

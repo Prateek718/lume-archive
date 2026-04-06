@@ -7,8 +7,10 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { FIRST_LAUNCH_KEY } from '../_layout';
 
 type GenderValue = 'man' | 'woman' | 'other';
 
@@ -56,6 +58,7 @@ export default function OnboardingScreen() {
       return;
     }
 
+    await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
     router.replace('/(tabs)/scan');
   };
 

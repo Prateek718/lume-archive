@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export const GUEST_PROFILE_KEY = '@lume/guest_profile';
+export const FIRST_LAUNCH_KEY  = '@lume/first_launch';
 
 export const DEFAULT_GUEST = {
   id: 'guest',
@@ -25,7 +26,6 @@ export const DEFAULT_GUEST = {
 
 export default function RootLayout() {
   const router = useRouter();
-  const segments = useSegments();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -47,15 +47,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!ready) return;
-    const root = segments[0] as string;
-    const safeRoutes = [
-      'recommendations', 'salons', 'hair-detail',
-      'skin-detail', 'beard-detail', 'makeup-detail'
-    ];
-    if (safeRoutes.includes(root)) return;
-    if (root === '(tabs)') return;
-    // Always route to tabs on launch
-    router.replace('/(tabs)/scan');
+    router.replace('/(auth)/splash');
   }, [ready]);
 
   return (
