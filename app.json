@@ -43,6 +43,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "REDACTED_GOOGLE_PLACES_KEY"
+        }
+      ],
       "expo-camera",
       "expo-location",
       [
