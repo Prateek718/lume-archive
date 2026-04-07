@@ -4,6 +4,7 @@
 import { useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GUEST_PROFILE_KEY } from '../app/_layout';
+import { supabase } from '../lib/supabase';
 import { runScan } from '../services/scanService';
 import type { Scan } from '../types';
 
@@ -27,17 +28,41 @@ export function useScan() {
     setProcessingStep('');
   }, []);
 
-  const processPhoto = useCallback(async (photoUri: string, gender: string) => {
+  const processPhoto = useCallback(async (photoUri: string, genderParam: string) => {
     setError(null);
     setPhase('processing');
 
     try {
       console.log('[useScan] Starting processPhoto');
 
-      const profileStr = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
-      const profile = profileStr ? JSON.parse(profileStr) as { id: string; gender: string } : { id: 'guest', gender: 'man' };
-      const userId = profile.id;
-      console.log('[useScan] Got user:', userId);
+      // Always check Supabase session first
+      const { data: { user } } = await supabase.auth.getUser();
+
+      let userId: string;
+      let gender: string = genderParam;
+
+      if (user) {
+        // Authenticated user
+        userId = user.id;
+        // Get gender from Supabase profile
+        const { data: profile } = await supabase
+          .from('users')
+          .select('gender')
+          .eq('id', user.id)
+          .single();
+        if (profile?.gender) gender = profile.gender as string;
+      } else {
+        // Guest user
+        userId = 'guest';
+        const profileStr = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
+        const guestProfile = profileStr
+          ? JSON.parse(profileStr) as { id: string; gender: string }
+          : { id: 'guest', gender: 'man' };
+        userId = guestProfile.id;
+        gender = guestProfile.gender ?? genderParam;
+      }
+
+      console.log('[useScan] User ID:', userId, 'Gender:', gender, 'IsGuest:', userId === 'guest');
 
       console.log('[useScan] Calling Gemini API');
       const scan = await runScan(photoUri, gender, userId, (step) => {
