@@ -1,14 +1,15 @@
-// Location service — Google Places API (New) calls.
+// Location service — GPS fetching + Google Places API (New) calls.
 // Uses the v1 REST endpoint introduced in 2023.
-// All Places API calls go through this file only.
+// All location and Places API calls go through this file only.
 
+import { Alert } from 'react-native';
+import * as Location from 'expo-location';
 import type { Salon } from '../constants/mockSalons';
 
 const API_KEY     = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY ?? '';
 const NEARBY_URL  = 'https://places.googleapis.com/v1/places:searchNearby';
 
 // Fields we request from the Nearby Search response.
-// Phone number and photos are included so no separate Details call is needed.
 const FIELD_MASK = [
   'places.id',
   'places.displayName',
@@ -24,19 +25,16 @@ const FIELD_MASK = [
 
 type PriceRange = '₹' | '₹₹' | '₹₹₹' | '₹₹₹₹' | '';
 
-// Map the new API's string price level to rupee symbols.
-// PRICE_LEVEL_FREE and PRICE_LEVEL_UNSPECIFIED return '' (hidden in UI).
 function mapPriceLevel(level: string | undefined): PriceRange {
   switch (level) {
-    case 'PRICE_LEVEL_INEXPENSIVE': return '₹';
-    case 'PRICE_LEVEL_MODERATE':    return '₹₹';
-    case 'PRICE_LEVEL_EXPENSIVE':   return '₹₹₹';
-    case 'PRICE_LEVEL_VERY_EXPENSIVE': return '₹₹₹₹';
+    case 'PRICE_LEVEL_INEXPENSIVE':   return '₹';
+    case 'PRICE_LEVEL_MODERATE':      return '₹₹';
+    case 'PRICE_LEVEL_EXPENSIVE':     return '₹₹₹';
+    case 'PRICE_LEVEL_VERY_EXPENSIVE':return '₹₹₹₹';
     default: return '';
   }
 }
 
-// Known Indian salon chains — used as a fallback when Google returns no price level.
 const PREMIUM_CHAINS = ['enrich', 'purple', 'looks', 'naturals', 'jawed habib',
   'toni & guy', 'toni and guy', 'lakme', 'affinity', 'juice'];
 const BUDGET_CHAINS  = ['shalimar', 'green trends'];
@@ -48,15 +46,47 @@ function namePriceHint(name: string): PriceRange {
   return '';
 }
 
-// Build a photo media URL from a Places API photo resource name.
-// Returns undefined if no photo name is provided.
 function buildPhotoUrl(photoName: string | undefined): string | undefined {
   if (!photoName) return undefined;
   return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=400&maxWidthPx=400&key=${API_KEY}`;
 }
 
+// Request permission and return the device's current coordinates.
+// Returns null on denial, timeout, or any error — never throws.
+export async function getCurrentLocation(): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Location access needed',
+        'Please enable location in your phone settings to find salons near you.',
+        [{ text: 'OK' }],
+      );
+      return null;
+    }
+
+    const pos = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message.toLowerCase() : '';
+    if (msg.includes('timeout') || msg.includes('timed out')) {
+      Alert.alert(
+        'Location unavailable',
+        'Could not get your location. Please check your GPS signal and try again.',
+        [{ text: 'OK' }],
+      );
+    } else {
+      console.error('[locationService] getCurrentLocation error:', err);
+    }
+    return null;
+  }
+}
+
 // Fetch salons within 3 km of the given coordinates.
 // Returns mapped Salon objects ready for the map and cards.
+// Throws on API error so callers can show appropriate error states.
 export async function fetchNearbySalons(
   lat: number,
   lng: number,
@@ -64,8 +94,8 @@ export async function fetchNearbySalons(
   const res = await fetch(NEARBY_URL, {
     method:  'POST',
     headers: {
-      'Content-Type':    'application/json',
-      'X-Goog-Api-Key':  API_KEY,
+      'Content-Type':     'application/json',
+      'X-Goog-Api-Key':   API_KEY,
       'X-Goog-FieldMask': FIELD_MASK,
     },
     body: JSON.stringify({
@@ -81,13 +111,11 @@ export async function fetchNearbySalons(
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Places API ${res.status}: ${err}`);
+    throw new Error(`places_api_${res.status}`);
   }
 
   const json = await res.json();
 
-  // The new API returns { places: [...] } — empty array if none found.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const places: any[] = json.places ?? [];
 
@@ -108,19 +136,22 @@ export async function fetchNearbySalons(
   } satisfies Salon));
 }
 
-// Fetch the phone number for a salon that was loaded without one
-// (e.g. from mock data). Uses the Places API (New) Place Details endpoint.
+// Fetch the phone number for a salon. Returns null on any failure.
 export async function fetchSalonPhone(placeId: string): Promise<string | null> {
-  const res = await fetch(
-    `https://places.googleapis.com/v1/places/${placeId}`,
-    {
-      headers: {
-        'X-Goog-Api-Key':   API_KEY,
-        'X-Goog-FieldMask': 'nationalPhoneNumber',
+  try {
+    const res = await fetch(
+      `https://places.googleapis.com/v1/places/${placeId}`,
+      {
+        headers: {
+          'X-Goog-Api-Key':   API_KEY,
+          'X-Goog-FieldMask': 'nationalPhoneNumber',
+        },
       },
-    },
-  );
-  if (!res.ok) return null;
-  const json = await res.json();
-  return (json.nationalPhoneNumber as string) ?? null;
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    return (json.nationalPhoneNumber as string) ?? null;
+  } catch {
+    return null;
+  }
 }

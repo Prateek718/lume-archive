@@ -9,54 +9,107 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import type { User } from '../../types';
-
-const GUEST_PROFILE_KEY = '@lume/guest_profile';
+import { GUEST_PROFILE_KEY, DEFAULT_GUEST, FIRST_LAUNCH_KEY } from '../_layout';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [user, setUser]           = useState<User | null>(null);
-  const [isGuest, setIsGuest]     = useState(false);
-  const [scanCount, setScanCount] = useState(0);
-  const [topScore,  setTopScore]  = useState<number | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [refreshing,setRefreshing]= useState(false);
+
+  const [isGuest,      setIsGuest]      = useState(true);
+  const [displayName,  setDisplayName]  = useState('Guest');
+  const [city,         setCity]         = useState('');
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [scanCount,    setScanCount]    = useState(0);
+  const [topScore,     setTopScore]     = useState<number | null>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [refreshing,   setRefreshing]   = useState(false);
   const [notifReminders, setNotifReminders] = useState(true);
   const [notifRoutine,   setNotifRoutine]   = useState(true);
 
-  const fetchProfile = useCallback(async () => {
-    const profileStr = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
-    const profile = profileStr ? JSON.parse(profileStr) as User : null;
-    if (profile) {
-      setUser(profile);
-      setNotifReminders(profile.notification_reminders ?? true);
-      setNotifRoutine(profile.notification_routine ?? true);
-      setIsGuest(!profile || profile.id === 'guest');
-    } else {
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        setIsGuest(false);
+        const { data: profile } = await supabase
+          .from('users')
+          .select('display_name, city, avatar_url, referral_code, notification_reminders, notification_routine')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          setDisplayName(profile.display_name ?? user.email ?? 'User');
+          setCity(profile.city ?? '');
+          setReferralCode(profile.referral_code ?? null);
+          setNotifReminders(profile.notification_reminders ?? true);
+          setNotifRoutine(profile.notification_routine ?? true);
+        } else {
+          setDisplayName(user.email ?? 'User');
+        }
+      } else {
+        setIsGuest(true);
+        const raw = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
+        const guestProfile = raw ? JSON.parse(raw) : DEFAULT_GUEST;
+        setDisplayName(guestProfile.display_name ?? 'Guest');
+        setCity(guestProfile.city ?? '');
+        setNotifReminders(guestProfile.notification_reminders ?? true);
+        setNotifRoutine(guestProfile.notification_routine ?? true);
+      }
+    } catch {
       setIsGuest(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    setLoading(false);
-    setRefreshing(false);
   }, []);
 
-  useEffect(() => { fetchProfile(); }, []);
+  useEffect(() => { checkAuthStatus(); }, []);
 
-  const onRefresh = () => { setRefreshing(true); fetchProfile(); };
+  const onRefresh = () => { setRefreshing(true); checkAuthStatus(); };
 
-  const saveNotifPref = async (key: 'notification_reminders' | 'notification_routine', value: boolean) => {
-    const profileStr = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
-    const profile = profileStr ? JSON.parse(profileStr) : {};
-    await AsyncStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify({ ...profile, [key]: value }));
+  const saveNotifPref = async (
+    key: 'notification_reminders' | 'notification_routine',
+    value: boolean,
+  ) => {
+    // Persist for guests via AsyncStorage; for signed-in users update Supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('users').update({ [key]: value }).eq('id', user.id);
+    } else {
+      const raw = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
+      const profile = raw ? JSON.parse(raw) : {};
+      await AsyncStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify({ ...profile, [key]: value }));
+    }
   };
 
   const handleReferral = () => {
-    if (!user?.referral_code) return;
+    if (!referralCode) return;
     Alert.alert(
       'Your referral code',
-      `Share this code with friends:\n\n${user.referral_code}\n\nWhen they sign up, you both get credit.`,
-      [{ text: 'OK' }]
+      `Share this code with friends:\n\n${referralCode}\n\nWhen they sign up, you both get credit.`,
+      [{ text: 'OK' }],
+    );
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase.auth.signOut();
+            await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
+            router.replace('/(auth)/splash');
+          },
+        },
+      ],
     );
   };
 
@@ -68,8 +121,8 @@ export default function ProfileScreen() {
     );
   }
 
-  const initials = user?.display_name
-    ? user.display_name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  const initials = displayName
+    ? displayName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
   return (
@@ -100,8 +153,8 @@ export default function ProfileScreen() {
           <View style={s.avatar}>
             <Text style={s.avatarText}>{initials}</Text>
           </View>
-          <Text style={s.displayName}>{user?.display_name ?? 'Guest'}</Text>
-          {user?.city && <Text style={s.cityText}>{user.city}</Text>}
+          <Text style={s.displayName}>{displayName}</Text>
+          {!!city && <Text style={s.cityText}>{city}</Text>}
         </View>
 
         {/* Stats row */}
@@ -117,20 +170,24 @@ export default function ProfileScreen() {
           </View>
           <View style={s.statDivider} />
           <View style={s.statItem}>
-            <Text style={s.statNum}>{user?.referral_code ?? '–'}</Text>
+            <Text style={s.statNum}>{referralCode ?? '–'}</Text>
             <Text style={s.statLabel}>Referral code</Text>
           </View>
         </View>
 
         {/* Account section */}
-        <Text style={s.sectionLabel}>ACCOUNT</Text>
-        <View style={s.menuCard}>
-          <MenuItem
-            label="Referral code"
-            value={user?.referral_code ?? undefined}
-            onPress={handleReferral}
-          />
-        </View>
+        {!isGuest && referralCode && (
+          <>
+            <Text style={s.sectionLabel}>ACCOUNT</Text>
+            <View style={s.menuCard}>
+              <MenuItem
+                label="Referral code"
+                value={referralCode}
+                onPress={handleReferral}
+              />
+            </View>
+          </>
+        )}
 
         {/* Notifications section */}
         <Text style={s.sectionLabel}>NOTIFICATIONS</Text>
@@ -172,6 +229,17 @@ export default function ProfileScreen() {
           <MenuItem label="Terms of service" arrow />
         </View>
 
+        {/* Sign out — authenticated users only */}
+        {!isGuest && (
+          <TouchableOpacity
+            style={s.signOutBtn}
+            onPress={handleSignOut}
+            activeOpacity={0.8}
+          >
+            <Text style={s.signOutText}>Sign out</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
     </View>
@@ -201,7 +269,7 @@ function MenuItem({ label, value, arrow, onPress }: {
   );
 }
 
-// ─── STYLES ────────────────────────────────────────────────────────────────
+// ─── STYLES ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   screen:  { flex: 1, backgroundColor: Colors.background },
   centre:  { alignItems: 'center', justifyContent: 'center' },

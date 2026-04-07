@@ -34,24 +34,33 @@ export default function SignupScreen() {
       });
       if (error) throw error;
 
-      const userId = data.user?.id;
-      if (userId) {
-        await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
+      const userId   = data.user?.id;
+      const userName = (data.user?.user_metadata?.full_name as string | undefined)
+                    ?? (data.user?.user_metadata?.name as string | undefined)
+                    ?? null;
 
-        const { data: profile } = await supabase
+      if (userId) {
+        const { data: profile, error: profileError } = await supabase
           .from('users')
           .select('onboarding_complete')
           .eq('id', userId)
           .single();
 
-        if (!profile || !profile.onboarding_complete) {
+        if (profileError || !profile) {
+          // New user — create profile row
           await supabase.from('users').upsert({
-            id: userId,
+            id:                  userId,
+            display_name:        userName,
             onboarding_complete: false,
-            created_at: new Date().toISOString(),
+            created_at:          new Date().toISOString(),
           });
+          await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
+          router.replace('/(auth)/onboarding');
+        } else if (!profile.onboarding_complete) {
+          await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
           router.replace('/(auth)/onboarding');
         } else {
+          await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
           router.replace('/(tabs)/scan');
         }
       }
