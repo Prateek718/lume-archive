@@ -6,9 +6,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { FIRST_LAUNCH_KEY } from '../_layout';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -19,26 +21,49 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim()) {
-      Alert.alert('Enter email', 'Please enter your email address.');
-      return;
-    }
-    if (!password) {
-      Alert.alert('Enter password', 'Please enter your password.');
-      return;
-    }
-
+    console.log('[login] Attempting sign in with:', email.trim());
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email:    email.trim().toLowerCase(),
-      password: password,
-    });
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email:    email.trim().toLowerCase(),
+        password,
+      });
 
-    if (error) {
-      Alert.alert('Sign in failed', error.message);
+      console.log('[login] Result - error:', error?.message, 'user:', data?.user?.id);
+
+      if (error) {
+        Alert.alert('Sign in failed', error.message);
+        return;
+      }
+
+      if (!data.user) {
+        Alert.alert('Sign in failed', 'Could not sign in. Please try again.');
+        return;
+      }
+
+      // Check onboarding status
+      const { data: profile } = await supabase
+        .from('users')
+        .select('onboarding_complete')
+        .eq('id', data.user.id)
+        .single();
+
+      console.log('[login] Profile:', profile);
+
+      await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
+
+      if (!profile || !profile.onboarding_complete) {
+        router.replace('/(auth)/onboarding');
+      } else {
+        router.replace('/(tabs)/scan');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Sign in failed';
+      console.error('[login] Error:', msg);
+      Alert.alert('Error', msg);
+    } finally {
+      setLoading(false);
     }
-    // Success: _layout.tsx onAuthStateChange handles routing
   };
 
   const handleForgotPassword = async () => {

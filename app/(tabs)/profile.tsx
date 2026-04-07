@@ -94,6 +94,25 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('scans').delete().eq('user_id', user.id);
+      await supabase.from('users').delete().eq('id', user.id);
+
+      await supabase.auth.signOut();
+      router.replace('/(auth)/splash');
+    } catch (error: unknown) {
+      console.error('[profile] Delete account error:', error);
+      Alert.alert(
+        'Error',
+        'Could not delete account. Please try again or contact support.',
+      );
+    }
+  };
+
   const handleSignOut = () => {
     Alert.alert(
       'Sign out',
@@ -104,12 +123,16 @@ export default function ProfileScreen() {
           text: 'Sign out',
           style: 'destructive',
           onPress: async () => {
-            await supabase.auth.signOut();
-            await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
-            router.replace('/(auth)/splash');
+            try {
+              await supabase.auth.signOut();
+              router.replace('/(auth)/splash');
+            } catch (error: unknown) {
+              console.error('[profile] Sign out error:', error);
+              router.replace('/(auth)/splash');
+            }
           },
         },
-      ],
+      ]
     );
   };
 
@@ -229,15 +252,33 @@ export default function ProfileScreen() {
           <MenuItem label="Terms of service" arrow />
         </View>
 
-        {/* Sign out — authenticated users only */}
+        {/* Sign out + Delete account — authenticated users only */}
         {!isGuest && (
-          <TouchableOpacity
-            style={s.signOutBtn}
-            onPress={handleSignOut}
-            activeOpacity={0.8}
-          >
-            <Text style={s.signOutText}>Sign out</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={s.signOutBtn}
+              onPress={handleSignOut}
+              activeOpacity={0.8}
+            >
+              <Text style={s.signOutText}>Sign out</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert(
+                  'Delete account',
+                  'This will permanently delete your account and all your scan history. This cannot be undone.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: handleDeleteAccount },
+                  ],
+                )
+              }
+              activeOpacity={0.7}
+            >
+              <Text style={s.deleteAccountText}>Delete account</Text>
+            </TouchableOpacity>
+          </>
         )}
 
         <View style={{ height: Spacing.xxxl }} />
@@ -350,4 +391,11 @@ const s = StyleSheet.create({
     paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.md,
   },
   signOutText: { fontSize: Typography.size.md, color: '#A32D2D', fontWeight: '600' },
+  deleteAccountText: {
+    fontSize:      14,
+    color:         '#FF4444',
+    textAlign:     'center',
+    paddingVertical: 12,
+    marginTop:     8,
+  },
 });
