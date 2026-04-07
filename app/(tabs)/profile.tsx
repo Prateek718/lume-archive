@@ -101,8 +101,8 @@ export default function ProfileScreen() {
 
       await supabase.from('scans').delete().eq('user_id', user.id);
       await supabase.from('users').delete().eq('id', user.id);
-
       await supabase.auth.signOut();
+      await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
       router.replace('/(auth)/splash');
     } catch (error: unknown) {
       console.error('[profile] Delete account error:', error);
