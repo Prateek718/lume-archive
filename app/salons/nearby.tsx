@@ -6,7 +6,6 @@ import {
   TextInput, Dimensions, Animated, Linking, ActivityIndicator, Image,
 } from 'react-native';
 import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
-import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -14,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { GUEST_PROFILE_KEY } from '../_layout';
 import { MOCK_SALONS, type Salon } from '../../constants/mockSalons';
-import { fetchNearbySalons, fetchSalonPhone } from '../../services/locationService';
+import { getCurrentLocation, fetchNearbySalons, fetchSalonPhone } from '../../services/locationService';
 import { StarRating } from '../../components/ui/StarRating';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
@@ -25,14 +24,14 @@ const BANGALORE = { latitude: 12.9716, longitude: 77.5946, latitudeDelta: 0.06, 
 type Phase = 'permission' | 'loading' | 'map' | 'city';
 
 interface LumeRating {
-  rating_overall:          number | null;
-  rating_ambience:         number | null;
-  rating_price_value:      number | null;
-  rating_staff:            number | null;
-  rating_hygiene:          number | null;
-  rating_stylist_skill:    number | null;
-  haircut_price_tier_men:  string | null;
-  haircut_price_tier_women:string | null;
+  rating_overall:           number | null;
+  rating_ambience:          number | null;
+  rating_price_value:       number | null;
+  rating_staff:             number | null;
+  rating_hygiene:           number | null;
+  rating_stylist_skill:     number | null;
+  haircut_price_tier_men:   string | null;
+  haircut_price_tier_women: string | null;
 }
 
 const MEN_TIERS:   Record<string, string> = {
@@ -42,10 +41,10 @@ const MEN_TIERS:   Record<string, string> = {
   above_1000: 'Above ₹1,000',
 };
 const WOMEN_TIERS: Record<string, string> = {
-  under_600:    'Under ₹600',
-  '600_1000':   '₹600 – ₹1,000',
-  '1000_1500':  '₹1,000 – ₹1,500',
-  above_1500:   'Above ₹1,500',
+  under_600:   'Under ₹600',
+  '600_1000':  '₹600 – ₹1,000',
+  '1000_1500': '₹1,000 – ₹1,500',
+  above_1500:  'Above ₹1,500',
 };
 
 function avg(arr: (number | null)[]): number | null {
@@ -71,7 +70,8 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 function sortByDist(salons: Salon[], lat: number, lng: number): Salon[] {
-  return salons.map(s => ({ ...s, distance: haversineKm(lat, lng, s.latitude, s.longitude) }))
+  return salons
+    .map(s => ({ ...s, distance: haversineKm(lat, lng, s.latitude, s.longitude) }))
     .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
 }
 
@@ -79,18 +79,21 @@ export default function NearbyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [phase, setPhase]       = useState<Phase>('permission');
-  const [userLoc, setUserLoc]   = useState<{ latitude: number; longitude: number } | null>(null);
-  const [salons, setSalons]     = useState<Salon[]>([]);
+  const [phase,    setPhase]    = useState<Phase>('permission');
+  const [userLoc,  setUserLoc]  = useState<{ latitude: number; longitude: number } | null>(null);
+  const [salons,   setSalons]   = useState<Salon[]>([]);
   const [selected, setSelected] = useState<Salon | null>(null);
   const [cityInput, setCityInput] = useState('');
 
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const [sheetPhone, setSheetPhone]     = useState<string | null>(null);
-  const [fetchingPhone, setFetchingPhone] = useState(false);
-  const [lumeRatings, setLumeRatings]   = useState<LumeRating[]>([]);
-  const [loadingLume, setLoadingLume]   = useState(false);
-  const [gender, setGender]             = useState('man');
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [networkError,  setNetworkError]  = useState(false);
+
+  const [sheetVisible,   setSheetVisible]   = useState(false);
+  const [sheetPhone,     setSheetPhone]     = useState<string | null>(null);
+  const [fetchingPhone,  setFetchingPhone]  = useState(false);
+  const [lumeRatings,    setLumeRatings]    = useState<LumeRating[]>([]);
+  const [loadingLume,    setLoadingLume]    = useState(false);
+  const [gender,         setGender]         = useState('man');
 
   const sheetAnim = useRef(new Animated.Value(0)).current;
   const mapRef    = useRef<MapView>(null);
@@ -119,17 +122,19 @@ export default function NearbyScreen() {
     setSheetVisible(true);
     Animated.spring(sheetAnim, { toValue: 1, useNativeDriver: true, tension: 80, friction: 12 }).start();
 
-    // Phone number
     if (salon.phone) {
       setSheetPhone(salon.phone);
     } else if (salon.id.length > 6) {
       setFetchingPhone(true);
-      fetchSalonPhone(salon.id).then(p => setSheetPhone(p)).catch(() => {}).finally(() => setFetchingPhone(false));
+      fetchSalonPhone(salon.id)
+        .then(p => setSheetPhone(p))
+        .catch(() => {})
+        .finally(() => setFetchingPhone(false));
     }
 
-    // Lumé ratings
     setLoadingLume(true);
-    supabase.from('salon_ratings')
+    supabase
+      .from('salon_ratings')
       .select('rating_overall,rating_ambience,rating_price_value,rating_staff,rating_hygiene,rating_stylist_skill,haircut_price_tier_men,haircut_price_tier_women')
       .eq('google_place_id', salon.id)
       .then(
@@ -145,31 +150,64 @@ export default function NearbyScreen() {
     });
   }, [sheetAnim]);
 
-  const loadSalons = useCallback(async (coords: { latitude: number; longitude: number }) => {
+  // Full location + salon fetch flow — used by the permission screen and all retry buttons.
+  const doLocationSearch = useCallback(async () => {
+    setLocationError(null);
+    setNetworkError(false);
     setPhase('loading');
-    setUserLoc(coords);
+
+    const coords = await getCurrentLocation();
+
+    if (!coords) {
+      setLocationError('location_denied');
+      setPhase('permission');
+      return;
+    }
+
     try {
       const results = await fetchNearbySalons(coords.latitude, coords.longitude);
-      setSalons(sortByDist(results.length > 0 ? results : MOCK_SALONS, coords.latitude, coords.longitude));
-    } catch {
-      setSalons(sortByDist(MOCK_SALONS, coords.latitude, coords.longitude));
+      setUserLoc(coords);
+      if (!results || results.length === 0) {
+        setLocationError('no_salons');
+      } else {
+        setSalons(sortByDist(results, coords.latitude, coords.longitude));
+      }
+    } catch (err: unknown) {
+      console.error('[nearby] API error:', err instanceof Error ? err.message : String(err));
+      setNetworkError(true);
     }
     setPhase('map');
   }, []);
 
-  const requestLocation = useCallback(async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') { setPhase('city'); return; }
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    await loadSalons({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-  }, [loadSalons]);
+  // City-based search — skips GPS, uses typed city coordinates.
+  const loadSalonsFromCoords = useCallback(async (
+    coords: { latitude: number; longitude: number },
+  ) => {
+    setLocationError(null);
+    setNetworkError(false);
+    setPhase('loading');
+    setUserLoc(coords);
+
+    try {
+      const results = await fetchNearbySalons(coords.latitude, coords.longitude);
+      if (!results || results.length === 0) {
+        setLocationError('no_salons');
+      } else {
+        setSalons(sortByDist(results, coords.latitude, coords.longitude));
+      }
+    } catch (err: unknown) {
+      console.error('[nearby] API error:', err instanceof Error ? err.message : String(err));
+      setNetworkError(true);
+    }
+    setPhase('map');
+  }, []);
 
   const handleCitySearch = useCallback(async () => {
-    await loadSalons(BANGALORE);
-  }, [loadSalons]);
+    await loadSalonsFromCoords(BANGALORE);
+  }, [loadSalonsFromCoords]);
 
-  // ── Permission ────────────────────────────────────────────────────────────
-  if (phase === 'permission') {
+  // ── Permission ─────────────────────────────────────────────────────────────
+  if (phase === 'permission' && !locationError) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
         <StatusBar style="light" />
@@ -181,7 +219,7 @@ export default function NearbyScreen() {
             Lumé shows grooming studios within a few kilometres.{'\n'}
             We never track your location in the background.
           </Text>
-          <TouchableOpacity style={s.primaryBtn} onPress={requestLocation} activeOpacity={0.85}>
+          <TouchableOpacity style={s.primaryBtn} onPress={doLocationSearch} activeOpacity={0.85}>
             <Text style={s.primaryBtnText}>Allow location access</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.ghostBtn} onPress={() => setPhase('city')} activeOpacity={0.7}>
@@ -192,7 +230,7 @@ export default function NearbyScreen() {
     );
   }
 
-  // ── Loading ───────────────────────────────────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (phase === 'loading') {
     return (
       <View style={[s.screen, s.centreBox, { paddingTop: insets.top }]}>
@@ -203,7 +241,74 @@ export default function NearbyScreen() {
     );
   }
 
-  // ── City entry ────────────────────────────────────────────────────────────
+  // ── Location denied ────────────────────────────────────────────────────────
+  if (locationError === 'location_denied') {
+    return (
+      <View style={[s.screen, { paddingTop: insets.top }]}>
+        <StatusBar style="light" />
+        <BackBar title="Nearby Salons" />
+        <View style={s.errorContainer}>
+          <Text style={s.errorIcon}>📍</Text>
+          <Text style={s.errorTitle}>Location access needed</Text>
+          <Text style={s.errorMessage}>
+            Enable location in your phone settings to find salons near you
+          </Text>
+          <TouchableOpacity
+            style={s.goldButton}
+            onPress={() => Linking.openSettings()}
+            activeOpacity={0.85}
+          >
+            <Text style={s.goldButtonText}>Open Settings</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={doLocationSearch} style={s.retryLink}>
+            <Text style={s.retryText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── No salons found ────────────────────────────────────────────────────────
+  if (locationError === 'no_salons') {
+    return (
+      <View style={[s.screen, { paddingTop: insets.top }]}>
+        <StatusBar style="light" />
+        <BackBar title="Nearby Salons" />
+        <View style={s.errorContainer}>
+          <Text style={s.errorIcon}>🏙️</Text>
+          <Text style={s.errorTitle}>No salons found nearby</Text>
+          <Text style={s.errorMessage}>
+            We're expanding to more cities soon. Try searching in a different area.
+          </Text>
+          <TouchableOpacity style={s.goldButton} onPress={doLocationSearch} activeOpacity={0.85}>
+            <Text style={s.goldButtonText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Network error ──────────────────────────────────────────────────────────
+  if (networkError) {
+    return (
+      <View style={[s.screen, { paddingTop: insets.top }]}>
+        <StatusBar style="light" />
+        <BackBar title="Nearby Salons" />
+        <View style={s.errorContainer}>
+          <Text style={s.errorIcon}>📡</Text>
+          <Text style={s.errorTitle}>Connection issue</Text>
+          <Text style={s.errorMessage}>
+            Could not load salons. Please check your connection and try again.
+          </Text>
+          <TouchableOpacity style={s.goldButton} onPress={doLocationSearch} activeOpacity={0.85}>
+            <Text style={s.goldButtonText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── City entry ─────────────────────────────────────────────────────────────
   if (phase === 'city') {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
@@ -218,13 +323,16 @@ export default function NearbyScreen() {
             placeholderTextColor={Colors.textTertiary}
             value={cityInput}
             onChangeText={setCityInput}
-            autoCapitalize="words" autoFocus
+            autoCapitalize="words"
+            autoFocus
             returnKeyType="search"
             onSubmitEditing={() => cityInput.trim() && handleCitySearch()}
           />
           <TouchableOpacity
             style={[s.primaryBtn, !cityInput.trim() && s.disabled]}
-            onPress={handleCitySearch} disabled={!cityInput.trim()} activeOpacity={0.85}
+            onPress={handleCitySearch}
+            disabled={!cityInput.trim()}
+            activeOpacity={0.85}
           >
             <Text style={s.primaryBtnText}>Find salons</Text>
           </TouchableOpacity>
@@ -233,14 +341,13 @@ export default function NearbyScreen() {
     );
   }
 
-  // ── Map + cards ───────────────────────────────────────────────────────────
+  // ── Map + cards ────────────────────────────────────────────────────────────
   const mapRegion = userLoc
     ? { ...userLoc, latitudeDelta: 0.04, longitudeDelta: 0.04 }
     : BANGALORE;
 
   const sheetTranslate = sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [500, 0] });
 
-  // Lumé rating aggregates for the sheet
   const lumeCount  = lumeRatings.length;
   const lumeAvg    = avg(lumeRatings.map(r => r.rating_overall));
   const categoryAvgs = {
@@ -251,7 +358,7 @@ export default function NearbyScreen() {
     stylistSkill: avg(lumeRatings.map(r => r.rating_stylist_skill)),
   };
   const topPriceTier = modeTier(
-    lumeRatings.map(r => gender === 'woman' ? r.haircut_price_tier_women : r.haircut_price_tier_men)
+    lumeRatings.map(r => gender === 'woman' ? r.haircut_price_tier_women : r.haircut_price_tier_men),
   );
   const tierLabels = gender === 'woman' ? WOMEN_TIERS : MEN_TIERS;
 
@@ -259,7 +366,6 @@ export default function NearbyScreen() {
     <View style={s.screen}>
       <StatusBar style="light" />
 
-      {/* Top bar sits above map */}
       <View style={[s.topBar, { paddingTop: insets.top }]}>
         <BackBar title="Nearby Salons" />
       </View>
@@ -273,7 +379,12 @@ export default function NearbyScreen() {
         showsMyLocationButton={false}
       >
         {userLoc && (
-          <Circle center={userLoc} radius={3000} strokeColor={Colors.gold + '44'} fillColor={Colors.gold + '0D'} />
+          <Circle
+            center={userLoc}
+            radius={3000}
+            strokeColor={Colors.gold + '44'}
+            fillColor={Colors.gold + '0D'}
+          />
         )}
         {salons.map(salon => (
           <Marker
@@ -293,9 +404,12 @@ export default function NearbyScreen() {
       {/* Salon cards */}
       <View style={[s.cardsWrap, { paddingBottom: insets.bottom + 8 }]}>
         <Text style={s.cardsLabel}>{salons.length} salons nearby</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
           contentContainerStyle={s.cardsScroll}
-          snapToInterval={CARD_W + Spacing.sm} decelerationRate="fast"
+          snapToInterval={CARD_W + Spacing.sm}
+          decelerationRate="fast"
         >
           {salons.map(salon => (
             <TouchableOpacity
@@ -306,7 +420,11 @@ export default function NearbyScreen() {
             >
               <View style={s.cardThumb}>
                 {salon.photoUrl && (
-                  <Image source={{ uri: salon.photoUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                  <Image
+                    source={{ uri: salon.photoUrl }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="cover"
+                  />
                 )}
                 <View style={s.cardThumbOverlay} />
                 {salon.openNow === true  && <View style={s.openBadge}><Text style={s.openBadgeText}>Open now</Text></View>}
@@ -365,7 +483,6 @@ export default function NearbyScreen() {
                   )}
                 </View>
 
-                {/* ── Lumé ratings ── */}
                 <Text style={s.sheetSectionLabel}>LUMÉ RATINGS</Text>
                 {loadingLume ? (
                   <ActivityIndicator color={Colors.gold} style={{ marginVertical: Spacing.md }} />
@@ -381,10 +498,10 @@ export default function NearbyScreen() {
                       </View>
                     </View>
                     {Object.entries({
-                      Ambience:      categoryAvgs.ambience,
-                      'Price value': categoryAvgs.priceValue,
-                      Staff:         categoryAvgs.staff,
-                      Hygiene:       categoryAvgs.hygiene,
+                      Ambience:        categoryAvgs.ambience,
+                      'Price value':   categoryAvgs.priceValue,
+                      Staff:           categoryAvgs.staff,
+                      Hygiene:         categoryAvgs.hygiene,
                       'Stylist skill': categoryAvgs.stylistSkill,
                     }).map(([label, val]) => val != null ? (
                       <View key={label} style={s.lumeCatRow}>
@@ -398,18 +515,18 @@ export default function NearbyScreen() {
                   </View>
                 )}
 
-                {/* ── Haircut price ── */}
                 {lumeCount > 0 && topPriceTier && (
                   <>
                     <Text style={s.sheetSectionLabel}>HAIRCUT PRICE</Text>
                     <View style={s.priceCard}>
                       <Text style={s.priceTierLabel}>{tierLabels[topPriceTier[0]] ?? topPriceTier[0]}</Text>
-                      <Text style={s.priceReportCount}>reported by {topPriceTier[1]} {topPriceTier[1] === 1 ? 'user' : 'users'}</Text>
+                      <Text style={s.priceReportCount}>
+                        reported by {topPriceTier[1]} {topPriceTier[1] === 1 ? 'user' : 'users'}
+                      </Text>
                     </View>
                   </>
                 )}
 
-                {/* ── Action buttons ── */}
                 <View style={s.actionRow}>
                   <TouchableOpacity
                     style={[s.actionBtn, s.dirBtn]}
@@ -429,8 +546,11 @@ export default function NearbyScreen() {
                     </View>
                   )}
                   {!fetchingPhone && sheetPhone && (
-                    <TouchableOpacity style={[s.actionBtn, s.callBtn]} activeOpacity={0.85}
-                      onPress={() => Linking.openURL(`tel:${sheetPhone}`)}>
+                    <TouchableOpacity
+                      style={[s.actionBtn, s.callBtn]}
+                      activeOpacity={0.85}
+                      onPress={() => Linking.openURL(`tel:${sheetPhone}`)}
+                    >
                       <Text style={s.callBtnText}>Call</Text>
                     </TouchableOpacity>
                   )}
@@ -482,67 +602,77 @@ const bb = StyleSheet.create({
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen:   { flex: 1, backgroundColor: Colors.background },
-  centreBox:{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl },
-  topBar:   { backgroundColor: Colors.background, zIndex: 10 },
+  screen:    { flex: 1, backgroundColor: Colors.background },
+  centreBox: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl },
+  topBar:    { backgroundColor: Colors.background, zIndex: 10 },
 
   // Permission / city
-  iconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl },
-  iconGlyph:  { fontSize: 28, color: Colors.gold },
-  permTitle:  { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, textAlign: 'center', marginBottom: Spacing.sm },
-  permBody:   { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
-  primaryBtn: { width: '100%', backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
+  iconCircle:     { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl },
+  iconGlyph:      { fontSize: 28, color: Colors.gold },
+  permTitle:      { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, textAlign: 'center', marginBottom: Spacing.sm },
+  permBody:       { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
+  primaryBtn:     { width: '100%', backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   primaryBtnText: { fontSize: Typography.size.md, fontWeight: '600', color: Colors.background },
-  ghostBtn:   { paddingVertical: Spacing.sm },
-  ghostBtnText:{ fontSize: Typography.size.base, color: Colors.textSecondary },
-  cityInput:  { width: '100%', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.input, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: Colors.cream, marginBottom: Spacing.md },
-  disabled:   { opacity: 0.4 },
-  loadingText:{ fontSize: Typography.size.base, color: Colors.textSecondary, marginTop: Spacing.md },
+  ghostBtn:       { paddingVertical: Spacing.sm },
+  ghostBtnText:   { fontSize: Typography.size.base, color: Colors.textSecondary },
+  cityInput:      { width: '100%', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.input, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: Colors.cream, marginBottom: Spacing.md },
+  disabled:       { opacity: 0.4 },
+  loadingText:    { fontSize: Typography.size.base, color: Colors.textSecondary, marginTop: Spacing.md },
+
+  // Error states
+  errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  errorIcon:      { fontSize: 40, marginBottom: 16 },
+  errorTitle:     { fontFamily: Typography.serif, fontSize: 20, color: Colors.cream, textAlign: 'center', marginBottom: 8 },
+  errorMessage:   { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  goldButton:     { backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24, marginBottom: 12 },
+  goldButtonText: { color: Colors.background, fontWeight: '600', fontSize: 14 },
+  retryLink:      { padding: 8 },
+  retryText:      { color: Colors.textSecondary, fontSize: 14 },
 
   map: { flex: 1 },
 
-  pin:          { backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 4 },
-  pinActive:    { backgroundColor: Colors.gold, borderColor: Colors.gold },
-  pinText:      { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
-  pinTextActive:{ color: Colors.background },
+  pin:           { backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 4 },
+  pinActive:     { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  pinText:       { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
+  pinTextActive: { color: Colors.background },
 
-  cardsWrap:  { backgroundColor: Colors.background, paddingTop: Spacing.md },
-  cardsLabel: { fontSize: Typography.size.sm, color: Colors.textSecondary, paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm },
-  cardsScroll:{ paddingHorizontal: Spacing.lg, gap: Spacing.sm },
+  cardsWrap:   { backgroundColor: Colors.background, paddingTop: Spacing.md },
+  cardsLabel:  { fontSize: Typography.size.sm, color: Colors.textSecondary, paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm },
+  cardsScroll: { paddingHorizontal: Spacing.lg, gap: Spacing.sm },
 
-  card:            { width: CARD_W, backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
-  cardActive:      { borderColor: Colors.gold },
-  cardThumb:       { height: 90, backgroundColor: Colors.border, overflow: 'hidden' },
-  cardThumbOverlay:{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
-  cardBody:        { padding: Spacing.sm },
-  cardName:        { fontSize: Typography.size.md, color: Colors.cream, fontWeight: '600', marginBottom: 2 },
-  cardAddr:        { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.xs },
-  metaRow:         { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: Spacing.xs },
-  ratingText:      { fontSize: Typography.size.sm, color: Colors.gold },
-  dot:             { fontSize: Typography.size.sm, color: Colors.textTertiary },
-  reviewText:      { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  distText:        { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  tagsRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  tag:             { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
-  tagText:         { fontSize: 10, color: Colors.textSecondary },
+  card:             { width: CARD_W, backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
+  cardActive:       { borderColor: Colors.gold },
+  cardThumb:        { height: 90, backgroundColor: Colors.border, overflow: 'hidden' },
+  cardThumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
+  cardBody:         { padding: Spacing.sm },
+  cardName:         { fontSize: Typography.size.md, color: Colors.cream, fontWeight: '600', marginBottom: 2 },
+  cardAddr:         { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.xs },
+  metaRow:          { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: Spacing.xs },
+  ratingText:       { fontSize: Typography.size.sm, color: Colors.gold },
+  dot:              { fontSize: Typography.size.sm, color: Colors.textTertiary },
+  reviewText:       { fontSize: Typography.size.sm, color: Colors.textSecondary },
+  distText:         { fontSize: Typography.size.sm, color: Colors.textSecondary },
+  tagsRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  tag:              { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  tagText:          { fontSize: 10, color: Colors.textSecondary },
 
-  openBadge:    { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#1A3A1A', borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  closedBadge:  { backgroundColor: '#3A1A1A' },
-  openBadgeText:{ fontSize: 10, color: '#6BCB77', fontWeight: '600' },
+  openBadge:     { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#1A3A1A', borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  closedBadge:   { backgroundColor: '#3A1A1A' },
+  openBadgeText: { fontSize: 10, color: '#6BCB77', fontWeight: '600' },
 
   // Sheet
-  overlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet:      { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: Colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' },
-  sheetScroll:{ flex: 1 },
-  sheetPhoto: { height: 160, backgroundColor: Colors.border, overflow: 'hidden' },
+  overlay:               { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  sheet:                 { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: Colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' },
+  sheetScroll:           { flex: 1 },
+  sheetPhoto:            { height: 160, backgroundColor: Colors.border, overflow: 'hidden' },
   sheetPhotoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface2 },
   sheetPhotoInitial:     { fontFamily: Typography.serif, fontSize: 48, color: Colors.gold },
-  sheetClose: { position: 'absolute', top: Spacing.sm, right: Spacing.sm, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  sheetCloseText: { fontSize: 14, color: Colors.cream, lineHeight: 18 },
-  sheetBody:  { padding: Spacing.lg },
-  sheetName:  { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, marginBottom: 4 },
-  sheetAddr:  { fontSize: Typography.size.base, color: Colors.textSecondary, marginBottom: Spacing.sm },
-  sheetSectionLabel: { fontSize: Typography.size.xs, color: Colors.gold, letterSpacing: 6, textTransform: 'uppercase', marginTop: Spacing.lg, marginBottom: Spacing.sm },
+  sheetClose:            { position: 'absolute', top: Spacing.sm, right: Spacing.sm, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  sheetCloseText:        { fontSize: 14, color: Colors.cream, lineHeight: 18 },
+  sheetBody:             { padding: Spacing.lg },
+  sheetName:             { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, marginBottom: 4 },
+  sheetAddr:             { fontSize: Typography.size.base, color: Colors.textSecondary, marginBottom: Spacing.sm },
+  sheetSectionLabel:     { fontSize: Typography.size.xs, color: Colors.gold, letterSpacing: 6, textTransform: 'uppercase', marginTop: Spacing.lg, marginBottom: Spacing.sm },
 
   // Lumé ratings
   lumeEmpty:      { fontSize: Typography.size.sm, color: Colors.textTertiary, marginBottom: Spacing.sm },

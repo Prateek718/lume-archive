@@ -2,12 +2,11 @@
 // Uses the v1 REST endpoint introduced in 2023.
 // All location and Places API calls go through this file only.
 
-import { Alert } from 'react-native';
 import * as Location from 'expo-location';
 import type { Salon } from '../constants/mockSalons';
 
-const API_KEY     = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY ?? '';
-const NEARBY_URL  = 'https://places.googleapis.com/v1/places:searchNearby';
+const API_KEY    = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY ?? '';
+const NEARBY_URL = 'https://places.googleapis.com/v1/places:searchNearby';
 
 // Fields we request from the Nearby Search response.
 const FIELD_MASK = [
@@ -52,40 +51,46 @@ function buildPhotoUrl(photoName: string | undefined): string | undefined {
 }
 
 // Request permission and return the device's current coordinates.
+// Uses Promise.race to enforce a 10-second timeout.
 // Returns null on denial, timeout, or any error — never throws.
-export async function getCurrentLocation(): Promise<{ latitude: number; longitude: number } | null> {
+export async function getCurrentLocation(): Promise<{
+  latitude: number;
+  longitude: number;
+} | null> {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
+
     if (status !== 'granted') {
-      Alert.alert(
-        'Location access needed',
-        'Please enable location in your phone settings to find salons near you.',
-        [{ text: 'OK' }],
-      );
+      console.log('[location] Permission denied');
       return null;
     }
 
-    const pos = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
-    return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message.toLowerCase() : '';
-    if (msg.includes('timeout') || msg.includes('timed out')) {
-      Alert.alert(
-        'Location unavailable',
-        'Could not get your location. Please check your GPS signal and try again.',
-        [{ text: 'OK' }],
-      );
-    } else {
-      console.error('[locationService] getCurrentLocation error:', err);
+    const location = await Promise.race([
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      }),
+      new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 10000),
+      ),
+    ]);
+
+    if (!location) {
+      console.log('[location] Timed out');
+      return null;
     }
+
+    return {
+      latitude:  (location as Location.LocationObject).coords.latitude,
+      longitude: (location as Location.LocationObject).coords.longitude,
+    };
+  } catch (error: unknown) {
+    console.error('[location] Error:',
+      error instanceof Error ? error.message : String(error));
     return null;
   }
 }
 
 // Fetch salons within 3 km of the given coordinates.
-// Returns mapped Salon objects ready for the map and cards.
 // Throws on API error so callers can show appropriate error states.
 export async function fetchNearbySalons(
   lat: number,
