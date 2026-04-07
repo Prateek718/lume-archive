@@ -4,6 +4,8 @@ import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as Linking from 'expo-linking';
+import { supabase } from '../lib/supabase';
 
 export const GUEST_PROFILE_KEY = '@lume/guest_profile';
 export const FIRST_LAUNCH_KEY  = '@lume/first_launch';
@@ -40,7 +42,30 @@ export default function RootLayout() {
       if (!existing) {
         await AsyncStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify(DEFAULT_GUEST));
       }
+
+      // Handle deep links for password reset (lume://auth/callback)
+      // NOTE: Supabase Dashboard → Authentication → URL Configuration must have:
+      //   Site URL:      lume://
+      //   Redirect URLs: lume://auth/callback
+      const handleDeepLink = async (url: string) => {
+        if (url.includes('auth/callback')) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            router.replace('/(tabs)/scan');
+          }
+        }
+      };
+
+      Linking.getInitialURL().then(url => {
+        if (url) handleDeepLink(url);
+      });
+
+      const linkingSub = Linking.addEventListener('url', ({ url }) => {
+        handleDeepLink(url);
+      });
+
       setReady(true);
+      return () => { linkingSub.remove(); };
     };
     init();
   }, []);

@@ -1,106 +1,139 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput,
   TouchableOpacity, KeyboardAvoidingView,
-  Platform, ScrollView, ActivityIndicator, Alert,
+  Platform, Alert, ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
-export default function ResetPasswordScreen() {
+export default function OtpScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const [email,   setEmail]   = useState('');
   const [loading, setLoading] = useState(false);
+  const [sent,    setSent]    = useState(false);
 
-  const handleReset = async () => {
-    const trimmed = email.trim();
+  // Handle deep link callback from password reset email
+  useEffect(() => {
+    const token = params.token as string;
+    const type  = params.type  as string;
+
+    if (token && type === 'recovery') {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          router.replace('/(tabs)/scan');
+        }
+      });
+    }
+  }, [params]);
+
+  const handleSendReset = async () => {
+    const trimmed = email.trim().toLowerCase();
     if (!trimmed) {
-      Alert.alert('Enter email', 'Please enter your email address.');
+      Alert.alert('Enter your email', 'Please enter your email address.');
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(trimmed);
-    setLoading(false);
-
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      Alert.alert('Reset link sent', 'Check your inbox for a password reset link.');
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: 'lume://auth/callback',
+      });
+      if (error) throw error;
+      setSent(true);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Could not send reset email.';
+      Alert.alert('Error', msg);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const canSubmit = email.trim().length > 0;
-
   return (
-    <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <StatusBar style="light" />
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+    <View style={styles.root}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <StatusBar style="light" />
+        <View style={styles.container}>
+          <Text style={styles.title}>Reset password</Text>
 
-        <Text style={styles.title}>Reset password</Text>
-        <Text style={styles.subtitle}>
-          Enter your email address and we'll send you a reset link
-        </Text>
+          {!sent ? (
+            <>
+              <Text style={styles.subtitle}>
+                Enter your email and we'll send you a reset link
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Email address"
+                placeholderTextColor={Colors.textTertiary}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={email}
+                onChangeText={setEmail}
+                returnKeyType="go"
+                onSubmitEditing={handleSendReset}
+                autoFocus
+              />
+              <TouchableOpacity
+                style={[styles.ctaButton, !email.trim() && styles.ctaDisabled]}
+                onPress={handleSendReset}
+                disabled={!email.trim() || loading}
+                activeOpacity={0.8}
+              >
+                {loading
+                  ? <ActivityIndicator color={Colors.background} />
+                  : <Text style={styles.ctaText}>Send reset link</Text>
+                }
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.subtitle}>
+                Check your inbox — we've sent a reset link to {email.trim()}
+              </Text>
+              <View style={styles.sentIcon}>
+                <Text style={styles.sentEmoji}>✉️</Text>
+              </View>
+              <Text style={styles.sentNote}>
+                Didn't receive it? Check your spam folder or try again.
+              </Text>
+              <TouchableOpacity
+                style={styles.retryLink}
+                onPress={() => setSent(false)}
+              >
+                <Text style={styles.retryText}>Try again</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email address"
-          placeholderTextColor={Colors.textTertiary}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={email}
-          onChangeText={setEmail}
-          returnKeyType="go"
-          onSubmitEditing={() => canSubmit && !loading && handleReset()}
-          autoFocus
-        />
-
-        <TouchableOpacity
-          style={[styles.ctaButton, (!canSubmit || loading) && styles.ctaDisabled]}
-          onPress={handleReset}
-          disabled={!canSubmit || loading}
-          activeOpacity={0.8}
-        >
-          {loading
-            ? <ActivityIndicator color={Colors.background} />
-            : <Text style={styles.ctaText}>Send reset link</Text>
-          }
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.backLink}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backText}>← Back to sign in</Text>
-        </TouchableOpacity>
-
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <TouchableOpacity
+            style={styles.backLink}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>← Back to sign in</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: Colors.background },
+  root:      { flex: 1, backgroundColor: Colors.background },
+  flex:      { flex: 1 },
   container: {
     flexGrow:          1,
     justifyContent:    'center',
     paddingHorizontal: Spacing.xl,
     paddingVertical:   Spacing.xxxl,
   },
-
   title: {
     fontFamily:   Typography.serif,
     fontSize:     Typography.size.xxl,
@@ -111,9 +144,8 @@ const styles = StyleSheet.create({
     fontSize:     Typography.size.base,
     color:        Colors.textSecondary,
     marginBottom: Spacing.xxl,
-    lineHeight:   20,
+    lineHeight:   22,
   },
-
   input: {
     backgroundColor:   Colors.surface,
     borderWidth:       1,
@@ -125,13 +157,11 @@ const styles = StyleSheet.create({
     color:             Colors.cream,
     marginBottom:      Spacing.md,
   },
-
   ctaButton: {
     backgroundColor: Colors.gold,
     borderRadius:    Radius.input,
     paddingVertical: Spacing.md,
     alignItems:      'center',
-    marginTop:       Spacing.sm,
     marginBottom:    Spacing.xl,
   },
   ctaDisabled: { opacity: 0.4 },
@@ -140,13 +170,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color:      Colors.background,
   },
-
-  backLink: {
-    alignItems:      'center',
-    paddingVertical: Spacing.sm,
+  sentIcon:  { alignItems: 'center', marginVertical: Spacing.xl },
+  sentEmoji: { fontSize: 48 },
+  sentNote:  {
+    fontSize:     Typography.size.sm,
+    color:        Colors.textTertiary,
+    textAlign:    'center',
+    marginBottom: Spacing.xl,
   },
-  backText: {
-    fontSize: Typography.size.base,
-    color:    Colors.gold,
-  },
+  retryLink: { alignItems: 'center', marginBottom: Spacing.xl },
+  retryText: { color: Colors.gold, fontSize: Typography.size.base },
+  backLink:  { alignItems: 'center', paddingVertical: Spacing.sm },
+  backText:  { fontSize: Typography.size.base, color: Colors.textSecondary },
 });
