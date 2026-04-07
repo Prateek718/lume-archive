@@ -64,9 +64,6 @@ export default function SplashScreen() {
         {/* Brand name */}
         <Text style={styles.brand}>Lumé</Text>
 
-        {/* Tagline */}
-        <Text style={styles.tagline}>be you</Text>
-
       </Animated.View>
     </View>
   );
@@ -101,12 +98,5 @@ const styles = StyleSheet.create({
     fontSize:      42,
     color:         Colors.cream,
     letterSpacing: 3,
-    marginBottom:  Spacing.sm,
-  },
-  tagline: {
-    fontSize:      Typography.size.sm,
-    color:         Colors.gold,
-    letterSpacing: 6,
-    textTransform: 'uppercase',
   },
 });
