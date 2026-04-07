@@ -254,7 +254,7 @@ export default function ProfileScreen() {
 
         {/* Sign out + Delete account — authenticated users only */}
         {!isGuest && (
-          <>
+          <View style={s.authActions}>
             <TouchableOpacity
               style={s.signOutBtn}
               onPress={handleSignOut}
@@ -263,7 +263,10 @@ export default function ProfileScreen() {
               <Text style={s.signOutText}>Sign out</Text>
             </TouchableOpacity>
 
+            <View style={s.authActionsDivider} />
+
             <TouchableOpacity
+              style={s.deleteAccountBtn}
               onPress={() =>
                 Alert.alert(
                   'Delete account',
@@ -278,7 +281,7 @@ export default function ProfileScreen() {
             >
               <Text style={s.deleteAccountText}>Delete account</Text>
             </TouchableOpacity>
-          </>
+          </View>
         )}
 
         <View style={{ height: Spacing.xxxl }} />
@@ -385,17 +388,24 @@ const s = StyleSheet.create({
   switchLabel: { fontSize: Typography.size.base, color: Colors.cream },
 
   // Sign out
+  authActions: {
+    marginTop:       24,
+    borderTopWidth:  1,
+    borderTopColor:  '#2A2420',
+    paddingTop:      16,
+    marginBottom:    Spacing.md,
+  },
+  authActionsDivider: {
+    height:          1,
+    backgroundColor: '#2A2420',
+    marginVertical:  8,
+  },
   signOutBtn: {
     backgroundColor: Colors.surface, borderRadius: Radius.card,
     borderWidth: 1, borderColor: '#A32D2D',
-    paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.md,
+    paddingVertical: Spacing.md, alignItems: 'center',
   },
   signOutText: { fontSize: Typography.size.md, color: '#A32D2D', fontWeight: '600' },
-  deleteAccountText: {
-    fontSize:      14,
-    color:         '#FF4444',
-    textAlign:     'center',
-    paddingVertical: 12,
-    marginTop:     8,
-  },
+  deleteAccountBtn: { paddingVertical: 12, alignItems: 'center' },
+  deleteAccountText: { fontSize: 14, color: '#FF4444', textAlign: 'center' },
 });

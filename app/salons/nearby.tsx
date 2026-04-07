@@ -156,27 +156,35 @@ export default function NearbyScreen() {
     setNetworkError(false);
     setPhase('loading');
 
-    const coords = await getCurrentLocation();
-
-    if (!coords) {
-      setLocationError('location_denied');
-      setPhase('permission');
-      return;
-    }
-
     try {
-      const results = await fetchNearbySalons(coords.latitude, coords.longitude);
-      setUserLoc(coords);
-      if (!results || results.length === 0) {
-        setLocationError('no_salons');
-      } else {
-        setSalons(sortByDist(results, coords.latitude, coords.longitude));
+      const coords = await getCurrentLocation();
+
+      if (!coords) {
+        setLocationError('location_denied');
+        setPhase('permission');
+        return;
       }
-    } catch (err: unknown) {
-      console.error('[nearby] API error:', err instanceof Error ? err.message : String(err));
+
+      console.log('[nearby] Got coords:', coords);
+
+      try {
+        const results = await fetchNearbySalons(coords.latitude, coords.longitude);
+        setUserLoc(coords);
+        if (!results || results.length === 0) {
+          setLocationError('no_salons');
+        } else {
+          setSalons(sortByDist(results, coords.latitude, coords.longitude));
+        }
+      } catch (apiError: unknown) {
+        console.error('[nearby] API error:', apiError instanceof Error ? apiError.message : String(apiError));
+        setNetworkError(true);
+      }
+    } catch (outerError: unknown) {
+      console.error('[nearby] Unexpected crash:', outerError instanceof Error ? outerError.message : String(outerError));
       setNetworkError(true);
+    } finally {
+      setPhase('map');
     }
-    setPhase('map');
   }, []);
 
   // City-based search — skips GPS, uses typed city coordinates.

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Polyline, Circle as SvgCircle, Line, Text as SvgText } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { getTierLabel } from '../../constants/tiers';
@@ -70,39 +71,54 @@ function LineChart({ scans }: { scans: Scan[] }) {
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
+  const router  = useRouter();
   const [tab, setTab] = useState<'scans' | 'routine'>('scans');
 
   // Scans
-  const [scans, setScans]       = useState<Scan[]>([]);
+  const [scans,        setScans]        = useState<Scan[]>([]);
   const [loadingScans, setLoadingScans] = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
-  const [gender, setGender]     = useState<string>('man');
+  const [gender,       setGender]       = useState<string>('man');
+  const [isGuest,      setIsGuest]      = useState(false);
 
   // Routine
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [streak,  setStreak]  = useState(0);
 
-  // ── Load gender from guest profile ───────────────────────────────────────
-  useEffect(() => {
-    const loadGender = async () => {
-      const profileStr = await AsyncStorage.getItem('@lume/guest_profile');
-      const profile = profileStr ? JSON.parse(profileStr) as { gender?: string } : { gender: 'man' };
-      if (profile.gender) setGender(profile.gender);
-    };
-    loadGender();
-  }, []);
-
   // ── Fetch scans ───────────────────────────────────────────────────────────
   const fetchScans = useCallback(async () => {
-    const profileStr = await AsyncStorage.getItem('@lume/guest_profile');
-    const profile = profileStr ? JSON.parse(profileStr) as { id: string } : { id: 'guest' };
-    const userId = profile.id;
-    const { data } = await supabase
-      .from('scans')
-      .select('id, score_overall, score_hair, score_skin, score_beard, score_makeup, tier_label, face_shape, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-    setScans((data as Scan[]) ?? []);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      setIsGuest(false);
+      // Get gender from Supabase profile
+      const { data: profile } = await supabase
+        .from('users')
+        .select('gender')
+        .eq('id', user.id)
+        .single();
+      if (profile?.gender) setGender(profile.gender as string);
+
+      const { data: scansData, error } = await supabase
+        .from('scans')
+        .select('id, score_overall, score_hair, score_skin, score_beard, score_makeup, tier_label, face_shape, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[history] Error fetching scans:', error.message);
+      } else {
+        setScans(scansData ?? []);
+      }
+    } else {
+      setIsGuest(true);
+      // Fall back to gender from AsyncStorage for guest
+      const profileStr = await AsyncStorage.getItem('@lume/guest_profile');
+      const guestProfile = profileStr ? JSON.parse(profileStr) as { gender?: string } : { gender: 'man' };
+      if (guestProfile.gender) setGender(guestProfile.gender);
+      setScans([]);
+    }
+
     setLoadingScans(false);
     setRefreshing(false);
   }, []);
@@ -147,7 +163,19 @@ export default function HistoryScreen() {
       return <ActivityIndicator color={Colors.gold} style={{ marginTop: Spacing.xxl }} />;
     }
     if (scans.length === 0) {
-      return (
+      return isGuest ? (
+        <View style={s.emptyBox}>
+          <Text style={s.emptyTitle}>No scan history</Text>
+          <Text style={s.emptyBody}>Sign in to save and view your scan history</Text>
+          <TouchableOpacity
+            style={s.emptyBtn}
+            onPress={() => router.push('/(auth)/signup')}
+            activeOpacity={0.85}
+          >
+            <Text style={s.emptyBtnText}>Sign in</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
         <View style={s.emptyBox}>
           <Text style={s.emptyTitle}>No scans yet</Text>
           <Text style={s.emptyBody}>Head to the Scan tab to get your first grooming score.</Text>
@@ -332,9 +360,11 @@ const s = StyleSheet.create({
   pillText:      { fontSize: Typography.size.sm, color: Colors.textSecondary, fontWeight: '600' },
   pillTextActive:{ color: Colors.background },
 
-  emptyBox:   { alignItems: 'center', paddingTop: Spacing.xxxl },
-  emptyTitle: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, marginBottom: Spacing.sm },
-  emptyBody:  { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+  emptyBox:     { alignItems: 'center', paddingTop: Spacing.xxxl },
+  emptyTitle:   { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, marginBottom: Spacing.sm },
+  emptyBody:    { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xl },
+  emptyBtn:     { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  emptyBtnText: { fontSize: Typography.size.md, fontWeight: '600', color: Colors.background },
 
   // Progress card
   progressCard: {

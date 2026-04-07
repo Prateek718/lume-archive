@@ -90,12 +90,14 @@ export async function getCurrentLocation(): Promise<{
   }
 }
 
-// Fetch salons within 3 km of the given coordinates.
+// Fetch salons within 5 km of the given coordinates.
 // Throws on API error so callers can show appropriate error states.
 export async function fetchNearbySalons(
   lat: number,
   lng: number,
 ): Promise<Salon[]> {
+  console.log('[nearby] Searching at coords:', lat, lng);
+
   const res = await fetch(NEARBY_URL, {
     method:  'POST',
     headers: {
@@ -104,18 +106,19 @@ export async function fetchNearbySalons(
       'X-Goog-FieldMask': FIELD_MASK,
     },
     body: JSON.stringify({
-      includedTypes: ['hair_salon', 'beauty_salon', 'barber_shop'],
+      includedTypes: ['hair_salon', 'beauty_salon', 'barber_shop', 'hair_care'],
       maxResultCount: 20,
       locationRestriction: {
         circle: {
           center: { latitude: lat, longitude: lng },
-          radius: 3000,
+          radius: 5000,
         },
       },
     }),
   });
 
   if (!res.ok) {
+    console.error('[nearby] Places API error status:', res.status);
     throw new Error(`places_api_${res.status}`);
   }
 
@@ -123,6 +126,8 @@ export async function fetchNearbySalons(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const places: any[] = json.places ?? [];
+
+  console.log('[nearby] Places count:', places.length);
 
   return places.map(place => ({
     id:          place.id as string,
