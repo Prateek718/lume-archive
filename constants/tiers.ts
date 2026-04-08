@@ -1,23 +1,58 @@
-// Score tier labels for the overall grooming score.
-// Each tier has a minimum score, a maximum score, and the label shown to the user.
+export type TierName = 'Polished' | 'Sharp' | 'Elevated';
 
 export interface Tier {
-  min:   number;
-  max:   number;
-  label: string;
+  name:        TierName;
+  diamonds:    number;
+  description: string;
+  minScore:    number;
+  maxScore:    number;
 }
 
 export const TIERS: Tier[] = [
-  { min:  0,  max: 20,  label: 'Needs Work'  },
-  { min: 21,  max: 40,  label: 'Developing'  },
-  { min: 41,  max: 60,  label: 'Refined'     },
-  { min: 61,  max: 75,  label: 'Sharp'       },
-  { min: 76,  max: 90,  label: 'Polished'    },
-  { min: 91,  max: 100, label: 'Immaculate'  },
+  {
+    name:        'Polished',
+    diamonds:    1,
+    description: "Great starting point — let's build your routine",
+    minScore:    0,
+    maxScore:    59,
+  },
+  {
+    name:        'Sharp',
+    diamonds:    2,
+    description: 'Solid grooming game — a few refinements away from exceptional',
+    minScore:    60,
+    maxScore:    79,
+  },
+  {
+    name:        'Elevated',
+    diamonds:    3,
+    description: "Exceptional grooming — you're setting the standard",
+    minScore:    80,
+    maxScore:    100,
+  },
 ];
 
-// Helper: pass a score (0-100) and get back the tier label.
+export function getTierFromScore(score: number): Tier {
+  return TIERS.find(t => score >= t.minScore && score <= t.maxScore) ?? TIERS[0];
+}
+
 export function getTierLabel(score: number): string {
-  const tier = TIERS.find(t => score >= t.min && score <= t.max);
-  return tier?.label ?? 'Needs Work';
+  return getTierFromScore(score).name;
+}
+
+export type CategoryPotential = 'High potential' | 'Good foundation' | 'Needs attention' | 'Strong asset';
+
+export function getCategoryPotential(score: number | null): CategoryPotential {
+  if (score === null) return 'Good foundation';
+  if (score >= 80)   return 'High potential';
+  if (score >= 70)   return 'Strong asset';
+  if (score >= 60)   return 'Good foundation';
+  return 'Needs attention';
+}
+
+export function getCategoryDiamonds(score: number | null): number {
+  if (score === null) return 2;
+  if (score >= 80)   return 3;
+  if (score >= 60)   return 2;
+  return 1;
 }

@@ -139,18 +139,6 @@ export default function RecommendationsScreen() {
           />
         )}
 
-        {/* Score strip */}
-        <View style={s.scoreStrip}>
-          <ScoreItem label="Hair"  score={scan.score_hair} />
-          <View style={s.scoreDivider} />
-          <ScoreItem label="Skin"  score={scan.score_skin} />
-          <View style={s.scoreDivider} />
-          {isWoman
-            ? <ScoreItem label="Makeup" score={scan.score_makeup} />
-            : <ScoreItem label="Beard"  score={scan.score_beard} />
-          }
-        </View>
-
         <View style={{ height: Spacing.xxxl }} />
       </Animated.ScrollView>
     </View>
@@ -188,15 +176,6 @@ function CategoryCard({ iconChar, iconBg, iconColor, title, subtitle, tags, onPr
   );
 }
 
-function ScoreItem({ label, score }: { label: string; score: number | null }) {
-  return (
-    <View style={s.scoreItem}>
-      <Text style={s.scoreNum}>{score ?? '—'}</Text>
-      <Text style={s.scoreLabel}>{label.toUpperCase()}</Text>
-    </View>
-  );
-}
-
 // ── Styles ─────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   screen:    { flex: 1, backgroundColor: Colors.background },
@@ -230,14 +209,4 @@ const s = StyleSheet.create({
   tag:    { backgroundColor: Colors.goldDim, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 3 },
   tagText:{ fontSize: Typography.size.xs, color: Colors.gold, textTransform: 'capitalize' },
 
-  scoreStrip: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.surface, borderRadius: Radius.card,
-    borderWidth: 1, borderColor: Colors.border,
-    padding: Spacing.md, marginTop: Spacing.md,
-  },
-  scoreItem:    { flex: 1, alignItems: 'center' },
-  scoreNum:     { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.cream },
-  scoreLabel:   { fontSize: Typography.size.xs, color: Colors.textSecondary, letterSpacing: 2, marginTop: 2 },
-  scoreDivider: { width: 1, height: 40, backgroundColor: Colors.border },
 });

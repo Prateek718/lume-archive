@@ -29,23 +29,36 @@ function buildPrompt(gender: string): string {
   return `Analyse this face photo and return ONLY a valid JSON object with no markdown, no code fences, no explanation.
 Gender context: ${gender}
 
+Focus ONLY on grooming-related observations that can be improved with effort, products, or professional help.
+
+When referencing fixed physical traits (face shape, jawline, natural features), note them ONLY as assets to work with — never as problems. For example: mention a strong jawline to suggest styles that complement it.
+
+Only grooming habits (beard maintenance, skin care routine, hair condition, dark circles, oiliness) should be noted as areas for improvement.
+
+NEVER say any natural feature is a problem or flaw.
+
 Return exactly this structure:
 {
   "face_shape": one of ["oval","round","square","heart","oblong","diamond"],
-  "skin_type": one of ["oily","dry","combination","normal","sensitive"],
-  "skin_concerns": array of zero or more from ["acne","pigmentation","dryness","dark_circles","uneven_tone","oiliness"],
   "hair_texture": one of ["straight","wavy","curly","coily"],
   "hair_condition": one of ["healthy","dry","damaged","oily","thinning"],
+  "skin_type": one of ["oily","dry","combination","normal","sensitive"],
+  "skin_concerns": array of zero or more from ["acne","dryness","oiliness","dark_circles","uneven_texture","dehydration"],
   "beard_density": one of ["none","light","medium","heavy"] or null if gender is woman,
-  "brow_shape": one of ["arch","straight","rounded","sparse"] or null if gender is man,
-  "undereye": one of ["dark","puffy","hollow","normal"] or null if gender is man,
-  "score_hair": integer 0-100 based on hair health and presentation,
-  "score_skin": integer 0-100 based on skin clarity and condition,
-  "score_beard": integer 0-100 based on beard grooming or null if gender is woman,
-  "score_makeup": integer 0-100 based on brow shape and skin evenness or null if gender is man
+  "beard_condition": one of ["well_groomed","needs_shaping","patchy","untrimmed"] or null if gender is woman,
+  "brow_condition": one of ["well_defined","sparse","ungroomed","over_plucked"] or null if gender is man,
+  "undereye": one of ["dark_circles","puffiness","normal"] or null if gender is man,
+  "score_hair": integer 0-100 based on hair grooming and condition only,
+  "score_skin": integer 0-100 based on skin care routine evidence only,
+  "score_beard": integer 0-100 based on beard grooming only or null if gender is woman,
+  "score_makeup": integer 0-100 based on brow grooming and skin care only or null if gender is man
 }
 
-Scoring guidance: Be consistent and conservative. A score of 70-80 represents someone who is well-groomed. Only give 85+ for exceptional grooming. Only give below 50 for clearly poor grooming. When in doubt, score in the 60-75 range.`;
+Scoring guidance: Score based on evidence of grooming effort and maintenance only.
+A well-maintained beard scores high regardless of density.
+Healthy conditioned hair scores high regardless of texture or colour.
+Never penalise for fixed traits.
+70-80 = good grooming effort. 85+ = exceptional maintenance. Below 60 = clear grooming concerns to address.`;
 }
 
 // Pass the base64-encoded image string (no data URI prefix) and the user's gender.

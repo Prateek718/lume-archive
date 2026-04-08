@@ -8,12 +8,12 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import Svg, { Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { useScan } from '../../hooks/useScan';
 import { GUEST_PROFILE_KEY } from '../_layout';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { getTierFromScore, getCategoryPotential, getCategoryDiamonds } from '../../constants/tiers';
 import type { Scan } from '../../types';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -32,17 +32,6 @@ const OVAL_W    = SW * 0.75;
 const OVAL_H    = SH * 0.60;
 const OVAL_LEFT = (SW - OVAL_W) / 2;
 const OVAL_TOP  = (SH - OVAL_H) / 2;
-
-// Arc gauge constants — 270° horseshoe, gap at bottom
-const R        = 88;
-const SW_STROKE = 14;
-const ARC_SIZE  = (R + SW_STROKE) * 2 + 4;
-const ARC_CX    = ARC_SIZE / 2;
-const CIRCUM    = 2 * Math.PI * R;
-const ARC_LEN   = CIRCUM * 0.75;   // 270°
-
-// Animated SVG circle (strokeDashoffset can't use native driver)
-const AnimatedCircle = Animated.createAnimatedComponent(Circle as React.ComponentType<any>);
 
 // ─── HOME ────────────────────────────────────────────────────────────────────
 function HomeScreen({ onStart, gender, onGenderChange, isGuest }: {
@@ -227,118 +216,115 @@ function ProcessingScreen({ step }: { step: string }) {
   );
 }
 
+// ─── DIAMONDS ────────────────────────────────────────────────────────────────
+function Diamonds({ count, total = 3 }: { count: number; total?: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 4 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            width: 9,
+            height: 9,
+            backgroundColor: i < count ? '#C9A84C' : '#2A2420',
+            borderRadius: 2,
+            transform: [{ rotate: '45deg' }],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 // ─── RESULT ───────────────────────────────────────────────────────────────────
 function ResultScreen({ scan, gender, onScanAgain }: {
   scan:        NonNullable<ReturnType<typeof useScan>['result']>;
   gender:      string;
   onScanAgain: () => void;
 }) {
-  const router  = useRouter();
-  const score   = scan.score_overall ?? 0;
+  const router   = useRouter();
+  const tier     = getTierFromScore(scan.score_overall ?? 0);
+  const isWoman  = gender === 'woman';
 
-  const progress        = useRef(new Animated.Value(0)).current;
-  const tierFade        = useRef(new Animated.Value(0)).current;
-  const catFade         = useRef(new Animated.Value(0)).current;
-  const catSlide        = useRef(new Animated.Value(24)).current;
-  const [display, setDisplay] = useState(0);
-
-  const strokeOffset = progress.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [ARC_LEN, ARC_LEN * (1 - score / 100)],
-  });
+  const catFade  = useRef(new Animated.Value(0)).current;
+  const catSlide = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
-    // Arc + count-up over 1.8 s
-    Animated.timing(progress, {
-      toValue: 1, duration: 1800, useNativeDriver: false,
-    }).start();
-    const id = progress.addListener(({ value }) => setDisplay(Math.round(value * score)));
-
-    // Tier label fades in after arc completes
-    Animated.timing(tierFade, {
-      toValue: 1, duration: 400, delay: 1900, useNativeDriver: true,
-    }).start();
-
-    // Categories slide up
     Animated.parallel([
-      Animated.timing(catFade,  { toValue: 1, duration: 400, delay: 2200, useNativeDriver: true }),
-      Animated.timing(catSlide, { toValue: 0, duration: 400, delay: 2200, useNativeDriver: true }),
+      Animated.timing(catFade,  { toValue: 1, duration: 600, delay: 300, useNativeDriver: true }),
+      Animated.timing(catSlide, { toValue: 0, duration: 600, delay: 300, useNativeDriver: true }),
     ]).start();
-
-    return () => progress.removeListener(id);
   }, []);
 
-  const categories = gender === 'woman'
+  const categories = isWoman
     ? [
-        { label: 'HAIR',   score: scan.score_hair   },
-        { label: 'SKIN',   score: scan.score_skin   },
-        { label: 'MAKEUP', score: scan.score_makeup },
+        { label: 'Hair',   score: scan.score_hair   },
+        { label: 'Skin',   score: scan.score_skin   },
+        { label: 'Makeup', score: scan.score_makeup },
       ]
     : [
-        { label: 'HAIR',  score: scan.score_hair  },
-        { label: 'SKIN',  score: scan.score_skin  },
-        { label: 'BEARD', score: scan.score_beard },
+        { label: 'Hair',  score: scan.score_hair  },
+        { label: 'Skin',  score: scan.score_skin  },
+        { label: 'Beard', score: scan.score_beard },
       ];
+
+  const pills = [
+    scan.face_shape   && `${scan.face_shape} face`,
+    scan.hair_texture && `${scan.hair_texture} hair`,
+    scan.skin_type    && `${scan.skin_type} skin`,
+  ].filter(Boolean) as string[];
 
   return (
     <SafeAreaView style={s.fill}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={s.resultBox} showsVerticalScrollIndicator={false}>
-
-        {/* Arc gauge */}
-        <View style={s.arcWrap}>
-          <Svg width={ARC_SIZE} height={ARC_SIZE}>
-            {/* Track */}
-            <Circle
-              cx={ARC_CX} cy={ARC_CX} r={R}
-              fill="none" stroke={Colors.surface2}
-              strokeWidth={SW_STROKE}
-              strokeDasharray={`${ARC_LEN} ${CIRCUM}`}
-              strokeLinecap="round"
-              transform={`rotate(135, ${ARC_CX}, ${ARC_CX})`}
-            />
-            {/* Animated progress */}
-            <AnimatedCircle
-              cx={ARC_CX} cy={ARC_CX} r={R}
-              fill="none" stroke={Colors.gold}
-              strokeWidth={SW_STROKE}
-              strokeDasharray={`${ARC_LEN} ${CIRCUM}`}
-              strokeDashoffset={strokeOffset}
-              strokeLinecap="round"
-              transform={`rotate(135, ${ARC_CX}, ${ARC_CX})`}
-            />
-          </Svg>
-          {/* Score number centred inside arc */}
-          <View style={s.arcCenter} pointerEvents="none">
-            <Text style={s.arcScore}>{display}</Text>
-            <Text style={s.arcLabel}>/ 100</Text>
-          </View>
+      <ScrollView
+        contentContainerStyle={s.resultBox}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Diamond icon */}
+        <View style={s.iconWrap}>
+          <View style={s.iconDiamond} />
         </View>
 
-        {/* Tier label */}
-        <Animated.Text style={[s.tierLabel, { opacity: tierFade }]}>
-          {scan.tier_label}
-        </Animated.Text>
+        {/* Tier */}
+        <Text style={s.profileLabel}>YOUR GROOMING PROFILE</Text>
+        <Text style={s.tierName}>{tier.name}</Text>
+        <Diamonds count={tier.diamonds} />
+        <Text style={s.tierDesc}>{tier.description}</Text>
 
-        {/* Category scores */}
-        <Animated.View style={[s.catRow, { opacity: catFade, transform: [{ translateY: catSlide }] }]}>
-          {categories.map(cat => (
-            <View key={cat.label} style={s.catItem}>
-              <Text style={s.catScore}>{cat.score ?? '—'}</Text>
-              <Text style={s.catLabel}>{cat.label}</Text>
+        {/* Divider */}
+        <View style={s.divider} />
+
+        {/* Pills */}
+        <Animated.View style={[s.pillsRow, { opacity: catFade, transform: [{ translateY: catSlide }] }]}>
+          {pills.map(p => (
+            <View key={p} style={s.pill}>
+              <Text style={s.pillText}>{p}</Text>
             </View>
           ))}
         </Animated.View>
 
-        {/* Face detail pills */}
-        <Animated.View style={[s.detailsRow, { opacity: catFade }]}>
-          {scan.face_shape   && <View style={s.pill}><Text style={s.pillText}>{scan.face_shape} face</Text></View>}
-          {scan.skin_type    && <View style={s.pill}><Text style={s.pillText}>{scan.skin_type} skin</Text></View>}
-          {scan.hair_texture && <View style={s.pill}><Text style={s.pillText}>{scan.hair_texture} hair</Text></View>}
+        {/* Categories */}
+        <Animated.View style={[s.categoriesWrap, { opacity: catFade, transform: [{ translateY: catSlide }] }]}>
+          <Text style={s.focusLabel}>AREAS TO FOCUS ON</Text>
+          <View style={s.categoriesCard}>
+            {categories.map((cat, idx) => (
+              <View key={cat.label} style={[
+                s.catRow,
+                idx < categories.length - 1 && s.catRowBorder,
+              ]}>
+                <View>
+                  <Text style={s.catLabel}>{cat.label}</Text>
+                  <Text style={s.catPotential}>{getCategoryPotential(cat.score)}</Text>
+                </View>
+                <Diamonds count={getCategoryDiamonds(cat.score)} />
+              </View>
+            ))}
+          </View>
         </Animated.View>
 
         {/* Actions */}
-        <Animated.View style={[{ width: '100%' }, { opacity: catFade }]}>
+        <Animated.View style={[s.actionsWrap, { opacity: catFade }]}>
           <TouchableOpacity
             style={s.ctaButton}
             activeOpacity={0.8}
@@ -472,35 +458,21 @@ const s = StyleSheet.create({
     flexGrow: 1, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xl,
   },
-  arcWrap: {
-    width: ARC_SIZE, height: ARC_SIZE,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: Spacing.md,
-  },
-  arcCenter: {
-    position: 'absolute', alignItems: 'center',
-  },
-  arcScore: {
-    fontFamily: Typography.serif, fontSize: 64, color: Colors.cream, lineHeight: 68,
-  },
-  arcLabel: {
-    fontSize: Typography.size.sm, color: Colors.textSecondary,
-  },
-  tierLabel: {
-    fontFamily: Typography.serif, fontSize: Typography.size.xl,
-    color: Colors.gold, letterSpacing: 1, marginBottom: Spacing.xl,
-  },
-  catRow: {
-    flexDirection: 'row', justifyContent: 'center',
-    gap: Spacing.xxl, marginBottom: Spacing.lg,
-  },
-  catItem:  { alignItems: 'center' },
-  catScore: { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.cream },
-  catLabel: { fontSize: Typography.size.xs, color: Colors.textSecondary, letterSpacing: 4, textTransform: 'uppercase', marginTop: 2 },
-  detailsRow: {
-    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
-    gap: Spacing.sm, marginBottom: Spacing.xl,
-  },
-  pill:     { backgroundColor: Colors.surface, borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
-  pillText: { fontSize: Typography.size.sm, color: Colors.textSecondary, textTransform: 'capitalize' },
+  iconWrap:       { width: 52, height: 52, backgroundColor: 'rgba(201,168,76,0.1)', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)', borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  iconDiamond:    { width: 22, height: 22, backgroundColor: Colors.gold, borderRadius: 3, transform: [{ rotate: '45deg' }] },
+  profileLabel:   { fontSize: 10, color: Colors.textSecondary, letterSpacing: 3, marginBottom: 8 },
+  tierName:       { fontFamily: Typography.serif, fontSize: 38, color: Colors.cream, lineHeight: 44, marginBottom: 10 },
+  tierDesc:       { fontSize: 12, color: Colors.textSecondary, textAlign: 'center', marginTop: 10, marginBottom: 4, paddingHorizontal: Spacing.lg, lineHeight: 18 },
+  divider:        { height: 1, backgroundColor: Colors.border, width: '100%', marginVertical: Spacing.lg },
+  pillsRow:       { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.xs, marginBottom: Spacing.xl },
+  focusLabel:     { fontSize: 10, color: Colors.gold, letterSpacing: 3, marginBottom: Spacing.sm, alignSelf: 'flex-start' },
+  categoriesWrap: { width: '100%', marginBottom: Spacing.xl },
+  categoriesCard: { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md },
+  catRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  catRowBorder:   { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  catLabel:       { fontSize: 14, color: Colors.cream, marginBottom: 3 },
+  catPotential:   { fontSize: 11, color: Colors.textSecondary },
+  actionsWrap:    { width: '100%' },
+  pill:           { backgroundColor: Colors.surface, borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
+  pillText:       { fontSize: Typography.size.sm, color: Colors.textSecondary, textTransform: 'capitalize' },
 });

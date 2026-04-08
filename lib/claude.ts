@@ -14,6 +14,17 @@ function buildPrompt(gender: string, analysis: GeminiAnalysis): string {
 Gender: ${gender}
 Face analysis: ${JSON.stringify(analysis)}
 
+When referencing fixed physical traits (face shape, jawline, natural features), frame them only as assets to work with.
+For example: 'Your oval face shape is versatile — here are styles that complement it.' Never say a natural feature is a problem or flaw.
+
+Only grooming habits (beard maintenance, skin routine, hair condition) should be framed as improvable.
+
+For dark circles: recommend eye cream, cold compress, adequate sleep — frame as 'To brighten the under-eye area, consider...' not 'you have dark circles'.
+
+For skin concerns: frame as routine-building. Use 'Your skin will benefit from...' not 'Your skin is...'
+
+All advice must be actionable — something the user can do, buy, or ask a professional for.
+
 If gender is 'woman', ONLY suggest 3 styles from this list:
 Bob cut, Lob haircut, Pixie cut, Bangs, Shag haircut, Wolf cut, Blunt cut, Curtain bangs, Butterfly haircut, Bixie cut, French bob, Balayage, Updo, Bun, Ponytail, Beach waves, Feathered hair, Wedge haircut, Layer haircut, Razor cut, Textured layers
 
