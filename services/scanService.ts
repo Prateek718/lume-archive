@@ -113,13 +113,25 @@ export async function runScan(
     } as Scan;
   }
 
+  console.log('[scanService] scanRow keys:', Object.keys(scanRow));
+  console.log('[scanService] scanRow sample:', JSON.stringify({
+    user_id:       scanRow.user_id,
+    face_shape:    scanRow.face_shape,
+    score_overall: scanRow.score_overall,
+    tier_label:    scanRow.tier_label,
+  }));
+
   const { data, error } = await supabase
     .from('scans')
     .insert(scanRow)
     .select()
     .single();
 
-  if (error) throw new Error(`Failed to save scan: ${error.message}`);
+  if (error) {
+    console.error('[scanService] Supabase insert error:', error.message);
+    console.error('[scanService] Supabase error details:', JSON.stringify(error));
+    throw new Error(`Failed to save scan: ${error.message}`);
+  }
   console.log('[scanService] Saved successfully');
 
   // Step 6 — update last_scan_at on the user's profile
