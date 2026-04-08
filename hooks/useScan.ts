@@ -44,13 +44,20 @@ export function useScan() {
       if (user) {
         // Authenticated user
         userId = user.id;
-        // Get gender from Supabase profile
-        const { data: profile } = await supabase
-          .from('users')
-          .select('gender')
-          .eq('id', user.id)
-          .single();
-        if (profile?.gender) gender = profile.gender as string;
+        try {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('gender')
+            .eq('id', user.id)
+            .single();
+          if (profile?.gender) gender = profile.gender as string;
+          console.log('[useScan] Gender from profile:', gender);
+        } catch (profileError: unknown) {
+          console.error('[useScan] Failed to fetch gender:',
+            profileError instanceof Error ? profileError.message : String(profileError));
+          // Use genderParam as fallback
+          gender = genderParam;
+        }
       } else {
         // Guest user
         userId = 'guest';
