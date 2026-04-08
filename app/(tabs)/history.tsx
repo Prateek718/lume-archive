@@ -1,6 +1,6 @@
-// History tab — Scans section (timeline + line chart) + Routine section (daily checklist)
+// History tab — Scans section (timeline) + Routine section (daily checklist)
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl,
@@ -8,25 +8,34 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { getTierLabel, getTierFromScore, getCategoryDiamonds } from '../../constants/tiers';
 import type { Scan } from '../../types';
 
-// ── Routine steps — shown as a daily checklist ────────────────────────────
-const ROUTINE_STEPS = [
-  { id: 'cleanse_am',  label: 'Cleanse',        time: 'AM' },
-  { id: 'moisturise',  label: 'Moisturise',      time: 'AM' },
-  { id: 'spf',         label: 'SPF 30+',         time: 'AM' },
-  { id: 'cleanse_pm',  label: 'Cleanse',         time: 'PM' },
-  { id: 'serum',       label: 'Serum / treatment',time: 'PM' },
-  { id: 'night_cream', label: 'Night cream',     time: 'PM' },
+// ── Types ──────────────────────────────────────────────────────────────────
+type RoutineStep = { id: string; label: string; time: 'Morning' | 'Evening' };
+type StreakData  = { current: number; best: number; lastDate: string };
+
+// ── Routine AsyncStorage keys ──────────────────────────────────────────────
+const ROUTINE_LOG_KEY    = '@lume/routine_log';
+const ROUTINE_STEPS_KEY  = '@lume/routine_steps';
+const ROUTINE_STREAK_KEY = '@lume/routine_streak';
+
+const DEFAULT_STEPS: RoutineStep[] = [
+  { id: 'morning_1', label: 'Gentle cleanser',  time: 'Morning' },
+  { id: 'morning_2', label: 'Moisturiser',       time: 'Morning' },
+  { id: 'morning_3', label: 'SPF 30+',           time: 'Morning' },
+  { id: 'evening_1', label: 'Cleanser',          time: 'Evening' },
+  { id: 'evening_2', label: 'Night moisturiser', time: 'Evening' },
 ];
 
-// Key: YYYY-MM-DD — value: JSON array of completed step IDs
-function todayKey() {
-  return `routine_${new Date().toISOString().slice(0, 10)}`;
+// ── Helpers ────────────────────────────────────────────────────────────────
+function isYesterday(dateStr: string): boolean {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return dateStr === yesterday.toISOString().slice(0, 10);
 }
 
 // ── Diamonds ──────────────────────────────────────────────────────────────
@@ -62,8 +71,9 @@ export default function HistoryScreen() {
   const [isGuest,      setIsGuest]      = useState(false);
 
   // Routine
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [streak,  setStreak]  = useState(0);
+  const [routineSteps, setRoutineSteps] = useState<RoutineStep[]>(DEFAULT_STEPS);
+  const [routineLog,   setRoutineLog]   = useState<Record<string, string[]>>({});
+  const [streakData,   setStreakData]   = useState<StreakData>({ current: 0, best: 0, lastDate: '' });
 
   // ── Fetch scans ───────────────────────────────────────────────────────────
   const fetchScans = useCallback(async () => {
@@ -105,24 +115,37 @@ export default function HistoryScreen() {
 
   // ── Load routine state ────────────────────────────────────────────────────
   const loadRoutine = useCallback(async () => {
-    const raw = await AsyncStorage.getItem(todayKey());
-    const done: string[] = raw ? JSON.parse(raw) : [];
-    setChecked(new Set(done));
-    // Streak: count consecutive past days with all 6 steps complete
-    let s = 0;
-    const today = new Date();
-    for (let d = 1; d <= 30; d++) {
-      const day = new Date(today);
-      day.setDate(today.getDate() - d);
-      const key = `routine_${day.toISOString().slice(0, 10)}`;
-      const val = await AsyncStorage.getItem(key);
-      const dayDone: string[] = val ? JSON.parse(val) : [];
-      if (dayDone.length === ROUTINE_STEPS.length) { s++; } else { break; }
+    // Load steps (or persist defaults)
+    const stepsRaw = await AsyncStorage.getItem(ROUTINE_STEPS_KEY);
+    const steps: RoutineStep[] = stepsRaw
+      ? JSON.parse(stepsRaw) as RoutineStep[]
+      : DEFAULT_STEPS;
+    if (!stepsRaw) {
+      await AsyncStorage.setItem(ROUTINE_STEPS_KEY, JSON.stringify(DEFAULT_STEPS));
     }
-    setStreak(s);
+    setRoutineSteps(steps);
+
+    // Load full log
+    const logRaw = await AsyncStorage.getItem(ROUTINE_LOG_KEY);
+    const log: Record<string, string[]> = logRaw
+      ? JSON.parse(logRaw) as Record<string, string[]>
+      : {};
+    setRoutineLog(log);
+
+    // Load streak
+    const streakRaw = await AsyncStorage.getItem(ROUTINE_STREAK_KEY);
+    const streak: StreakData = streakRaw
+      ? JSON.parse(streakRaw) as StreakData
+      : { current: 0, best: 0, lastDate: '' };
+    setStreakData(streak);
   }, []);
 
-  useEffect(() => { fetchScans(); loadRoutine(); }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchScans();
+      loadRoutine();
+    }, [fetchScans, loadRoutine]),
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -130,11 +153,36 @@ export default function HistoryScreen() {
     loadRoutine();
   };
 
-  const toggleStep = async (id: string) => {
-    const next = new Set(checked);
-    if (next.has(id)) { next.delete(id); } else { next.add(id); }
-    setChecked(next);
-    await AsyncStorage.setItem(todayKey(), JSON.stringify([...next]));
+  const toggleStep = async (stepId: string) => {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayDone = [...(routineLog[todayKey] ?? [])];
+    const idx = todayDone.indexOf(stepId);
+    const adding = idx < 0;
+
+    if (adding) {
+      todayDone.push(stepId);
+    } else {
+      todayDone.splice(idx, 1);
+    }
+
+    const newLog = { ...routineLog, [todayKey]: todayDone };
+    setRoutineLog(newLog);
+    await AsyncStorage.setItem(ROUTINE_LOG_KEY, JSON.stringify(newLog));
+
+    // Update streak only when checking (not unchecking) and lastDate ≠ today
+    if (adding && streakData.lastDate !== todayKey) {
+      const next: StreakData = { ...streakData };
+      if (isYesterday(next.lastDate)) {
+        next.current += 1;
+        next.best = Math.max(next.current, next.best);
+      } else {
+        next.current = 1;
+        next.best = Math.max(1, next.best);
+      }
+      next.lastDate = todayKey;
+      setStreakData(next);
+      await AsyncStorage.setItem(ROUTINE_STREAK_KEY, JSON.stringify(next));
+    }
   };
 
   // ── Scans section ─────────────────────────────────────────────────────────
@@ -229,30 +277,52 @@ export default function HistoryScreen() {
 
   // ── Routine section ───────────────────────────────────────────────────────
   const RoutineSection = () => {
-    const completedToday = checked.size;
-    const total = ROUTINE_STEPS.length;
-    const pct = Math.round((completedToday / total) * 100);
+    if (isGuest) {
+      return (
+        <View style={s.emptyBox}>
+          <Text style={s.emptyTitle}>Sign in to track your routine</Text>
+          <Text style={s.emptyBody}>Build streaks and track your grooming consistency</Text>
+          <TouchableOpacity
+            style={s.emptyBtn}
+            onPress={() => router.push('/(auth)/signup')}
+            activeOpacity={0.85}
+          >
+            <Text style={s.emptyBtnText}>Sign in</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    const todayKey   = new Date().toISOString().slice(0, 10);
+    const todayDone  = new Set<string>(routineLog[todayKey] ?? []);
+    const total      = routineSteps.length;
+    const completed  = todayDone.size;
+    const pct        = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return (
       <>
+        {/* Streak card */}
         <View style={s.streakCard}>
           <View style={s.streakLeft}>
-            <Text style={s.streakNum}>{streak}</Text>
+            <Text style={s.streakEmoji}>🔥</Text>
+            <Text style={s.streakNum}>{streakData.current}</Text>
             <Text style={s.streakLabel}>day streak</Text>
           </View>
           <View style={s.streakRight}>
-            <Text style={s.streakToday}>{completedToday}/{total} today</Text>
+            <Text style={s.streakBest}>Best: {streakData.best} days</Text>
+            <Text style={s.streakToday}>{completed}/{total} today</Text>
             <View style={s.streakBar}>
               <View style={[s.streakFill, { width: `${pct}%` as any }]} />
             </View>
           </View>
         </View>
 
-        {(['AM', 'PM'] as const).map(period => (
+        {/* Morning + Evening checklists */}
+        {(['Morning', 'Evening'] as const).map(period => (
           <View key={period} style={s.periodBlock}>
-            <Text style={s.periodLabel}>{period} ROUTINE</Text>
-            {ROUTINE_STEPS.filter(r => r.time === period).map(step => {
-              const done = checked.has(step.id);
+            <Text style={s.periodLabel}>{period.toUpperCase()} ROUTINE</Text>
+            {routineSteps.filter(r => r.time === period).map(step => {
+              const done = todayDone.has(step.id);
               return (
                 <TouchableOpacity
                   key={step.id}
@@ -367,20 +437,22 @@ const s = StyleSheet.create({
   scanPillText: { fontSize: 10, color: Colors.textSecondary, textTransform: 'capitalize' },
 
   // Streak card
-  streakCard:  {
+  streakCard: {
     flexDirection: 'row', backgroundColor: Colors.surface,
     borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border,
     padding: Spacing.lg, marginBottom: Spacing.lg, alignItems: 'center',
   },
-  streakLeft:    { marginRight: Spacing.xl },
-  streakNum:     { fontFamily: Typography.serif, fontSize: 40, color: Colors.gold },
-  streakLabel:   { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  streakRight:   { flex: 1 },
-  streakToday:   { fontSize: Typography.size.base, color: Colors.cream, marginBottom: Spacing.xs },
-  streakBar:     { height: 4, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
-  streakFill:    { height: 4, backgroundColor: Colors.gold, borderRadius: 2 },
+  streakLeft:  { marginRight: Spacing.xl, alignItems: 'center' },
+  streakEmoji: { fontSize: 24, marginBottom: 2 },
+  streakNum:   { fontFamily: Typography.serif, fontSize: 40, color: Colors.gold, lineHeight: 44 },
+  streakLabel: { fontSize: Typography.size.sm, color: Colors.textSecondary },
+  streakRight: { flex: 1 },
+  streakBest:  { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.xs },
+  streakToday: { fontSize: Typography.size.base, color: Colors.cream, marginBottom: Spacing.xs },
+  streakBar:   { height: 4, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
+  streakFill:  { height: 4, backgroundColor: Colors.gold, borderRadius: 2 },
 
-  // Routine
+  // Routine checklist
   periodBlock: { marginBottom: Spacing.lg },
   periodLabel: { fontSize: Typography.size.xs, color: Colors.gold, letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.sm },
   stepRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.xs },

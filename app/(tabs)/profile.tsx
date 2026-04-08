@@ -1,125 +1,173 @@
-// Profile tab — avatar, stats, settings menu
+// Profile tab — user info, stats, routine reminders, account actions
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Switch, ActivityIndicator, RefreshControl, Alert,
+  Switch, Alert, Platform,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import { GUEST_PROFILE_KEY, DEFAULT_GUEST, FIRST_LAUNCH_KEY } from '../_layout';
+import { FIRST_LAUNCH_KEY, GUEST_PROFILE_KEY } from '../_layout';
+import { getTierFromScore } from '../../constants/tiers';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [isGuest,      setIsGuest]      = useState(true);
-  const [displayName,  setDisplayName]  = useState('Guest');
-  const [city,         setCity]         = useState('');
-  const [referralCode, setReferralCode] = useState<string | null>(null);
-  const [scanCount,    setScanCount]    = useState(0);
-  const [topScore,     setTopScore]     = useState<number | null>(null);
-  const [loading,      setLoading]      = useState(true);
-  const [refreshing,   setRefreshing]   = useState(false);
-  const [notifReminders, setNotifReminders] = useState(true);
-  const [notifRoutine,   setNotifRoutine]   = useState(true);
+  const [isGuest,           setIsGuest]           = useState(true);
+  const [displayName,       setDisplayName]       = useState('');
+  const [gender,            setGender]            = useState('');
+  const [city,              setCity]              = useState('');
+  const [scanCount,         setScanCount]         = useState(0);
+  const [currentStreak,     setCurrentStreak]     = useState(0);
+  const [bestStreak,        setBestStreak]        = useState(0);
+  const [topTier,           setTopTier]           = useState('');
+  const [reminderEnabled,   setReminderEnabled]   = useState(false);
+  const [morningTime,       setMorningTime]       = useState(new Date(new Date().setHours(8, 0, 0, 0)));
+  const [eveningTime,       setEveningTime]       = useState(new Date(new Date().setHours(21, 0, 0, 0)));
+  const [showMorningPicker, setShowMorningPicker] = useState(false);
+  const [showEveningPicker, setShowEveningPicker] = useState(false);
 
-  const checkAuthStatus = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, []),
+  );
 
-      if (user) {
-        setIsGuest(false);
-        const { data: profile } = await supabase
-          .from('users')
-          .select('display_name, city, avatar_url, referral_code, notification_reminders, notification_routine')
-          .eq('id', user.id)
-          .single();
-
-        if (profile) {
-          setDisplayName(profile.display_name ?? user.email ?? 'User');
-          setCity(profile.city ?? '');
-          setReferralCode(profile.referral_code ?? null);
-          setNotifReminders(profile.notification_reminders ?? true);
-          setNotifRoutine(profile.notification_routine ?? true);
-        } else {
-          setDisplayName(user.email ?? 'User');
-        }
-      } else {
-        setIsGuest(true);
-        const raw = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
-        const guestProfile = raw ? JSON.parse(raw) : DEFAULT_GUEST;
-        setDisplayName(guestProfile.display_name ?? 'Guest');
-        setCity(guestProfile.city ?? '');
-        setNotifReminders(guestProfile.notification_reminders ?? true);
-        setNotifRoutine(guestProfile.notification_routine ?? true);
-      }
-    } catch {
-      setIsGuest(true);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => { checkAuthStatus(); }, []);
-
-  const onRefresh = () => { setRefreshing(true); checkAuthStatus(); };
-
-  const saveNotifPref = async (
-    key: 'notification_reminders' | 'notification_routine',
-    value: boolean,
-  ) => {
-    // Persist for guests via AsyncStorage; for signed-in users update Supabase
+  async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('users').update({ [key]: value }).eq('id', user.id);
-    } else {
-      const raw = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
-      const profile = raw ? JSON.parse(raw) : {};
-      await AsyncStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify({ ...profile, [key]: value }));
+
+    if (!user) {
+      setIsGuest(true);
+      return;
     }
-  };
 
-  const handleReferral = () => {
-    if (!referralCode) return;
-    Alert.alert(
-      'Your referral code',
-      `Share this code with friends:\n\n${referralCode}\n\nWhen they sign up, you both get credit.`,
-      [{ text: 'OK' }],
-    );
-  };
+    setIsGuest(false);
 
-  const handleDeleteAccount = async () => {
-    try {
-      const { error } = await supabase.rpc('delete_user');
+    // Load user profile
+    const { data: profile } = await supabase
+      .from('users')
+      .select('display_name, gender, city')
+      .eq('id', user.id)
+      .single();
 
-      if (error) {
-        console.error('[profile] Delete account error:', error.message);
-        Alert.alert(
-          'Error',
-          'Could not delete account. Please try again or contact support.'
-        );
+    if (profile) {
+      setDisplayName(profile.display_name ?? '');
+      setGender(profile.gender ?? '');
+      setCity(profile.city ?? '');
+    }
+
+    // Load scan count and top tier
+    const { data: scans } = await supabase
+      .from('scans')
+      .select('score_overall, tier_label')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (scans) {
+      setScanCount(scans.length);
+      const bestScore = scans.length > 0
+        ? Math.max(...scans.map(sc => sc.score_overall ?? 0))
+        : 0;
+      if (bestScore > 0) setTopTier(getTierFromScore(bestScore).name);
+    }
+
+    // Load streak from AsyncStorage
+    const streakRaw = await AsyncStorage.getItem('@lume/routine_streak');
+    if (streakRaw) {
+      const streak = JSON.parse(streakRaw) as { current: number; best: number };
+      setCurrentStreak(streak.current ?? 0);
+      setBestStreak(streak.best ?? 0);
+    }
+
+    // Load notification settings
+    const reminderRaw = await AsyncStorage.getItem('@lume/reminder_enabled');
+    setReminderEnabled(reminderRaw === 'true');
+
+    const morningRaw = await AsyncStorage.getItem('@lume/morning_time');
+    if (morningRaw) setMorningTime(new Date(morningRaw));
+
+    const eveningRaw = await AsyncStorage.getItem('@lume/evening_time');
+    if (eveningRaw) setEveningTime(new Date(eveningRaw));
+  }
+
+  async function handleReminderToggle(value: boolean) {
+    setReminderEnabled(value);
+    await AsyncStorage.setItem('@lume/reminder_enabled', value ? 'true' : 'false');
+
+    if (value) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        setReminderEnabled(false);
+        await AsyncStorage.setItem('@lume/reminder_enabled', 'false');
+        Alert.alert('Permission needed', 'Enable notifications in your phone settings.');
         return;
       }
-
-      await supabase.auth.signOut();
-      await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
-      router.replace('/(auth)/splash');
-    } catch (error: unknown) {
-      console.error('[profile] Delete account error:', error);
-      Alert.alert(
-        'Error',
-        'Could not delete account. Please try again or contact support.'
-      );
+      await scheduleReminders(morningTime, eveningTime);
+    } else {
+      await Notifications.cancelAllScheduledNotificationsAsync();
     }
-  };
+  }
 
-  const handleSignOut = () => {
+  async function scheduleReminders(morning: Date, evening: Date) {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Lumé',
+        body: 'Time for your morning grooming routine ☀️',
+        data: { type: 'routine_morning' },
+      },
+      trigger: {
+        hour: morning.getHours(),
+        minute: morning.getMinutes(),
+        repeats: true,
+      } as any,
+    });
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Lumé',
+        body: 'Time for your evening grooming routine 🌙',
+        data: { type: 'routine_evening' },
+      },
+      trigger: {
+        hour: evening.getHours(),
+        minute: evening.getMinutes(),
+        repeats: true,
+      } as any,
+    });
+  }
+
+  async function handleMorningChange(event: any, date?: Date) {
+    setShowMorningPicker(false);
+    if (date) {
+      setMorningTime(date);
+      await AsyncStorage.setItem('@lume/morning_time', date.toISOString());
+      if (reminderEnabled) await scheduleReminders(date, eveningTime);
+    }
+  }
+
+  async function handleEveningChange(event: any, date?: Date) {
+    setShowEveningPicker(false);
+    if (date) {
+      setEveningTime(date);
+      await AsyncStorage.setItem('@lume/evening_time', date.toISOString());
+      if (reminderEnabled) await scheduleReminders(morningTime, date);
+    }
+  }
+
+  function formatTime(date: Date): string {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function handleSignOut() {
     Alert.alert(
       'Sign out',
       'Are you sure you want to sign out?',
@@ -138,157 +186,215 @@ export default function ProfileScreen() {
             }
           },
         },
-      ]
+      ],
     );
-  };
+  }
 
-  if (loading) {
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Delete account',
+      'This will permanently delete your account and all your data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.rpc('delete_user');
+              if (error) throw error;
+              await supabase.auth.signOut();
+              await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
+              router.replace('/(auth)/splash');
+            } catch (error: unknown) {
+              Alert.alert('Error', 'Could not delete account. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  // ── Guest view ─────────────────────────────────────────────────────────────
+  if (isGuest) {
     return (
-      <View style={[s.screen, s.centre, { paddingTop: insets.top }]}>
-        <ActivityIndicator color={Colors.gold} size="large" />
+      <View style={[s.screen, { paddingTop: insets.top }]}>
+        <StatusBar style="light" />
+        <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+          <Text style={s.pageTitle}>Profile</Text>
+
+          <View style={s.guestBanner}>
+            <View style={s.guestAvatar}>
+              <Text style={s.guestAvatarText}>?</Text>
+            </View>
+            <Text style={s.guestTitle}>You're browsing as a guest</Text>
+            <Text style={s.guestSub}>
+              Sign in to save your scans, track streaks and get reminders
+            </Text>
+            <TouchableOpacity
+              style={s.signInBtn}
+              onPress={() => router.push('/(auth)/signup')}
+              activeOpacity={0.85}
+            >
+              <Text style={s.signInBtnText}>Sign in</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={s.sectionLabel}>ABOUT</Text>
+          <View style={s.card}>
+            <TouchableOpacity style={s.row} activeOpacity={0.7}>
+              <Text style={s.rowLabel}>Privacy Policy</Text>
+              <Text style={s.rowArrow}>›</Text>
+            </TouchableOpacity>
+            <View style={s.divider} />
+            <TouchableOpacity style={s.row} activeOpacity={0.7}>
+              <Text style={s.rowLabel}>Terms of Service</Text>
+              <Text style={s.rowArrow}>›</Text>
+            </TouchableOpacity>
+            <View style={s.divider} />
+            <View style={s.row}>
+              <Text style={s.rowLabel}>Version</Text>
+              <Text style={s.rowValue}>1.0.0</Text>
+            </View>
+          </View>
+        </ScrollView>
       </View>
     );
   }
 
-  const initials = displayName
-    ? displayName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-    : '?';
-
+  // ── Authenticated view ─────────────────────────────────────────────────────
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <StatusBar style="light" />
-      <ScrollView
-        contentContainerStyle={s.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />}
-      >
-        {/* Guest sign-in banner */}
-        {isGuest && (
-          <TouchableOpacity
-            onPress={() => router.push('/(auth)/signup')}
-            style={s.guestBanner}
-            activeOpacity={0.8}
-          >
-            <Text style={s.guestBannerTitle}>Sign in to save your results</Text>
-            <Text style={s.guestBannerBody}>
-              Create an account to keep your scan history{'\n'}
-              and access Lumé from any device
-            </Text>
-          </TouchableOpacity>
-        )}
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={s.pageTitle}>Profile</Text>
 
-        {/* Avatar + name */}
-        <View style={s.avatarSection}>
+        {/* User info card */}
+        <View style={s.userCard}>
           <View style={s.avatar}>
-            <Text style={s.avatarText}>{initials}</Text>
+            <Text style={s.avatarText}>
+              {displayName?.[0]?.toUpperCase() ?? 'U'}
+            </Text>
           </View>
-          <Text style={s.displayName}>{displayName}</Text>
-          {!!city && <Text style={s.cityText}>{city}</Text>}
-        </View>
-
-        {/* Stats row */}
-        <View style={s.statsRow}>
-          <View style={s.statItem}>
-            <Text style={s.statNum}>{scanCount}</Text>
-            <Text style={s.statLabel}>Scans</Text>
-          </View>
-          <View style={s.statDivider} />
-          <View style={s.statItem}>
-            <Text style={s.statNum}>{topScore ?? '–'}</Text>
-            <Text style={s.statLabel}>Top score</Text>
-          </View>
-          <View style={s.statDivider} />
-          <View style={s.statItem}>
-            <Text style={s.statNum}>{referralCode ?? '–'}</Text>
-            <Text style={s.statLabel}>Referral code</Text>
-          </View>
-        </View>
-
-        {/* Account section */}
-        {!isGuest && referralCode && (
-          <>
-            <Text style={s.sectionLabel}>ACCOUNT</Text>
-            <View style={s.menuCard}>
-              <MenuItem
-                label="Referral code"
-                value={referralCode}
-                onPress={handleReferral}
-              />
+          <Text style={s.userName}>{displayName}</Text>
+          <Text style={s.userMeta}>
+            {city}{city && gender ? ' · ' : ''}{gender === 'man' ? 'Man' : gender === 'woman' ? 'Woman' : ''}
+          </Text>
+          {topTier ? (
+            <View style={s.tierBadge}>
+              <Text style={s.tierBadgeText}>{topTier}</Text>
             </View>
-          </>
-        )}
+          ) : null}
+        </View>
 
-        {/* Notifications section */}
-        <Text style={s.sectionLabel}>NOTIFICATIONS</Text>
-        <View style={s.menuCard}>
-          <View style={s.switchRow}>
-            <Text style={s.switchLabel}>Visit reminders</Text>
-            <Switch
-              value={notifReminders}
-              onValueChange={v => {
-                setNotifReminders(v);
-                saveNotifPref('notification_reminders', v);
-              }}
-              trackColor={{ false: Colors.border, true: Colors.gold }}
-              thumbColor={Colors.cream}
-            />
+        {/* Stats */}
+        <View style={s.statsRow}>
+          <View style={s.statCard}>
+            <Text style={s.statNum}>{scanCount}</Text>
+            <Text style={s.statLabel}>SCANS</Text>
           </View>
-          <View style={s.divider} />
-          <View style={s.switchRow}>
-            <Text style={s.switchLabel}>Routine nudges</Text>
-            <Switch
-              value={notifRoutine}
-              onValueChange={v => {
-                setNotifRoutine(v);
-                saveNotifPref('notification_routine', v);
-              }}
-              trackColor={{ false: Colors.border, true: Colors.gold }}
-              thumbColor={Colors.cream}
-            />
+          <View style={s.statCard}>
+            <Text style={s.statNum}>🔥 {currentStreak}</Text>
+            <Text style={s.statLabel}>STREAK</Text>
+          </View>
+          <View style={s.statCard}>
+            <Text style={s.statNum}>{bestStreak}</Text>
+            <Text style={s.statLabel}>BEST</Text>
           </View>
         </View>
 
-        {/* About section */}
+        {/* Routine reminders */}
+        <Text style={s.sectionLabel}>ROUTINE REMINDERS</Text>
+        <View style={s.card}>
+          <View style={s.row}>
+            <Text style={s.rowLabel}>Daily reminder</Text>
+            <Switch
+              value={reminderEnabled}
+              onValueChange={handleReminderToggle}
+              trackColor={{ false: Colors.border, true: Colors.gold }}
+              thumbColor={Colors.cream}
+            />
+          </View>
+          {reminderEnabled && (
+            <>
+              <View style={s.divider} />
+              <TouchableOpacity
+                style={s.row}
+                onPress={() => setShowMorningPicker(true)}
+                activeOpacity={0.7}
+              >
+                <View>
+                  <Text style={s.rowLabel}>Morning</Text>
+                  <Text style={s.rowSub}>AM routine reminder</Text>
+                </View>
+                <View style={s.timeBtn}>
+                  <Text style={s.timeBtnText}>{formatTime(morningTime)}</Text>
+                </View>
+              </TouchableOpacity>
+              <View style={s.divider} />
+              <TouchableOpacity
+                style={s.row}
+                onPress={() => setShowEveningPicker(true)}
+                activeOpacity={0.7}
+              >
+                <View>
+                  <Text style={s.rowLabel}>Evening</Text>
+                  <Text style={s.rowSub}>PM routine reminder</Text>
+                </View>
+                <View style={s.timeBtn}>
+                  <Text style={s.timeBtnText}>{formatTime(eveningTime)}</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {showMorningPicker && (
+          <DateTimePicker
+            value={morningTime}
+            mode="time"
+            is24Hour={false}
+            onChange={handleMorningChange}
+          />
+        )}
+        {showEveningPicker && (
+          <DateTimePicker
+            value={eveningTime}
+            mode="time"
+            is24Hour={false}
+            onChange={handleEveningChange}
+          />
+        )}
+
+        {/* About */}
         <Text style={s.sectionLabel}>ABOUT</Text>
-        <View style={s.menuCard}>
-          <MenuItem label="Version" value="1.0.0" />
+        <View style={s.card}>
+          <TouchableOpacity style={s.row} activeOpacity={0.7}>
+            <Text style={s.rowLabel}>Privacy Policy</Text>
+            <Text style={s.rowArrow}>›</Text>
+          </TouchableOpacity>
           <View style={s.divider} />
-          <MenuItem label="Privacy policy" arrow />
+          <TouchableOpacity style={s.row} activeOpacity={0.7}>
+            <Text style={s.rowLabel}>Terms of Service</Text>
+            <Text style={s.rowArrow}>›</Text>
+          </TouchableOpacity>
           <View style={s.divider} />
-          <MenuItem label="Terms of service" arrow />
+          <View style={s.row}>
+            <Text style={s.rowLabel}>Version</Text>
+            <Text style={s.rowValue}>1.0.0</Text>
+          </View>
         </View>
 
-        {/* Sign out + Delete account — authenticated users only */}
-        {!isGuest && (
-          <View style={s.authActions}>
-            <TouchableOpacity
-              style={s.signOutBtn}
-              onPress={handleSignOut}
-              activeOpacity={0.8}
-            >
-              <Text style={s.signOutText}>Sign out</Text>
-            </TouchableOpacity>
-
-            <View style={s.authActionsDivider} />
-
-            <TouchableOpacity
-              style={s.deleteAccountBtn}
-              onPress={() =>
-                Alert.alert(
-                  'Delete account',
-                  'This will permanently delete your account and all your scan history. This cannot be undone.',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: handleDeleteAccount },
-                  ],
-                )
-              }
-              activeOpacity={0.7}
-            >
-              <Text style={s.deleteAccountText}>Delete account</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Account actions */}
+        <View style={s.accountActions}>
+          <TouchableOpacity onPress={handleSignOut} style={s.signOutBtn} activeOpacity={0.7}>
+            <Text style={s.signOutText}>Sign out</Text>
+          </TouchableOpacity>
+          <View style={s.actionsDivider} />
+          <TouchableOpacity onPress={handleDeleteAccount} style={s.deleteBtn} activeOpacity={0.7}>
+            <Text style={s.deleteText}>Delete account</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
@@ -296,122 +402,100 @@ export default function ProfileScreen() {
   );
 }
 
-// ── MenuItem helper ────────────────────────────────────────────────────────
-function MenuItem({ label, value, arrow, onPress }: {
-  label:    string;
-  value?:   string;
-  arrow?:   boolean;
-  onPress?: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={s.menuRow}
-      onPress={onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-      disabled={!onPress && !arrow}
-    >
-      <Text style={s.menuLabel}>{label}</Text>
-      <View style={s.menuRight}>
-        {value && <Text style={s.menuValue}>{value}</Text>}
-        {arrow && <Text style={s.menuArrow}>›</Text>}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 // ─── STYLES ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen:  { flex: 1, backgroundColor: Colors.background },
-  centre:  { alignItems: 'center', justifyContent: 'center' },
-  content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg },
+  screen:       { flex: 1, backgroundColor: Colors.background },
+  scrollContent: { paddingBottom: Spacing.xl },
 
-  // Guest banner
+  pageTitle: {
+    fontFamily:        Typography.serif,
+    fontSize:          28,
+    color:             Colors.cream,
+    paddingHorizontal: Spacing.lg,
+    paddingTop:        Spacing.md,
+    marginBottom:      Spacing.lg,
+  },
+
+  // Guest
   guestBanner: {
-    backgroundColor: 'rgba(201,168,76,0.1)',
-    borderRadius:    12,
+    backgroundColor: Colors.surface,
+    borderRadius:    Radius.card,
     borderWidth:     1,
-    borderColor:     '#C9A84C',
-    padding:         16,
-    marginBottom:    20,
+    borderColor:     'rgba(201,168,76,0.2)',
+    padding:         Spacing.xl,
     alignItems:      'center',
+    marginHorizontal: Spacing.lg,
+    marginBottom:    Spacing.lg,
   },
-  guestBannerTitle: {
-    color:        '#C9A84C',
-    fontWeight:   '600',
-    fontSize:     15,
-    marginBottom: 4,
+  guestAvatar: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: Colors.surface2,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: Spacing.md,
   },
-  guestBannerBody: {
-    color:     '#8A7A6A',
-    fontSize:  13,
-    textAlign: 'center',
-  },
+  guestAvatarText: { fontSize: 24, color: Colors.textSecondary },
+  guestTitle:  { fontFamily: Typography.serif, fontSize: 16, color: Colors.cream, marginBottom: Spacing.xs, textAlign: 'center' },
+  guestSub:    { fontSize: 12, color: Colors.textSecondary, textAlign: 'center', lineHeight: 18, marginBottom: Spacing.lg },
+  signInBtn:     { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: 12, paddingHorizontal: 32, width: '100%', alignItems: 'center' },
+  signInBtnText: { fontSize: 14, fontWeight: '600', color: Colors.background },
 
-  // Avatar
-  avatarSection: { alignItems: 'center', marginBottom: Spacing.xl },
-  avatar: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: Colors.goldDim, borderWidth: 2, borderColor: Colors.gold,
-    alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md,
+  // User card
+  userCard: {
+    alignItems:      'center',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    marginBottom:    Spacing.sm,
   },
-  avatarText:  { fontFamily: Typography.serif, fontSize: 28, color: Colors.gold },
-  displayName: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, marginBottom: 4 },
-  cityText:    { fontSize: Typography.size.base, color: Colors.textSecondary },
+  avatar: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderWidth: 1, borderColor: 'rgba(201,168,76,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  avatarText:    { fontFamily: Typography.serif, fontSize: 26, color: Colors.gold },
+  userName:      { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, marginBottom: 4 },
+  userMeta:      { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.sm },
+  tierBadge:     { backgroundColor: 'rgba(201,168,76,0.12)', borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 4 },
+  tierBadgeText: { fontSize: 12, color: Colors.gold },
 
   // Stats
   statsRow: {
-    flexDirection: 'row', backgroundColor: Colors.surface,
-    borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border,
-    padding: Spacing.lg, marginBottom: Spacing.xl, alignItems: 'center',
+    flexDirection: 'row', gap: Spacing.sm,
+    marginHorizontal: Spacing.lg, marginBottom: Spacing.lg,
   },
-  statItem:    { flex: 1, alignItems: 'center' },
-  statNum:     { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, marginBottom: 2 },
-  statLabel:   { fontSize: Typography.size.xs, color: Colors.textSecondary },
-  statDivider: { width: 1, height: 32, backgroundColor: Colors.border },
+  statCard:  { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.sm, alignItems: 'center' },
+  statNum:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, marginBottom: 2 },
+  statLabel: { fontSize: 9, color: Colors.textSecondary, letterSpacing: 1 },
 
-  // Section label
+  // Section / card
   sectionLabel: {
-    fontSize: Typography.size.xs, color: Colors.gold,
-    letterSpacing: 6, textTransform: 'uppercase',
-    marginBottom: Spacing.sm, marginTop: Spacing.sm,
+    fontSize: 10, color: Colors.textSecondary, letterSpacing: 2,
+    marginHorizontal: Spacing.lg, marginBottom: Spacing.sm, marginTop: Spacing.xs,
   },
+  card: {
+    backgroundColor:  Colors.surface,
+    borderRadius:     Radius.card,
+    borderWidth:      1,
+    borderColor:      Colors.border,
+    marginHorizontal: Spacing.lg,
+    marginBottom:     Spacing.lg,
+    paddingHorizontal: Spacing.md,
+  },
+  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  rowLabel: { fontSize: 14, color: Colors.cream },
+  rowSub:   { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  rowValue: { fontSize: 13, color: Colors.textSecondary },
+  rowArrow: { fontSize: 18, color: Colors.gold },
+  divider:  { height: 1, backgroundColor: Colors.border },
+  timeBtn:     { backgroundColor: Colors.surface2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  timeBtnText: { fontSize: 13, color: Colors.gold },
 
-  // Menu card
-  menuCard: {
-    backgroundColor: Colors.surface, borderRadius: Radius.card,
-    borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.lg,
-    overflow: 'hidden',
-  },
-  menuRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
-  menuLabel: { fontSize: Typography.size.base, color: Colors.cream },
-  menuRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  menuValue: { fontSize: Typography.size.base, color: Colors.textSecondary },
-  menuArrow: { fontSize: 22, color: Colors.textSecondary, lineHeight: 24 },
-  divider:   { height: 1, backgroundColor: Colors.border, marginHorizontal: Spacing.md },
-
-  // Switch row
-  switchRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
-  switchLabel: { fontSize: Typography.size.base, color: Colors.cream },
-
-  // Sign out
-  authActions: {
-    marginTop:       24,
-    borderTopWidth:  1,
-    borderTopColor:  '#2A2420',
-    paddingTop:      16,
-    marginBottom:    Spacing.md,
-  },
-  authActionsDivider: {
-    height:          1,
-    backgroundColor: '#2A2420',
-    marginVertical:  8,
-  },
-  signOutBtn: {
-    backgroundColor: Colors.surface, borderRadius: Radius.card,
-    borderWidth: 1, borderColor: '#A32D2D',
-    paddingVertical: Spacing.md, alignItems: 'center',
-  },
-  signOutText: { fontSize: Typography.size.md, color: '#A32D2D', fontWeight: '600' },
-  deleteAccountBtn: { paddingVertical: 12, alignItems: 'center' },
-  deleteAccountText: { fontSize: 14, color: '#FF4444', textAlign: 'center' },
+  // Account actions
+  accountActions:  { marginHorizontal: Spacing.lg, borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.md },
+  signOutBtn:      { paddingVertical: 12, alignItems: 'center' },
+  signOutText:     { fontSize: 14, color: Colors.textSecondary },
+  actionsDivider:  { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
+  deleteBtn:       { paddingVertical: 12, alignItems: 'center' },
+  deleteText:      { fontSize: 14, color: '#FF4444' },
 });

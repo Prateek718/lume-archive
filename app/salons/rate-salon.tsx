@@ -47,6 +47,16 @@ export default function RateSalonScreen() {
   const insets  = useSafeAreaInsets();
   const params  = useLocalSearchParams<{ placeId?: string; name?: string; address?: string }>();
 
+  const [isGuest,  setIsGuest]  = useState(true);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsGuest(!user);
+      setChecking(false);
+    });
+  }, []);
+
   const [step, setStep]           = useState<Step>(params.placeId ? 'form' : 'search');
   const [selected, setSelected]   = useState<Salon | null>(
     params.placeId
@@ -163,6 +173,40 @@ export default function RateSalonScreen() {
   }, [selected, overall, cats, priceTier, gender]);
 
   const tiers = gender === 'woman' ? WOMEN_TIERS : MEN_TIERS;
+
+  // ── Auth gate ─────────────────────────────────────────────────────────────
+  if (checking) {
+    return (
+      <View style={[s.screen, { alignItems: 'center', justifyContent: 'center', paddingTop: insets.top }]}>
+        <StatusBar style="light" />
+        <ActivityIndicator color={Colors.gold} size="large" />
+      </View>
+    );
+  }
+
+  if (isGuest) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <StatusBar style="light" />
+        <Text style={{ fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, marginBottom: 8, textAlign: 'center' }}>
+          Sign in to rate salons
+        </Text>
+        <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+          Your ratings help the Lumé community find great salons
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 }}
+          onPress={() => router.push('/(auth)/signup')}
+          activeOpacity={0.85}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.background }}>Sign in</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={{ marginTop: 16 }} onPress={() => router.back()} activeOpacity={0.7}>
+          <Text style={{ fontSize: 14, color: Colors.textSecondary }}>Go back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // ── Search ────────────────────────────────────────────────────────────────
   if (step === 'search') {
