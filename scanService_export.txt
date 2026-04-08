@@ -96,12 +96,24 @@ export async function runScan(
   onProgress('Saving your results…');
   console.log('[scanService] Saving to Supabase, userId:', userId);
   const scanRow = {
-    user_id:       userId,
-    image_url:     null,          // we never store the photo permanently
-    ...analysis,
+    user_id:         userId,
+    image_url:       null,
+    face_shape:      analysis.face_shape,
+    skin_type:       analysis.skin_type,
+    skin_concerns:   analysis.skin_concerns,
+    hair_texture:    analysis.hair_texture,
+    hair_condition:  analysis.hair_condition,
+    beard_density:   analysis.beard_density,
+    beard_condition: analysis.beard_condition,
+    brow_condition:  analysis.brow_condition,
+    undereye:        analysis.undereye,
+    score_hair:      analysis.score_hair,
+    score_skin:      analysis.score_skin,
+    score_beard:     analysis.score_beard,
+    score_makeup:    analysis.score_makeup,
     score_overall:   scoreOverall,
     tier_label:      tierLabel,
-    recommendations,
+    recommendations: recommendations ?? null,
   };
 
   if (!userId || userId === 'guest') {
@@ -121,24 +133,48 @@ export async function runScan(
     tier_label:    scanRow.tier_label,
   }));
 
-  const { data, error } = await supabase
-    .from('scans')
-    .insert(scanRow)
-    .select()
-    .single();
+  console.log('[scanService] recommendations type:', typeof recommendations);
+  console.log('[scanService] recommendations sample:',
+    JSON.stringify(recommendations)?.slice(0, 200));
+
+  let data, error;
+  try {
+    const result = await supabase
+      .from('scans')
+      .insert(scanRow)
+      .select()
+      .single();
+    data = result.data;
+    error = result.error;
+  } catch (insertException: unknown) {
+    console.error('[scanService] Insert exception:',
+      insertException instanceof Error ? insertException.message : String(insertException));
+    return {
+      ...scanRow,
+      id:         `local_${Date.now()}`,
+      created_at: new Date().toISOString(),
+    } as Scan;
+  }
 
   if (error) {
     console.error('[scanService] Supabase insert error:', error.message);
     console.error('[scanService] Supabase error details:', JSON.stringify(error));
-    throw new Error(`Failed to save scan: ${error.message}`);
+    // Instead of throwing, return a local result so user still sees recommendations
+    return {
+      ...scanRow,
+      id:         `local_${Date.now()}`,
+      created_at: new Date().toISOString(),
+    } as Scan;
   }
   console.log('[scanService] Saved successfully');
 
   // Step 6 — update last_scan_at on the user's profile
-  await supabase
-    .from('users')
-    .update({ last_scan_at: new Date().toISOString() })
-    .eq('id', userId);
+  if (data) {
+    await supabase
+      .from('users')
+      .update({ last_scan_at: new Date().toISOString() })
+      .eq('id', userId);
+  }
 
   return data as Scan;
   } catch (error: unknown) {
