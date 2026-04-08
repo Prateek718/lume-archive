@@ -320,7 +320,7 @@ export default function HistoryScreen() {
         {/* Morning + Evening checklists */}
         {(['Morning', 'Evening'] as const).map(period => (
           <View key={period} style={s.periodBlock}>
-            <Text style={s.periodLabel}>{period.toUpperCase()} ROUTINE</Text>
+            <Text style={s.periodLabel}>{period === 'Morning' ? 'AM' : 'PM'} ROUTINE</Text>
             {routineSteps.filter(r => r.time === period).map(step => {
               const done = todayDone.has(step.id);
               return (

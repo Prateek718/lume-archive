@@ -167,6 +167,17 @@ export default function ProfileScreen() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
+  async function clearRoutineData() {
+    await AsyncStorage.multiRemove([
+      '@lume/routine_steps',
+      '@lume/routine_log',
+      '@lume/routine_streak',
+      '@lume/morning_time',
+      '@lume/evening_time',
+      '@lume/reminder_enabled',
+    ]);
+  }
+
   function handleSignOut() {
     Alert.alert(
       'Sign out',
@@ -180,6 +191,7 @@ export default function ProfileScreen() {
             try {
               await supabase.auth.signOut();
               await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
+              await clearRoutineData();
               router.replace('/(auth)/splash');
             } catch {
               router.replace('/(auth)/splash');
@@ -205,6 +217,7 @@ export default function ProfileScreen() {
               if (error) throw error;
               await supabase.auth.signOut();
               await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
+              await clearRoutineData();
               router.replace('/(auth)/splash');
             } catch (error: unknown) {
               Alert.alert('Error', 'Could not delete account. Please try again.');

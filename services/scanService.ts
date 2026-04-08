@@ -149,8 +149,6 @@ export async function runScan(
   } catch (insertException: unknown) {
     const msg = insertException instanceof Error ? insertException.message : String(insertException);
     console.error('[scanService] Insert exception:', msg);
-    const { Alert } = require('react-native');
-    Alert.alert('Debug: Insert Exception', msg, [{ text: 'OK' }]);
     return {
       ...scanRow,
       id:         `local_${Date.now()}`,
@@ -161,13 +159,7 @@ export async function runScan(
   if (error) {
     console.error('[scanService] Supabase insert error:', error.message);
     console.error('[scanService] Supabase error details:', JSON.stringify(error));
-    // Show error visibly for debugging
-    const { Alert } = require('react-native');
-    Alert.alert(
-      'Debug: Save Error',
-      `Code: ${error.code}\nMessage: ${error.message}\nDetails: ${error.details}\nHint: ${error.hint}`,
-      [{ text: 'OK' }]
-    );
+    // Instead of throwing, return a local result so user still sees recommendations
     return {
       ...scanRow,
       id:         `local_${Date.now()}`,
