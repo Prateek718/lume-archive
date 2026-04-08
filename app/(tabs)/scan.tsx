@@ -329,10 +329,18 @@ function ResultScreen({ scan, gender, onScanAgain }: {
             style={s.ctaButton}
             activeOpacity={0.8}
             onPress={() => {
-              if (scan.id?.startsWith('guest_')) {
-                router.push({ pathname: '/recommendations', params: { scanJson: JSON.stringify(scan) } });
+              if (scan.id?.startsWith('guest_') || scan.id?.startsWith('local_')) {
+                // Either guest scan or failed Supabase save — pass full scan data
+                router.push({
+                  pathname: '/recommendations',
+                  params: { scanJson: JSON.stringify(scan) },
+                });
               } else {
-                router.push({ pathname: '/recommendations', params: { scanId: scan.id } });
+                // Successfully saved to Supabase — fetch by ID
+                router.push({
+                  pathname: '/recommendations',
+                  params: { scanId: scan.id },
+                });
               }
             }}
           >
