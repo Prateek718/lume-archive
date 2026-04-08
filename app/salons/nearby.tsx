@@ -3,9 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Dimensions, Animated, Linking, ActivityIndicator, Image,
+  TextInput, Animated, Linking, ActivityIndicator, Image,
 } from 'react-native';
-import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -17,8 +16,6 @@ import { getCurrentLocation, fetchNearbySalons, fetchSalonPhone } from '../../se
 import { StarRating } from '../../components/ui/StarRating';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
-const { width: SW } = Dimensions.get('window');
-const CARD_W = SW * 0.72;
 const BANGALORE = { latitude: 12.9716, longitude: 77.5946, latitudeDelta: 0.06, longitudeDelta: 0.06 };
 
 type Phase = 'permission' | 'loading' | 'map' | 'city';
@@ -96,7 +93,6 @@ export default function NearbyScreen() {
   const [gender,         setGender]         = useState('man');
 
   const sheetAnim = useRef(new Animated.Value(0)).current;
-  const mapRef    = useRef<MapView>(null);
 
   useEffect(() => {
     AsyncStorage.getItem(GUEST_PROFILE_KEY).then(raw => {
@@ -105,14 +101,6 @@ export default function NearbyScreen() {
         if (p.gender) setGender(p.gender);
       }
     });
-  }, []);
-
-  const focusSalon = useCallback((salon: Salon) => {
-    setSelected(salon);
-    mapRef.current?.animateToRegion({
-      latitude: salon.latitude, longitude: salon.longitude,
-      latitudeDelta: 0.01, longitudeDelta: 0.01,
-    }, 400);
   }, []);
 
   const openSheet = useCallback(async (salon: Salon) => {
@@ -351,11 +339,7 @@ export default function NearbyScreen() {
     );
   }
 
-  // ── Map + cards ────────────────────────────────────────────────────────────
-  const mapRegion = userLoc
-    ? { ...userLoc, latitudeDelta: 0.04, longitudeDelta: 0.04 }
-    : BANGALORE;
-
+  // ── List + sheet ───────────────────────────────────────────────────────────
   const sheetTranslate = sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [500, 0] });
 
   const lumeCount  = lumeRatings.length;
@@ -373,94 +357,62 @@ export default function NearbyScreen() {
   const tierLabels = gender === 'woman' ? WOMEN_TIERS : MEN_TIERS;
 
   return (
-    <View style={s.screen}>
+    <View style={[s.screen, { paddingTop: insets.top }]}>
       <StatusBar style="light" />
+      <BackBar title="Nearby Salons" />
 
-      <View style={[s.topBar, { paddingTop: insets.top }]}>
-        <BackBar title="Nearby Salons" />
-      </View>
-
-      <MapView
-        ref={mapRef}
-        style={s.map}
-        provider={PROVIDER_DEFAULT}
-        initialRegion={mapRegion}
-        showsUserLocation={!!userLoc}
-        showsMyLocationButton={false}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + Spacing.xl }]}
+        showsVerticalScrollIndicator={false}
       >
-        {userLoc && (
-          <Circle
-            center={userLoc}
-            radius={3000}
-            strokeColor={Colors.gold + '44'}
-            fillColor={Colors.gold + '0D'}
-          />
-        )}
+        <Text style={s.listHeader}>{salons.length} salons nearby</Text>
         {salons.map(salon => (
-          <Marker
+          <TouchableOpacity
             key={salon.id}
-            coordinate={{ latitude: salon.latitude, longitude: salon.longitude }}
-            onPress={() => focusSalon(salon)}
+            style={[s.listCard, selected?.id === salon.id && s.listCardActive]}
+            onPress={() => openSheet(salon)}
+            activeOpacity={0.85}
           >
-            <View style={[s.pin, selected?.id === salon.id && s.pinActive]}>
-              <Text style={[s.pinText, selected?.id === salon.id && s.pinTextActive]}>
-                {salon.priceRange || '₹'}
-              </Text>
-            </View>
-          </Marker>
-        ))}
-      </MapView>
-
-      {/* Salon cards */}
-      <View style={[s.cardsWrap, { paddingBottom: insets.bottom + 8 }]}>
-        <Text style={s.cardsLabel}>{salons.length} salons nearby</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.cardsScroll}
-          snapToInterval={CARD_W + Spacing.sm}
-          decelerationRate="fast"
-        >
-          {salons.map(salon => (
-            <TouchableOpacity
-              key={salon.id}
-              style={[s.card, selected?.id === salon.id && s.cardActive]}
-              onPress={() => { focusSalon(salon); openSheet(salon); }}
-              activeOpacity={0.85}
-            >
-              <View style={s.cardThumb}>
-                {salon.photoUrl && (
-                  <Image
-                    source={{ uri: salon.photoUrl }}
-                    style={StyleSheet.absoluteFill}
-                    resizeMode="cover"
-                  />
-                )}
-                <View style={s.cardThumbOverlay} />
-                {salon.openNow === true  && <View style={s.openBadge}><Text style={s.openBadgeText}>Open now</Text></View>}
-                {salon.openNow === false && <View style={[s.openBadge, s.closedBadge]}><Text style={s.openBadgeText}>Closed</Text></View>}
-              </View>
-              <View style={s.cardBody}>
-                <Text style={s.cardName} numberOfLines={1}>{salon.name}</Text>
-                <Text style={s.cardAddr} numberOfLines={1}>{salon.address}</Text>
-                <View style={s.metaRow}>
-                  <Text style={s.ratingText}>★ {salon.rating}</Text>
-                  <Text style={s.dot}>·</Text>
-                  <Text style={s.reviewText}>{salon.reviewCount} reviews</Text>
-                  {salon.distance != null && (
-                    <><Text style={s.dot}>·</Text><Text style={s.distText}>{salon.distance.toFixed(1)} km</Text></>
-                  )}
+            <View style={s.listThumb}>
+              {salon.photoUrl && (
+                <Image
+                  source={{ uri: salon.photoUrl }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode="cover"
+                />
+              )}
+              <View style={s.listThumbOverlay} />
+              {salon.openNow === true && (
+                <View style={s.openBadge}>
+                  <Text style={s.openBadgeText}>Open now</Text>
                 </View>
-                {!!salon.priceRange && (
-                  <View style={s.tagsRow}>
-                    <View style={s.tag}><Text style={s.tagText}>{salon.priceRange}</Text></View>
-                  </View>
+              )}
+              {salon.openNow === false && (
+                <View style={[s.openBadge, s.closedBadge]}>
+                  <Text style={s.openBadgeText}>Closed</Text>
+                </View>
+              )}
+            </View>
+            <View style={s.listBody}>
+              <Text style={s.listName} numberOfLines={1}>{salon.name}</Text>
+              <Text style={s.listAddr} numberOfLines={1}>{salon.address}</Text>
+              <View style={s.metaRow}>
+                <Text style={s.ratingText}>★ {salon.rating}</Text>
+                <Text style={s.dot}>·</Text>
+                <Text style={s.reviewText}>{salon.reviewCount} reviews</Text>
+                {salon.distance != null && (
+                  <>
+                    <Text style={s.dot}>·</Text>
+                    <Text style={s.distText}>{salon.distance.toFixed(1)} km</Text>
+                  </>
                 )}
               </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+            </View>
+            <Text style={s.listArrow}>›</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Bottom sheet */}
       {sheetVisible && selected && (
@@ -614,7 +566,6 @@ const bb = StyleSheet.create({
 const s = StyleSheet.create({
   screen:    { flex: 1, backgroundColor: Colors.background },
   centreBox: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl },
-  topBar:    { backgroundColor: Colors.background, zIndex: 10 },
 
   // Permission / city
   iconCircle:     { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl },
@@ -639,32 +590,22 @@ const s = StyleSheet.create({
   retryLink:      { padding: 8 },
   retryText:      { color: Colors.textSecondary, fontSize: 14 },
 
-  map: { flex: 1 },
-
-  pin:           { backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 4 },
-  pinActive:     { backgroundColor: Colors.gold, borderColor: Colors.gold },
-  pinText:       { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
-  pinTextActive: { color: Colors.background },
-
-  cardsWrap:   { backgroundColor: Colors.background, paddingTop: Spacing.md },
-  cardsLabel:  { fontSize: Typography.size.sm, color: Colors.textSecondary, paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm },
-  cardsScroll: { paddingHorizontal: Spacing.lg, gap: Spacing.sm },
-
-  card:             { width: CARD_W, backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
-  cardActive:       { borderColor: Colors.gold },
-  cardThumb:        { height: 90, backgroundColor: Colors.border, overflow: 'hidden' },
-  cardThumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
-  cardBody:         { padding: Spacing.sm },
-  cardName:         { fontSize: Typography.size.md, color: Colors.cream, fontWeight: '600', marginBottom: 2 },
-  cardAddr:         { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.xs },
-  metaRow:          { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: Spacing.xs },
+  // List view
+  listContent:      { padding: Spacing.lg },
+  listHeader:       { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.md, letterSpacing: 1 },
+  listCard:         { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.sm, overflow: 'hidden', flexDirection: 'row', alignItems: 'center' },
+  listCardActive:   { borderColor: Colors.gold },
+  listThumb:        { width: 80, height: 80, backgroundColor: Colors.border, overflow: 'hidden' },
+  listThumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
+  listBody:         { flex: 1, padding: Spacing.sm },
+  listName:         { fontSize: Typography.size.md, color: Colors.cream, fontWeight: '600', marginBottom: 2 },
+  listAddr:         { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.xs },
+  listArrow:        { fontSize: 20, color: Colors.textTertiary, paddingRight: Spacing.sm },
+  metaRow:          { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingText:       { fontSize: Typography.size.sm, color: Colors.gold },
   dot:              { fontSize: Typography.size.sm, color: Colors.textTertiary },
   reviewText:       { fontSize: Typography.size.sm, color: Colors.textSecondary },
   distText:         { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  tagsRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  tag:              { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
-  tagText:          { fontSize: 10, color: Colors.textSecondary },
 
   openBadge:     { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#1A3A1A', borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
   closedBadge:   { backgroundColor: '#3A1A1A' },

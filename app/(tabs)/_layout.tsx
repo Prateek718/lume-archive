@@ -21,7 +21,7 @@ function SalonsIcon({ color }: { color: string }) {
   );
 }
 
-function HistoryIcon({ color }: { color: string }) {
+function RoutineIcon({ color }: { color: string }) {
   return (
     <View style={[ic.iconCal, { borderColor: color }]}>
       <View style={[ic.iconCalLine, { backgroundColor: color }]} />
@@ -76,10 +76,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="routine"
         options={{
-          title:      'History',
-          tabBarIcon: ({ color }) => <HistoryIcon color={color} />,
+          title:      'Routine',
+          tabBarIcon: ({ color }) => <RoutineIcon color={color} />,
         }}
       />
       <Tabs.Screen
