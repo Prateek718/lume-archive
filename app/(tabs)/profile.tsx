@@ -96,11 +96,17 @@ export default function ProfileScreen() {
 
   const handleDeleteAccount = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { error } = await supabase.rpc('delete_user');
 
-      await supabase.from('scans').delete().eq('user_id', user.id);
-      await supabase.from('users').delete().eq('id', user.id);
+      if (error) {
+        console.error('[profile] Delete account error:', error.message);
+        Alert.alert(
+          'Error',
+          'Could not delete account. Please try again or contact support.'
+        );
+        return;
+      }
+
       await supabase.auth.signOut();
       await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
       router.replace('/(auth)/splash');
@@ -108,7 +114,7 @@ export default function ProfileScreen() {
       console.error('[profile] Delete account error:', error);
       Alert.alert(
         'Error',
-        'Could not delete account. Please try again or contact support.',
+        'Could not delete account. Please try again or contact support.'
       );
     }
   };
@@ -125,9 +131,9 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await supabase.auth.signOut();
+              await AsyncStorage.removeItem(FIRST_LAUNCH_KEY);
               router.replace('/(auth)/splash');
-            } catch (error: unknown) {
-              console.error('[profile] Sign out error:', error);
+            } catch {
               router.replace('/(auth)/splash');
             }
           },
