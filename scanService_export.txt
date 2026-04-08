@@ -96,21 +96,9 @@ export async function runScan(
   onProgress('Saving your results…');
   console.log('[scanService] Saving to Supabase, userId:', userId);
   const scanRow = {
-    user_id:         userId,
-    image_url:       null,
-    face_shape:      analysis.face_shape,
-    skin_type:       analysis.skin_type,
-    skin_concerns:   analysis.skin_concerns,
-    hair_texture:    analysis.hair_texture,
-    hair_condition:  analysis.hair_condition,
-    beard_density:   analysis.beard_density,
-    beard_condition: analysis.beard_condition,
-    brow_condition:  analysis.brow_condition,
-    undereye:        analysis.undereye,
-    score_hair:      analysis.score_hair,
-    score_skin:      analysis.score_skin,
-    score_beard:     analysis.score_beard,
-    score_makeup:    analysis.score_makeup,
+    user_id:       userId,
+    image_url:     null,          // we never store the photo permanently
+    ...analysis,
     score_overall:   scoreOverall,
     tier_label:      tierLabel,
     recommendations,
