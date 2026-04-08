@@ -75,8 +75,8 @@ export default function RecommendationsScreen() {
   const hairTags  = [scan.hair_texture, scan.hair_condition].filter(Boolean) as string[];
   const skinTags  = [scan.skin_type, ...(scan.skin_concerns?.slice(0, 1) ?? [])].filter(Boolean) as string[];
   const thirdTags = isWoman
-    ? [scan.brow_condition, scan.undereye].filter(Boolean) as string[]
-    : [scan.beard_condition ?? scan.beard_density].filter(Boolean) as string[];
+    ? [scan.brow_shape, scan.undereye].filter(Boolean) as string[]
+    : [scan.beard_density].filter(Boolean) as string[];
 
   return (
     <View style={s.screen}>
