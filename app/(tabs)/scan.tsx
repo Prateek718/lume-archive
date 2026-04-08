@@ -20,7 +20,7 @@ const { width: SW, height: SH } = Dimensions.get('window');
 
 function inferGenderFromScan(scan: Scan): string {
   if (scan.beard_density && scan.beard_density !== 'none') return 'man';
-  if (scan.brow_shape) return 'woman';
+  if (scan.brow_condition) return 'woman';
   if (scan.undereye) return 'woman';
   if (scan.score_makeup !== null && scan.score_beard === null) return 'woman';
   if (scan.score_beard !== null && scan.score_makeup === null) return 'man';

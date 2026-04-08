@@ -90,6 +90,9 @@ export async function runScan(
   console.log('[scanService] Score:', scoreOverall);
 
   // Step 5 — save to Supabase
+  // NOTE: Run this SQL in Supabase to add new columns:
+  // alter table public.scans add column if not exists beard_condition text;
+  // alter table public.scans add column if not exists brow_condition text;
   onProgress('Saving your results…');
   console.log('[scanService] Saving to Supabase, userId:', userId);
   const scanRow = {

@@ -6,13 +6,12 @@ import {
   ActivityIndicator, RefreshControl,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Polyline, Circle as SvgCircle, Line, Text as SvgText } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import { getTierLabel } from '../../constants/tiers';
+import { getTierLabel, getTierFromScore, getCategoryDiamonds } from '../../constants/tiers';
 import type { Scan } from '../../types';
 
 // ── Routine steps — shown as a daily checklist ────────────────────────────
@@ -30,42 +29,23 @@ function todayKey() {
   return `routine_${new Date().toISOString().slice(0, 10)}`;
 }
 
-// ── Mini line chart ───────────────────────────────────────────────────────
-function LineChart({ scans }: { scans: Scan[] }) {
-  if (scans.length < 2) return null;
-
-  const W = 320, H = 100, PAD = 12;
-  const scores = scans.map(s => s.score_overall ?? 0);
-  const minY = Math.max(0,  Math.min(...scores) - 10);
-  const maxY = Math.min(100, Math.max(...scores) + 10);
-
-  const px = (i: number) => PAD + (i / (scans.length - 1)) * (W - PAD * 2);
-  const py = (v: number) => PAD + ((maxY - v) / (maxY - minY)) * (H - PAD * 2);
-
-  const points = scans.map((s, i) => `${px(i)},${py(s.score_overall ?? 0)}`).join(' ');
-
+// ── Diamonds ──────────────────────────────────────────────────────────────
+function Diamonds({ count, total = 3 }: { count: number; total?: number }) {
   return (
-    <Svg width={W} height={H} style={s.chart}>
-      {/* Baseline */}
-      <Line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke={Colors.border} strokeWidth={1} />
-      {/* Line */}
-      <Polyline points={points} fill="none" stroke={Colors.gold} strokeWidth={2} />
-      {/* Dots */}
-      {scans.map((sc, i) => (
-        <SvgCircle
-          key={sc.id}
-          cx={px(i)} cy={py(sc.score_overall ?? 0)}
-          r={3} fill={Colors.gold}
+    <View style={{ flexDirection: 'row', gap: 4 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            width: 8,
+            height: 8,
+            backgroundColor: i < count ? '#C9A84C' : '#2A2420',
+            borderRadius: 2,
+            transform: [{ rotate: '45deg' }],
+          }}
         />
       ))}
-      {/* First & last score labels */}
-      <SvgText x={px(0)} y={py(scores[0]) - 6} fill={Colors.textSecondary} fontSize={10} textAnchor="middle">
-        {scores[0]}
-      </SvgText>
-      <SvgText x={px(scans.length - 1)} y={py(scores[scores.length - 1]) - 6} fill={Colors.cream} fontSize={10} textAnchor="middle">
-        {scores[scores.length - 1]}
-      </SvgText>
-    </Svg>
+    </View>
   );
 }
 
@@ -101,7 +81,7 @@ export default function HistoryScreen() {
 
       const { data: scansData, error } = await supabase
         .from('scans')
-        .select('id, score_overall, score_hair, score_skin, score_beard, score_makeup, tier_label, face_shape, created_at')
+        .select('id, score_overall, tier_label, face_shape, hair_texture, hair_condition, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -183,40 +163,39 @@ export default function HistoryScreen() {
       );
     }
 
-    const latest = scans[scans.length - 1];
-    const first  = scans[0];
-    const improvement = (latest.score_overall ?? 0) - (first.score_overall ?? 0);
+    const latest    = scans[0]; // newest first
+    const latestTier = getTierFromScore(latest.score_overall ?? 0);
 
     return (
       <>
         {/* Progress card */}
         <View style={s.progressCard}>
-          <Text style={s.progressLabel}>OVERALL PROGRESS</Text>
+          <Text style={s.progressLabel}>GROOMING PROFILE</Text>
           <View style={s.progressRow}>
             <View style={s.progressStat}>
-              <Text style={s.progressNum}>{latest.score_overall ?? '–'}</Text>
-              <Text style={s.progressCaption}>Current score</Text>
-            </View>
-            {scans.length > 1 && (
-              <View style={s.progressStat}>
-                <Text style={[s.progressNum, { color: improvement >= 0 ? Colors.gold : '#A32D2D' }]}>
-                  {improvement >= 0 ? '+' : ''}{improvement}
-                </Text>
-                <Text style={s.progressCaption}>Since first scan</Text>
+              <Text style={s.progressTier}>{latestTier.name}</Text>
+              <View style={{ marginTop: 6 }}>
+                <Diamonds count={latestTier.diamonds} />
               </View>
-            )}
+              <Text style={s.progressCaption}>Current tier</Text>
+            </View>
+            <View style={s.statDivider} />
             <View style={s.progressStat}>
               <Text style={s.progressNum}>{scans.length}</Text>
               <Text style={s.progressCaption}>Total scans</Text>
             </View>
           </View>
-          <LineChart scans={scans} />
         </View>
 
         {/* Scan timeline (newest first) */}
-        {[...scans].reverse().map((scan, i) => {
-          const date = new Date(scan.created_at ?? '');
+        {scans.map((scan, i) => {
+          const tier    = getTierFromScore(scan.score_overall ?? 0);
+          const date    = new Date(scan.created_at ?? '');
           const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+          const pills   = [
+            scan.face_shape   && `${scan.face_shape} face`,
+            scan.hair_texture && `${scan.hair_texture} hair`,
+          ].filter(Boolean) as string[];
           return (
             <View key={scan.id} style={s.scanRow}>
               <View style={s.scanDotCol}>
@@ -225,28 +204,21 @@ export default function HistoryScreen() {
               </View>
               <View style={s.scanCard}>
                 <View style={s.scanCardTop}>
-                  <Text style={s.scanScore}>{scan.score_overall ?? '–'}</Text>
                   <View style={s.scanBadge}>
-                    <Text style={s.scanBadgeText}>{scan.tier_label ?? getTierLabel(scan.score_overall ?? 0)}</Text>
+                    <Text style={s.scanBadgeText}>{scan.tier_label ?? tier.name}</Text>
                   </View>
+                  <Diamonds count={tier.diamonds} />
                   <Text style={s.scanDate}>{dateStr}</Text>
                 </View>
-                <View style={s.scanSubScores}>
-                  <Text style={s.scanSub}>Hair {scan.score_hair ?? '–'}</Text>
-                  <Text style={s.scanSubDot}>·</Text>
-                  <Text style={s.scanSub}>Skin {scan.score_skin ?? '–'}</Text>
-                  {gender === 'woman' ? (
-                    <>
-                      <Text style={s.scanSubDot}>·</Text>
-                      <Text style={s.scanSub}>Makeup {scan.score_makeup ?? '–'}</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={s.scanSubDot}>·</Text>
-                      <Text style={s.scanSub}>Beard {scan.score_beard ?? '–'}</Text>
-                    </>
-                  )}
-                </View>
+                {pills.length > 0 && (
+                  <View style={s.scanPills}>
+                    {pills.map(p => (
+                      <View key={p} style={s.scanPill}>
+                        <Text style={s.scanPillText}>{p}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
           );
@@ -372,11 +344,12 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.border, padding: Spacing.lg, marginBottom: Spacing.lg,
   },
   progressLabel:   { fontSize: Typography.size.xs, color: Colors.gold, letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.md },
-  progressRow:     { flexDirection: 'row', justifyContent: 'space-around', marginBottom: Spacing.md },
+  progressRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   progressStat:    { alignItems: 'center' },
+  progressTier:    { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream },
   progressNum:     { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.cream },
-  progressCaption: { fontSize: Typography.size.xs, color: Colors.textSecondary, marginTop: 2 },
-  chart:           { alignSelf: 'center' },
+  progressCaption: { fontSize: Typography.size.xs, color: Colors.textSecondary, marginTop: 6 },
+  statDivider:     { width: 1, height: 40, backgroundColor: Colors.border },
 
   // Timeline
   scanRow:    { flexDirection: 'row', marginBottom: Spacing.md },
@@ -386,13 +359,12 @@ const s = StyleSheet.create({
   scanLine:   { flex: 1, width: 1, backgroundColor: Colors.border, marginTop: 4 },
   scanCard:   { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md },
   scanCardTop:{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs },
-  scanScore:  { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.cream },
   scanBadge:  { backgroundColor: Colors.goldDim, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
   scanBadgeText: { fontSize: Typography.size.xs, color: Colors.gold, fontWeight: '600' },
   scanDate:   { marginLeft: 'auto', fontSize: Typography.size.xs, color: Colors.textSecondary },
-  scanSubScores: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  scanSub:    { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  scanSubDot: { fontSize: Typography.size.sm, color: Colors.textTertiary },
+  scanPills:  { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: Spacing.xs },
+  scanPill:   { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  scanPillText: { fontSize: 10, color: Colors.textSecondary, textTransform: 'capitalize' },
 
   // Streak card
   streakCard:  {

@@ -64,8 +64,9 @@ export interface Scan {
   hair_texture:      'straight' | 'wavy' | 'curly' | 'coily' | null;
   hair_condition:    'healthy' | 'dry' | 'damaged' | 'oily' | 'thinning' | null;
   beard_density:     'none' | 'light' | 'medium' | 'heavy' | null;  // men only
-  brow_shape:        'arch' | 'straight' | 'rounded' | 'sparse' | null;  // women only
-  undereye:          'dark' | 'puffy' | 'hollow' | 'normal' | null;      // women only
+  beard_condition:   string | null;
+  brow_condition:    string | null;
+  undereye:          string | null;
 
   // Scores
   score_hair:        number | null;    // 0-100
