@@ -113,7 +113,7 @@ export async function runScan(
     score_makeup:    analysis.score_makeup,
     score_overall:   scoreOverall,
     tier_label:      tierLabel,
-    recommendations,
+    recommendations: recommendations ?? null,
   };
 
   if (!userId || userId === 'guest') {
@@ -133,11 +133,28 @@ export async function runScan(
     tier_label:    scanRow.tier_label,
   }));
 
-  const { data, error } = await supabase
-    .from('scans')
-    .insert(scanRow)
-    .select()
-    .single();
+  console.log('[scanService] recommendations type:', typeof recommendations);
+  console.log('[scanService] recommendations sample:',
+    JSON.stringify(recommendations)?.slice(0, 200));
+
+  let data, error;
+  try {
+    const result = await supabase
+      .from('scans')
+      .insert(scanRow)
+      .select()
+      .single();
+    data = result.data;
+    error = result.error;
+  } catch (insertException: unknown) {
+    console.error('[scanService] Insert exception:',
+      insertException instanceof Error ? insertException.message : String(insertException));
+    return {
+      ...scanRow,
+      id:         `local_${Date.now()}`,
+      created_at: new Date().toISOString(),
+    } as Scan;
+  }
 
   if (error) {
     console.error('[scanService] Supabase insert error:', error.message);

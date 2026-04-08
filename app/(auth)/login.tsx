@@ -94,24 +94,35 @@ export default function LoginScreen() {
       });
       if (error) throw error;
 
-      const userId = data.user?.id;
-      if (userId) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('onboarding_complete')
-          .eq('id', userId)
-          .single();
+      const userId   = data.user?.id;
+      const userName = data.user?.user_metadata?.full_name as string | undefined
+                    ?? data.user?.user_metadata?.name as string | undefined
+                    ?? null;
 
-        if (!profile || !profile.onboarding_complete) {
-          await supabase.from('users').upsert({
-            id: userId,
-            onboarding_complete: false,
-            created_at: new Date().toISOString(),
-          });
-          router.replace('/(auth)/onboarding');
-        } else {
-          router.replace('/(tabs)/scan');
-        }
+      if (!userId) throw new Error('No user ID received');
+
+      // Always check the users table — don't rely on FIRST_LAUNCH_KEY
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('onboarding_complete')
+        .eq('id', userId)
+        .single();
+
+      await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
+
+      if (profileError || !profile) {
+        // New user or deleted account — create row and send to onboarding
+        await supabase.from('users').upsert({
+          id:                  userId,
+          display_name:        userName,
+          onboarding_complete: false,
+          created_at:          new Date().toISOString(),
+        });
+        router.replace('/(auth)/onboarding');
+      } else if (!profile.onboarding_complete) {
+        router.replace('/(auth)/onboarding');
+      } else {
+        router.replace('/(tabs)/scan');
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Google Sign In failed';
