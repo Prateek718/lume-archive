@@ -142,15 +142,22 @@ export async function runScan(
   if (error) {
     console.error('[scanService] Supabase insert error:', error.message);
     console.error('[scanService] Supabase error details:', JSON.stringify(error));
-    throw new Error(`Failed to save scan: ${error.message}`);
+    // Instead of throwing, return a local result so user still sees recommendations
+    return {
+      ...scanRow,
+      id:         `local_${Date.now()}`,
+      created_at: new Date().toISOString(),
+    } as Scan;
   }
   console.log('[scanService] Saved successfully');
 
   // Step 6 — update last_scan_at on the user's profile
-  await supabase
-    .from('users')
-    .update({ last_scan_at: new Date().toISOString() })
-    .eq('id', userId);
+  if (data) {
+    await supabase
+      .from('users')
+      .update({ last_scan_at: new Date().toISOString() })
+      .eq('id', userId);
+  }
 
   return data as Scan;
   } catch (error: unknown) {
