@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -74,8 +74,8 @@ export default function SalonsHomeScreen() {
       >
         {/* Header */}
         <View style={s.header}>
-          <Text style={s.title}>Salons</Text>
-          <Text style={s.subtitle}>Discover, rate, and review</Text>
+          <Text style={s.title}>Discover</Text>
+          <Text style={s.subtitle}>Find salons and stylists near you</Text>
         </View>
 
         {/* Action cards */}
@@ -95,6 +95,62 @@ export default function SalonsHomeScreen() {
           subtitle="Share your experience"
           onPress={() => router.push('/salons/rate-salon')}
         />
+        {/* Coming soon */}
+        <Text style={s.comingSoonLabel}>COMING SOON</Text>
+
+        <TouchableOpacity
+          style={[s.card, s.cardDisabled]}
+          activeOpacity={1}
+          onPress={() => {}}
+        >
+          <View style={s.cardRow}>
+            <View style={[s.iconBox, { backgroundColor: '#1A1020' }]}>
+              <Text style={s.iconChar}>✂️</Text>
+            </View>
+            <View style={s.cardMid}>
+              <Text style={s.cardTitle}>Find a stylist</Text>
+              <Text style={s.cardSub}>Browse verified stylists near you</Text>
+            </View>
+            <View style={s.soonBadge}>
+              <Text style={s.soonText}>SOON</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.card, s.cardDisabled]}
+          activeOpacity={1}
+          onPress={() => {}}
+        >
+          <View style={s.cardRow}>
+            <View style={[s.iconBox, { backgroundColor: '#10182A' }]}>
+              <Text style={s.iconChar}>📅</Text>
+            </View>
+            <View style={s.cardMid}>
+              <Text style={s.cardTitle}>Book an appointment</Text>
+              <Text style={s.cardSub}>Schedule with your stylist</Text>
+            </View>
+            <View style={s.soonBadge}>
+              <Text style={s.soonText}>SOON</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Stylist waitlist banner */}
+        <View style={s.stylistBanner}>
+          <Text style={s.stylistBannerTitle}>Are you a stylist?</Text>
+          <Text style={s.stylistBannerSub}>
+            Join our platform and connect with clients
+          </Text>
+          <TouchableOpacity
+            style={s.stylistBannerBtn}
+            onPress={() => Linking.openURL('https://getlume.app/stylists')}
+            activeOpacity={0.85}
+          >
+            <Text style={s.stylistBannerBtnText}>Make your profile</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Recent ratings */}
         <Text style={s.sectionLabel}>YOUR RECENT RATINGS</Text>
         {loading ? (
@@ -167,6 +223,73 @@ const s = StyleSheet.create({
     fontSize: Typography.size.xs, color: Colors.gold,
     letterSpacing: 6, textTransform: 'uppercase',
     marginTop: Spacing.xl, marginBottom: Spacing.sm,
+  },
+  comingSoonLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    letterSpacing: 3,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  card: {
+    backgroundColor: Colors.surface, borderRadius: Radius.card,
+    borderWidth: 1, borderColor: Colors.border,
+    padding: Spacing.md, marginBottom: Spacing.sm,
+  },
+  cardRow:  { flexDirection: 'row', alignItems: 'center' },
+  iconBox:  { width: 44, height: 44, borderRadius: Radius.icon, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
+  iconChar: { fontSize: 20 },
+  cardMid:  { flex: 1 },
+  cardTitle:{ fontSize: Typography.size.md, color: Colors.cream, fontWeight: '600', marginBottom: 2 },
+  cardSub:  { fontSize: Typography.size.sm, color: Colors.textSecondary },
+  cardDisabled: {
+    opacity: 0.6,
+    borderColor: 'rgba(201,168,76,0.2)',
+  },
+  soonBadge: {
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderRadius: Radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  soonText: {
+    fontSize: 9,
+    color: Colors.gold,
+    letterSpacing: 1,
+    fontWeight: '600',
+  },
+  stylistBanner: {
+    backgroundColor: 'rgba(201,168,76,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.15)',
+    borderRadius: Radius.card,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    marginTop: Spacing.lg,
+  },
+  stylistBannerTitle: {
+    fontFamily: Typography.serif,
+    fontSize: 16,
+    color: Colors.cream,
+    marginBottom: 4,
+  },
+  stylistBannerSub: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+    lineHeight: 18,
+  },
+  stylistBannerBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: Radius.input,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+  },
+  stylistBannerBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.background,
   },
   emptyCard: {
     backgroundColor: Colors.surface, borderRadius: Radius.card,
