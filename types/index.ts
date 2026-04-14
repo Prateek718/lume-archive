@@ -21,26 +21,38 @@ export interface User {
 
 // ─── Recommendations ─────────────────────────────────────────────────────────
 // Matches the recommendations JSONB column inside the scans table.
+
+// One product category recommendation returned by Claude inside each section.
+export interface ProductRecommendation {
+  category:    string;   // e.g. 'face_cleanser', 'shampoo', 'beard_oil'
+  reason:      string;   // personalised one-sentence explanation
+  match_score: number;   // 60-100 — how well this category suits the user
+}
+
 export interface HairRecommendation {
-  summary: string;         // one-sentence summary
-  advice:  string;         // exact words to say to stylist
-  styles:  string[];       // 3 style name suggestions
+  summary:  string;              // one-sentence summary
+  advice:   string;              // exact words to say to stylist
+  styles:   string[];            // 3 style name suggestions
+  products?: ProductRecommendation[];
 }
 
 export interface SkinRecommendation {
   summary:  string;
   advice:   string;
-  routine:  string[];      // ordered list of routine steps
+  routine:  string[];            // ordered list of routine steps
+  products?: ProductRecommendation[];
 }
 
 export interface BeardRecommendation {
-  summary: string;
-  advice:  string;         // exact words to say to barber
+  summary:  string;
+  advice:   string;              // exact words to say to barber
+  products?: ProductRecommendation[];
 }
 
 export interface MakeupRecommendation {
-  summary: string;
-  advice:  string;
+  summary:  string;
+  advice:   string;
+  products?: ProductRecommendation[];
 }
 
 export interface Recommendations {

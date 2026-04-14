@@ -1,6 +1,6 @@
-// Rate a salon — Step 1: search/select, Step 2: review form, Step 3: success.
+// Rate a salon — search/select → new form → success.
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, ActivityIndicator, Alert,
@@ -8,82 +8,101 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { supabase } from '../../lib/supabase';
-import { GUEST_PROFILE_KEY } from '../_layout';
 import { MOCK_SALONS, type Salon } from '../../constants/mockSalons';
 import { fetchNearbySalons } from '../../services/locationService';
-import { StarRating } from '../../components/ui/StarRating';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
 type Step = 'search' | 'form' | 'success';
 
-const MEN_TIERS = [
-  { key: 'under_200',  label: 'Under ₹200' },
-  { key: '200_500',   label: '₹200 – ₹500' },
-  { key: '500_1000',  label: '₹500 – ₹1,000' },
-  { key: 'above_1000',label: 'Above ₹1,000' },
-];
-const WOMEN_TIERS = [
-  { key: 'under_600',   label: 'Under ₹600' },
-  { key: '600_1000',   label: '₹600 – ₹1,000' },
-  { key: '1000_1500',  label: '₹1,000 – ₹1,500' },
-  { key: 'above_1500', label: 'Above ₹1,500' },
-];
-
-const CAT_LABELS = [
-  { key: 'ambience',     label: 'Ambience' },
-  { key: 'priceValue',   label: 'Price for value' },
-  { key: 'staff',        label: 'Staff behaviour' },
-  { key: 'hygiene',      label: 'Hygiene' },
-  { key: 'stylistSkill', label: 'Stylist skill' },
+const SERVICE_GROUPS = [
+  {
+    label: 'HAIR',
+    items: ['Haircut', 'Hair colour', 'Blowout', 'Hair treatment', 'Keratin', 'Extensions'],
+  },
+  {
+    label: 'SKIN',
+    items: ['Facial', 'Cleanup', 'Waxing', 'Threading', 'Bleach'],
+  },
+  {
+    label: 'NAILS & MAKEUP',
+    items: ['Manicure', 'Pedicure', 'Nail art', 'Bridal makeup', 'Party makeup'],
+  },
 ] as const;
 
-type CatKey = typeof CAT_LABELS[number]['key'];
+const DETAIL_RATINGS = [
+  { key: 'rating_staff',    label: 'Staff skill' },
+  { key: 'rating_hygiene',  label: 'Hygiene' },
+  { key: 'rating_value',    label: 'Value for money' },
+  { key: 'rating_ambience', label: 'Ambience' },
+] as const;
+
+type DetailKey = typeof DETAIL_RATINGS[number]['key'];
+
+// ── Star components ───────────────────────────────────────────────────────────
+
+function StarsLarge({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <TouchableOpacity key={n} onPress={() => onChange(n)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+          <Text style={{ fontSize: 42, color: n <= value ? '#C9A84C' : '#2A2420', lineHeight: 50 }}>★</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+function StarsSmall({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 4 }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <TouchableOpacity key={n} onPress={() => onChange(n)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+          <Text style={{ fontSize: 22, color: n <= value ? '#C9A84C' : '#2A2420', lineHeight: 28 }}>★</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function RateSalonScreen() {
-  const router  = useRouter();
-  const insets  = useSafeAreaInsets();
-  const params  = useLocalSearchParams<{ placeId?: string; name?: string; address?: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ placeId?: string; name?: string; address?: string }>();
 
-  const [isGuest,  setIsGuest]  = useState(true);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setIsGuest(!user);
-      setChecking(false);
-    });
-  }, []);
-
-  const [step, setStep]           = useState<Step>(params.placeId ? 'form' : 'search');
-  const [selected, setSelected]   = useState<Salon | null>(
+  const [step, setStep]         = useState<Step>(params.placeId ? 'form' : 'search');
+  const [selected, setSelected] = useState<Salon | null>(
     params.placeId
-      ? { id: params.placeId, name: params.name ?? '', address: params.address ?? '',
-          city: '', latitude: 0, longitude: 0, rating: 0, reviewCount: 0, services: [], priceRange: '' }
-      : null
+      ? {
+          id:          params.placeId,
+          name:        params.name ?? '',
+          address:     params.address ?? '',
+          city:        '',
+          latitude:    0,
+          longitude:   0,
+          rating:      0,
+          reviewCount: 0,
+          services:    [],
+          priceRange:  '',
+        }
+      : null,
   );
 
   // Search state
-  const [query, setQuery]       = useState('');
-  const [salons, setSalons]     = useState<Salon[]>([]);
+  const [query,       setQuery]       = useState('');
+  const [salons,      setSalons]      = useState<Salon[]>([]);
   const [loadingList, setLoadingList] = useState(false);
 
   // Form state
-  const [overall,  setOverall]  = useState(0);
-  const [cats, setCats]         = useState<Record<CatKey, number>>({
-    ambience: 0, priceValue: 0, staff: 0, hygiene: 0, stylistSkill: 0,
+  const [overall,          setOverall]          = useState(0);
+  const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
+  const [detailRatings,    setDetailRatings]    = useState<Record<DetailKey, number>>({
+    rating_staff: 0, rating_hygiene: 0, rating_value: 0, rating_ambience: 0,
   });
-  const [priceTier, setPriceTier] = useState<string | null>(null);
-  const [gender, setGender]       = useState('man');
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    AsyncStorage.getItem(GUEST_PROFILE_KEY).then(raw => {
-      if (raw) { const p = JSON.parse(raw) as { gender?: string }; if (p.gender) setGender(p.gender); }
-    });
-  }, []);
 
   // Load nearby salons for the search list
   useEffect(() => {
@@ -93,7 +112,7 @@ export default function RateSalonScreen() {
       try {
         const { status } = await Location.getForegroundPermissionsAsync();
         if (status === 'granted') {
-          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+          const pos     = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
           const results = await fetchNearbySalons(pos.coords.latitude, pos.coords.longitude);
           setSalons(results.length > 0 ? results : MOCK_SALONS);
         } else {
@@ -108,8 +127,10 @@ export default function RateSalonScreen() {
   }, [step]);
 
   const filtered = query.trim()
-    ? salons.filter(s => s.name.toLowerCase().includes(query.toLowerCase()) ||
-        s.address.toLowerCase().includes(query.toLowerCase()))
+    ? salons.filter(s =>
+        s.name.toLowerCase().includes(query.toLowerCase()) ||
+        s.address.toLowerCase().includes(query.toLowerCase()),
+      )
     : salons;
 
   const selectSalon = useCallback((salon: Salon) => {
@@ -135,78 +156,58 @@ export default function RateSalonScreen() {
     setStep('form');
   }, [query]);
 
+  const toggleService = useCallback((item: string) => {
+    setSelectedServices(prev => {
+      const next = new Set(prev);
+      if (next.has(item)) { next.delete(item); } else { next.add(item); }
+      return next;
+    });
+  }, []);
+
+  const setDetailRating = useCallback((key: DetailKey, value: number) => {
+    setDetailRatings(prev => ({ ...prev, [key]: value }));
+  }, []);
+
   const handleSubmit = useCallback(async () => {
     if (!selected) return;
     if (overall === 0) {
-      Alert.alert('Rating required', 'Please give an overall star rating before submitting.');
+      Alert.alert('Rating required', 'Please give an overall star rating.');
       return;
     }
+    if (selectedServices.size === 0) {
+      Alert.alert('Service required', 'Please select at least one service you got done.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id;
-      if (!userId) {
+      if (!user) {
         Alert.alert('Not signed in', 'Please sign in to submit a rating.');
         setSubmitting(false);
         return;
       }
 
-      const tierField = gender === 'woman' ? 'haircut_price_tier_women' : 'haircut_price_tier_men';
       await supabase.from('salon_ratings').insert({
-        user_id:             userId,
-        google_place_id:     selected.id,
-        salon_name:          selected.name,
-        rating_overall:      overall,
-        rating_ambience:     cats.ambience      || null,
-        rating_price_value:  cats.priceValue    || null,
-        rating_staff:        cats.staff         || null,
-        rating_hygiene:      cats.hygiene       || null,
-        rating_stylist_skill:cats.stylistSkill  || null,
-        [tierField]:         priceTier          || null,
+        user_id:         user.id,
+        google_place_id: selected.id,
+        salon_name:      selected.name,
+        rating_overall:  overall,
+        services_done:   Array.from(selectedServices),
+        rating_staff:    detailRatings.rating_staff    || null,
+        rating_hygiene:  detailRatings.rating_hygiene  || null,
+        rating_value:    detailRatings.rating_value    || null,
+        rating_ambience: detailRatings.rating_ambience || null,
       });
       setStep('success');
-    } catch (e) {
+    } catch (e: unknown) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Could not save rating. Please try again.');
     } finally {
       setSubmitting(false);
     }
-  }, [selected, overall, cats, priceTier, gender]);
+  }, [selected, overall, selectedServices, detailRatings]);
 
-  const tiers = gender === 'woman' ? WOMEN_TIERS : MEN_TIERS;
-
-  // ── Auth gate ─────────────────────────────────────────────────────────────
-  if (checking) {
-    return (
-      <View style={[s.screen, { alignItems: 'center', justifyContent: 'center', paddingTop: insets.top }]}>
-        <StatusBar style="light" />
-        <ActivityIndicator color={Colors.gold} size="large" />
-      </View>
-    );
-  }
-
-  if (isGuest) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-        <StatusBar style="light" />
-        <Text style={{ fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, marginBottom: 8, textAlign: 'center' }}>
-          Sign in to rate salons
-        </Text>
-        <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
-          Your ratings help the Lumé community find great salons
-        </Text>
-        <TouchableOpacity
-          style={{ backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 }}
-          onPress={() => router.push('/(auth)/signup')}
-          activeOpacity={0.85}
-        >
-          <Text style={{ fontSize: 14, fontWeight: '600', color: Colors.background }}>Sign in</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={{ marginTop: 16 }} onPress={() => router.back()} activeOpacity={0.7}>
-          <Text style={{ fontSize: 14, color: Colors.textSecondary }}>Go back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const canSubmit = overall > 0 && selectedServices.size > 0;
 
   // ── Search ────────────────────────────────────────────────────────────────
   if (step === 'search') {
@@ -227,11 +228,16 @@ export default function RateSalonScreen() {
           />
         </View>
         {loadingList ? (
-          <ActivityIndicator color={Colors.gold} style={{ marginTop: Spacing.xl }} />
+          <ActivityIndicator color="#C9A84C" style={{ marginTop: Spacing.xl }} />
         ) : (
           <ScrollView contentContainerStyle={s.listContent} keyboardShouldPersistTaps="handled">
             {filtered.map(salon => (
-              <TouchableOpacity key={salon.id} style={s.listRow} onPress={() => selectSalon(salon)} activeOpacity={0.8}>
+              <TouchableOpacity
+                key={salon.id}
+                style={s.listRow}
+                onPress={() => selectSalon(salon)}
+                activeOpacity={0.8}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={s.listName} numberOfLines={1}>{salon.name}</Text>
                   <Text style={s.listAddr} numberOfLines={1}>{salon.address}</Text>
@@ -259,9 +265,9 @@ export default function RateSalonScreen() {
       <View style={[s.screen, s.successScreen, { paddingTop: insets.top }]}>
         <StatusBar style="light" />
         <Text style={s.successCheck}>✓</Text>
-        <Text style={s.successTitle}>Thank you!</Text>
+        <Text style={s.successTitle}>Rating submitted</Text>
         <Text style={s.successBody}>
-          Your rating helps everyone find the best salons.
+          Thanks for helping the Lumé community find great salons.
         </Text>
         <TouchableOpacity style={s.successBtn} onPress={() => router.back()} activeOpacity={0.85}>
           <Text style={s.successBtnText}>Back to Salons</Text>
@@ -274,61 +280,81 @@ export default function RateSalonScreen() {
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <StatusBar style="light" />
-      <BackBar title="Rate a Salon" onBack={() => params.placeId ? router.back() : setStep('search')} />
+      <BackBar
+        title="Rate a Salon"
+        onBack={() => (params.placeId ? router.back() : setStep('search'))}
+      />
 
-      <ScrollView contentContainerStyle={s.formContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={s.formContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Salon header */}
         <View style={s.salonHeader}>
           <Text style={s.salonHeaderName}>{selected?.name}</Text>
-          {!!selected?.address && <Text style={s.salonHeaderAddr}>{selected.address}</Text>}
+          {!!selected?.address && (
+            <Text style={s.salonHeaderAddr}>{selected.address}</Text>
+          )}
         </View>
 
-        {/* Overall rating */}
-        <Text style={s.fieldLabel}>OVERALL RATING</Text>
+        {/* ── Section 1: Overall experience ── */}
+        <Text style={s.sectionLabel}>OVERALL EXPERIENCE</Text>
         <View style={s.overallBox}>
-          <StarRating value={overall} onChange={setOverall} size="lg" />
-          {overall > 0 && <Text style={s.overallNum}>{overall}.0</Text>}
+          <StarsLarge value={overall} onChange={setOverall} />
         </View>
 
-        {/* Category ratings */}
-        <Text style={s.fieldLabel}>CATEGORIES</Text>
-        <View style={s.catCard}>
-          {CAT_LABELS.map(({ key, label }, i) => (
-            <View key={key} style={[s.catRow, i < CAT_LABELS.length - 1 && s.catRowBorder]}>
-              <Text style={s.catLabel}>{label}</Text>
-              <StarRating value={cats[key]} onChange={v => setCats(prev => ({ ...prev, [key]: v }))} size="sm" />
+        {/* ── Section 2: Services done ── */}
+        <Text style={s.sectionLabel}>WHAT DID YOU GET DONE?</Text>
+        <Text style={s.sectionSub}>Select all that apply</Text>
+
+        {SERVICE_GROUPS.map(group => (
+          <View key={group.label} style={s.serviceGroup}>
+            <Text style={s.serviceGroupLabel}>{group.label}</Text>
+            <View style={s.pillsWrap}>
+              {group.items.map(item => {
+                const active = selectedServices.has(item);
+                return (
+                  <TouchableOpacity
+                    key={item}
+                    style={[s.pill, active && s.pillActive]}
+                    onPress={() => toggleService(item)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[s.pillText, active && s.pillTextActive]}>{item}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          ))}
-        </View>
+          </View>
+        ))}
 
-        {/* Haircut price */}
-        <Text style={s.fieldLabel}>HAIRCUT PRICE</Text>
-        <Text style={s.fieldSub}>How much does a basic haircut cost here?</Text>
-        <View style={s.tiersCard}>
-          {tiers.map(({ key, label }) => (
-            <TouchableOpacity
+        {/* ── Section 3: Detail ratings ── */}
+        <Text style={s.sectionLabel}>RATE THE DETAILS</Text>
+        <View style={s.detailCard}>
+          {DETAIL_RATINGS.map(({ key, label }, i) => (
+            <View
               key={key}
-              style={[s.tierRow, priceTier === key && s.tierRowActive]}
-              onPress={() => setPriceTier(prev => prev === key ? null : key)}
-              activeOpacity={0.8}
+              style={[s.detailRow, i < DETAIL_RATINGS.length - 1 && s.detailRowBorder]}
             >
-              <View style={[s.radio, priceTier === key && s.radioActive]}>
-                {priceTier === key && <View style={s.radioDot} />}
-              </View>
-              <Text style={[s.tierLabel, priceTier === key && s.tierLabelActive]}>{label}</Text>
-            </TouchableOpacity>
+              <Text style={s.detailLabel}>{label}</Text>
+              <StarsSmall
+                value={detailRatings[key]}
+                onChange={v => setDetailRating(key, v)}
+              />
+            </View>
           ))}
         </View>
 
         {/* Submit */}
         <TouchableOpacity
-          style={[s.submitBtn, (overall === 0 || submitting) && s.submitBtnDisabled]}
+          style={[s.submitBtn, (!canSubmit || submitting) && s.submitBtnDisabled]}
           onPress={handleSubmit}
-          disabled={overall === 0 || submitting}
+          disabled={!canSubmit || submitting}
           activeOpacity={0.85}
         >
           {submitting
-            ? <ActivityIndicator color={Colors.background} />
+            ? <ActivityIndicator color="#0A0A0A" />
             : <Text style={s.submitBtnText}>Submit rating</Text>
           }
         </TouchableOpacity>
@@ -339,6 +365,7 @@ export default function RateSalonScreen() {
   );
 }
 
+// ── Back bar ──────────────────────────────────────────────────────────────────
 function BackBar({ title, onBack }: { title: string; onBack?: () => void }) {
   const router = useRouter();
   return (
@@ -354,56 +381,79 @@ function BackBar({ title, onBack }: { title: string; onBack?: () => void }) {
 const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
-  arrow: { fontSize: 28, color: Colors.gold, lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: Colors.cream },
+  arrow: { fontSize: 28, color: '#C9A84C', lineHeight: 32 },
+  title: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: '#F5F0E8' },
 });
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
+  screen: { flex: 1, backgroundColor: '#0A0A0A' },
 
   // Search
-  searchBox:   { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
-  searchInput: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.input, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: Colors.cream },
-  listContent: { paddingHorizontal: Spacing.lg },
-  listRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.xs },
-  listName:    { fontSize: Typography.size.md, color: Colors.cream, fontWeight: '600', marginBottom: 2 },
-  listAddr:    { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  listArrow:   { fontSize: 22, color: Colors.textTertiary, lineHeight: 26 },
-  addManualRow:{ backgroundColor: Colors.surface2, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.sm },
-  addManualText:{ fontSize: Typography.size.base, color: Colors.gold },
-  emptyHint:   { textAlign: 'center', color: Colors.textTertiary, fontSize: Typography.size.base, marginTop: Spacing.xl },
+  searchBox:    { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
+  searchInput:  { backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: '#F5F0E8' },
+  listContent:  { paddingHorizontal: Spacing.lg },
+  listRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', padding: Spacing.md, marginBottom: Spacing.xs },
+  listName:     { fontSize: Typography.size.md, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
+  listAddr:     { fontSize: Typography.size.sm, color: Colors.textSecondary },
+  listArrow:    { fontSize: 22, color: Colors.textTertiary, lineHeight: 26 },
+  addManualRow: { backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', padding: Spacing.md, alignItems: 'center', marginTop: Spacing.sm },
+  addManualText:{ fontSize: Typography.size.base, color: '#C9A84C' },
+  emptyHint:    { textAlign: 'center', color: Colors.textTertiary, fontSize: Typography.size.base, marginTop: Spacing.xl },
 
   // Form
-  formContent:  { paddingHorizontal: Spacing.lg },
-  salonHeader:  { paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: Spacing.lg },
-  salonHeaderName: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream },
+  formContent:     { paddingHorizontal: Spacing.lg },
+  salonHeader:     { paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: '#2A2420', marginBottom: Spacing.lg },
+  salonHeaderName: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: '#F5F0E8' },
   salonHeaderAddr: { fontSize: Typography.size.base, color: Colors.textSecondary, marginTop: 4 },
-  fieldLabel:   { fontSize: Typography.size.xs, color: Colors.gold, letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
-  fieldSub:     { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.sm, marginTop: -Spacing.xs },
-  overallBox:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.lg },
-  overallNum:   { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.gold },
-  catCard:      { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
-  catRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
-  catRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
-  catLabel:     { fontSize: Typography.size.base, color: Colors.cream },
-  tiersCard:    { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
-  tierRow:      { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  tierRowActive:{ backgroundColor: Colors.goldDim },
-  radio:        { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
-  radioActive:  { borderColor: Colors.gold },
-  radioDot:     { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.gold },
-  tierLabel:    { fontSize: Typography.size.base, color: Colors.textSecondary },
-  tierLabelActive:{ color: Colors.cream },
-  submitBtn:        { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
-  submitBtnDisabled:{ opacity: 0.4 },
-  submitBtnText:    { fontSize: Typography.size.md, fontWeight: '600', color: Colors.background },
+
+  sectionLabel: { fontSize: Typography.size.xs, color: '#C9A84C', letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.xs, marginTop: Spacing.xl },
+  sectionSub:   { fontSize: Typography.size.sm, color: '#8A7A6A', marginBottom: Spacing.md },
+
+  overallBox: {
+    backgroundColor: '#1A1412',
+    borderRadius:    12,
+    borderWidth:     1,
+    borderColor:     '#2A2420',
+    padding:         Spacing.xl,
+    alignItems:      'center',
+  },
+
+  // Service groups
+  serviceGroup:      { marginBottom: Spacing.lg },
+  serviceGroupLabel: { fontSize: 10, color: '#8A7A6A', letterSpacing: 3, marginBottom: Spacing.sm },
+  pillsWrap:         { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
+  pill: {
+    backgroundColor: '#1A1412',
+    borderWidth:     1,
+    borderColor:     '#2A2420',
+    borderRadius:    999,
+    paddingHorizontal: 14,
+    paddingVertical:   7,
+  },
+  pillActive: {
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    borderColor:     'rgba(201,168,76,0.4)',
+  },
+  pillText:       { fontSize: 13, color: '#4A4540' },
+  pillTextActive: { color: '#C9A84C', fontWeight: '600' },
+
+  // Detail ratings
+  detailCard:      { backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', overflow: 'hidden' },
+  detailRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
+  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#2A2420' },
+  detailLabel:     { fontSize: Typography.size.base, color: '#F5F0E8' },
+
+  // Submit
+  submitBtn:         { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
+  submitBtnDisabled: { opacity: 0.4 },
+  submitBtnText:     { fontSize: Typography.size.md, fontWeight: '600', color: '#0A0A0A' },
 
   // Success
   successScreen: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  successCheck:  { fontSize: 64, color: Colors.gold, marginBottom: Spacing.lg },
-  successTitle:  { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.cream, marginBottom: Spacing.sm },
+  successCheck:  { fontSize: 64, color: '#C9A84C', marginBottom: Spacing.lg },
+  successTitle:  { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: '#F5F0E8', marginBottom: Spacing.sm },
   successBody:   { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
-  successBtn:    { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  successBtnText:{ fontSize: Typography.size.md, fontWeight: '600', color: Colors.background },
+  successBtn:    { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  successBtnText:{ fontSize: Typography.size.md, fontWeight: '600', color: '#0A0A0A' },
 });

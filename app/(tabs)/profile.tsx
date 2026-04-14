@@ -13,17 +13,18 @@ import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import { FIRST_LAUNCH_KEY, GUEST_PROFILE_KEY } from '../_layout';
+import { FIRST_LAUNCH_KEY } from '../_layout';
 import { getTierFromScore } from '../../constants/tiers';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [isGuest,           setIsGuest]           = useState(true);
   const [displayName,       setDisplayName]       = useState('');
   const [gender,            setGender]            = useState('');
   const [city,              setCity]              = useState('');
+  const [preferredBrands,   setPreferredBrands]   = useState<string[]>([]);
+  const [routineLevel,      setRoutineLevel]      = useState('');
   const [scanCount,         setScanCount]         = useState(0);
   const [currentStreak,     setCurrentStreak]     = useState(0);
   const [bestStreak,        setBestStreak]        = useState(0);
@@ -42,18 +43,12 @@ export default function ProfileScreen() {
 
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      setIsGuest(true);
-      return;
-    }
-
-    setIsGuest(false);
+    if (!user) return;
 
     // Load user profile
     const { data: profile } = await supabase
       .from('users')
-      .select('display_name, gender, city')
+      .select('display_name, gender, city, preferred_brands, routine_level')
       .eq('id', user.id)
       .single();
 
@@ -61,6 +56,10 @@ export default function ProfileScreen() {
       setDisplayName(profile.display_name ?? '');
       setGender(profile.gender ?? '');
       setCity(profile.city ?? '');
+      type ProfileRow = { preferred_brands?: string[]; routine_level?: string };
+      const p = profile as ProfileRow;
+      setPreferredBrands(p.preferred_brands ?? []);
+      setRoutineLevel(p.routine_level ?? '');
     }
 
     // Load scan count and top tier
@@ -228,54 +227,6 @@ export default function ProfileScreen() {
     );
   }
 
-  // ── Guest view ─────────────────────────────────────────────────────────────
-  if (isGuest) {
-    return (
-      <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
-        <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={s.pageTitle}>Profile</Text>
-
-          <View style={s.guestBanner}>
-            <View style={s.guestAvatar}>
-              <Text style={s.guestAvatarText}>?</Text>
-            </View>
-            <Text style={s.guestTitle}>You're browsing as a guest</Text>
-            <Text style={s.guestSub}>
-              Sign in to save your scans, track streaks and get reminders
-            </Text>
-            <TouchableOpacity
-              style={s.signInBtn}
-              onPress={() => router.push('/(auth)/signup')}
-              activeOpacity={0.85}
-            >
-              <Text style={s.signInBtnText}>Sign in</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={s.sectionLabel}>ABOUT</Text>
-          <View style={s.card}>
-            <TouchableOpacity style={s.row} activeOpacity={0.7}>
-              <Text style={s.rowLabel}>Privacy Policy</Text>
-              <Text style={s.rowArrow}>›</Text>
-            </TouchableOpacity>
-            <View style={s.divider} />
-            <TouchableOpacity style={s.row} activeOpacity={0.7}>
-              <Text style={s.rowLabel}>Terms of Service</Text>
-              <Text style={s.rowArrow}>›</Text>
-            </TouchableOpacity>
-            <View style={s.divider} />
-            <View style={s.row}>
-              <Text style={s.rowLabel}>Version</Text>
-              <Text style={s.rowValue}>1.0.0</Text>
-            </View>
-          </View>
-        </ScrollView>
-      </View>
-    );
-  }
-
-  // ── Authenticated view ─────────────────────────────────────────────────────
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <StatusBar style="light" />
@@ -379,6 +330,44 @@ export default function ProfileScreen() {
           />
         )}
 
+        {/* Preferences */}
+        <Text style={s.sectionLabel}>PREFERENCES</Text>
+        <View style={s.card}>
+          <TouchableOpacity
+            style={s.row}
+            onPress={() => router.push('/profile/my-brands')}
+            activeOpacity={0.7}
+          >
+            <View>
+              <Text style={s.rowLabel}>My brands</Text>
+              <Text style={s.rowSub}>
+                {preferredBrands.length > 0
+                  ? preferredBrands.slice(0, 3).join(' · ')
+                  : 'Not set yet'
+                }
+              </Text>
+            </View>
+            <Text style={s.rowArrow}>›</Text>
+          </TouchableOpacity>
+          <View style={s.divider} />
+          <TouchableOpacity
+            style={s.row}
+            onPress={() => router.push('/profile/routine-level')}
+            activeOpacity={0.7}
+          >
+            <View>
+              <Text style={s.rowLabel}>Routine level</Text>
+              <Text style={s.rowSub}>
+                {routineLevel === 'simple'   ? 'Keep it simple · 2–3 products' :
+                 routineLevel === 'balanced' ? 'Balanced · 4–5 products' :
+                 routineLevel === 'full'     ? 'Full routine · 6+ products' :
+                 'Not set yet'}
+              </Text>
+            </View>
+            <Text style={s.rowArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* About */}
         <Text style={s.sectionLabel}>ABOUT</Text>
         <View style={s.card}>
@@ -428,29 +417,6 @@ const s = StyleSheet.create({
     paddingTop:        Spacing.md,
     marginBottom:      Spacing.lg,
   },
-
-  // Guest
-  guestBanner: {
-    backgroundColor: Colors.surface,
-    borderRadius:    Radius.card,
-    borderWidth:     1,
-    borderColor:     'rgba(201,168,76,0.2)',
-    padding:         Spacing.xl,
-    alignItems:      'center',
-    marginHorizontal: Spacing.lg,
-    marginBottom:    Spacing.lg,
-  },
-  guestAvatar: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: Colors.surface2,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: Spacing.md,
-  },
-  guestAvatarText: { fontSize: 24, color: Colors.textSecondary },
-  guestTitle:  { fontFamily: Typography.serif, fontSize: 16, color: Colors.cream, marginBottom: Spacing.xs, textAlign: 'center' },
-  guestSub:    { fontSize: 12, color: Colors.textSecondary, textAlign: 'center', lineHeight: 18, marginBottom: Spacing.lg },
-  signInBtn:     { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: 12, paddingHorizontal: 32, width: '100%', alignItems: 'center' },
-  signInBtnText: { fontSize: 14, fontWeight: '600', color: Colors.background },
 
   // User card
   userCard: {

@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import { FIRST_LAUNCH_KEY, GUEST_PROFILE_KEY, DEFAULT_GUEST } from '../_layout';
+import { FIRST_LAUNCH_KEY } from '../_layout';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -118,15 +118,6 @@ export default function SignupScreen() {
     router.replace('/(auth)/onboarding');
   };
 
-  const handleContinueAsGuest = async () => {
-    await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
-    const existing = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
-    if (!existing) {
-      await AsyncStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify(DEFAULT_GUEST));
-    }
-    router.replace('/(tabs)/scan');
-  };
-
   const canSubmit = email.trim().length > 0 && password.length >= 6;
 
   return (
@@ -219,14 +210,6 @@ export default function SignupScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.skipLink}
-            onPress={handleContinueAsGuest}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.skipText}>Continue as guest</Text>
-          </TouchableOpacity>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -244,12 +227,12 @@ const styles = StyleSheet.create({
 
   title: {
     fontFamily:   Typography.serif,
-    fontSize:     Typography.size.xxl,
+    fontSize:     22,
     color:        Colors.cream,
     marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize:     Typography.size.base,
+    fontSize:     13,
     color:        Colors.textSecondary,
     marginBottom: Spacing.xxl,
     lineHeight:   20,
@@ -285,7 +268,7 @@ const styles = StyleSheet.create({
     borderRadius:      Radius.input,
     paddingHorizontal: Spacing.md,
     paddingVertical:   Spacing.md,
-    fontSize:          Typography.size.md,
+    fontSize:          15,
     color:             Colors.cream,
     marginBottom:      Spacing.md,
   },
@@ -302,7 +285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingRight:      48,
     paddingVertical:   Spacing.md,
-    fontSize:          Typography.size.md,
+    fontSize:          15,
     color:             Colors.cream,
   },
   eyeBtn: {
@@ -336,11 +319,4 @@ const styles = StyleSheet.create({
   },
   switchText:     { fontSize: Typography.size.base, color: Colors.textSecondary },
   switchTextBold: { color: Colors.cream, fontWeight: '600' },
-
-  skipLink: {
-    alignItems:      'center',
-    paddingVertical: Spacing.sm,
-    marginTop:       Spacing.sm,
-  },
-  skipText: { fontSize: Typography.size.base, color: Colors.textTertiary },
 });

@@ -2,29 +2,13 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 
-export const GUEST_PROFILE_KEY = '@lume/guest_profile';
 export const FIRST_LAUNCH_KEY  = '@lume/first_launch';
-
-export const DEFAULT_GUEST = {
-  id: 'guest',
-  display_name: 'Guest',
-  gender: 'man',
-  city: 'Mumbai',
-  onboarding_complete: true,
-  notification_reminders: true,
-  notification_routine: true,
-  avatar_url: null,
-  referral_code: null,
-  referred_by: null,
-  push_token: null,
-  last_scan_at: null,
-  created_at: new Date().toISOString(),
-};
+// Retained for import compatibility with salon files — no longer written
+export const GUEST_PROFILE_KEY = '@lume/guest_profile';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -37,11 +21,6 @@ export default function RootLayout() {
         webClientId:     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
         scopes:          ['profile', 'email'],
       });
-
-      const existing = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
-      if (!existing) {
-        await AsyncStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify(DEFAULT_GUEST));
-      }
 
       // Handle deep links for password reset (lume://auth/callback)
       // NOTE: Supabase Dashboard → Authentication → URL Configuration must have:

@@ -26,8 +26,31 @@ export type GeminiAnalysis = Pick<
   | 'score_makeup'
 >;
 
-function buildPrompt(gender: string): string {
-  return `Analyse this face photo and return ONLY a valid JSON object with no markdown, no code fences, no explanation.
+function buildPrompt(
+  gender:              string,
+  city:                string | null,
+  budget:              string,
+  previousScanSummary: string | null,
+): string {
+  const userContext = [
+    `Gender: ${gender}`,
+    city
+      ? `City: ${city} — factor in local climate, humidity, pollution and UV levels when making recommendations`
+      : null,
+    budget === 'affordable'
+      ? 'Budget: Affordable — recommend products under ₹500'
+      : 'Budget: Premium — recommend products ₹500 and above',
+    previousScanSummary
+      ? `Previous scan context: ${previousScanSummary} — reference this when relevant. Note improvements or regressions. If a concern has improved say so. If something is worse flag it.`
+      : "Previous scan: This is the user's first scan — no previous context available.",
+  ].filter(Boolean).join('\n');
+
+  return `User context:
+${userContext}
+
+---
+
+Analyse this face photo and return ONLY a valid JSON object with no markdown, no code fences, no explanation.
 Gender context: ${gender}
 
 Focus ONLY on grooming-related observations that can be improved with effort, products, or professional help.
@@ -62,11 +85,14 @@ Never penalise for fixed traits.
 70-80 = good grooming effort. 85+ = exceptional maintenance. Below 60 = clear grooming concerns to address.`;
 }
 
-// Pass the base64-encoded image string (no data URI prefix) and the user's gender.
+// Pass the base64-encoded image string (no data URI prefix) plus user context.
 // Returns the parsed analysis object from Gemini.
 export async function analyseWithGemini(
-  base64Image: string,
-  gender: string,
+  base64Image:         string,
+  city:                string | null,
+  gender:              string,
+  budget:              string,
+  previousScanSummary: string | null,
 ): Promise<GeminiAnalysis> {
   const response = await fetch(ENDPOINT, {
     method:  'POST',
@@ -80,7 +106,7 @@ export async function analyseWithGemini(
               data:       base64Image,
             },
           },
-          { text: buildPrompt(gender) },
+          { text: buildPrompt(gender, city, budget, previousScanSummary) },
         ],
       }],
       generationConfig: {

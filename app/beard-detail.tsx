@@ -1,7 +1,7 @@
 // Beard detail screen — Shape | Routine | Products tabs. Men only.
 // Receives scanJson and gender as navigation params.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking,
 } from 'react-native';
@@ -9,9 +9,17 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
+import { getProductsForBrands } from '../constants/productConstants';
+import type { Product } from '../constants/productConstants';
+import { logProductEvent } from '../services/scanService';
+import { supabase } from '../lib/supabase';
 import type { Scan } from '../types';
 
 type Tab = 'shape' | 'routine' | 'products';
+
+function formatCategoryName(cat: string): string {
+  return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
 
 interface ProductItem { icon: string; name: string; why: string; tag: string; }
 
@@ -81,10 +89,47 @@ export default function BeardDetailScreen() {
   const scan = scanJson ? (JSON.parse(scanJson) as Scan) : null;
   const rec  = scan?.recommendations;
 
-  const [tab, setTab] = useState<Tab>('shape');
+  const [tab,          setTab]          = useState<Tab>('shape');
+  const [preferredBrands, setPreferredBrands] = useState<string[]>([]);
+  const [brandsLoaded, setBrandsLoaded]  = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadUserPrefs = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setBrandsLoaded(true); return; }
+      const { data } = await supabase
+        .from('users')
+        .select('preferred_brands')
+        .eq('id', user.id)
+        .single();
+      const row = data as { preferred_brands?: string[] } | null;
+      setPreferredBrands(row?.preferred_brands ?? []);
+      setBrandsLoaded(true);
+    };
+    loadUserPrefs();
+  }, []);
 
   const faceShapeBeard = FACE_SHAPE_BEARD[scan?.face_shape ?? ''] ?? null;
-  const products       = getBeardProducts(scan?.beard_density ?? null);
+
+  const productRecs = rec?.beard?.products ?? [];
+  const visibleCategories = [...new Set(productRecs.map(p => p.category))];
+
+  const handleBuyPress = async (product: Product, category: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && scan?.id && !scan.id.startsWith('local_')) {
+      await logProductEvent({
+        userId:      user.id,
+        scanId:      scan.id,
+        productId:   product.id,
+        productName: product.name,
+        brand:       product.brand,
+        category,
+        eventType:   'clicked_buy',
+      });
+    }
+    Linking.openURL(product.nykaa_url);
+  };
 
 
   return (
@@ -221,12 +266,88 @@ export default function BeardDetailScreen() {
         {/* ── PRODUCTS ── */}
         {tab === 'products' && (
           <>
-            <Text style={s.openingLine}>
-              Based on your{scan?.beard_density ? ` ${scan.beard_density}` : ''} beard density — these are the products and ingredients to look for.
-            </Text>
-            {products.map((p, i) => (
-              <ProductCard key={i} {...p} iconBg="#1A2010" iconColor="#6BCB77" />
-            ))}
+            {brandsLoaded && preferredBrands.length === 0 && (
+              <TouchableOpacity
+                style={s.noBrandsBanner}
+                onPress={() => router.push('/profile/my-brands' as never)}
+                activeOpacity={0.8}
+              >
+                <Text style={s.noBrandsTitle}>Set your preferred brands</Text>
+                <Text style={s.noBrandsSub}>We'll show products from brands you already trust</Text>
+                <Text style={s.noBrandsArrow}>›</Text>
+              </TouchableOpacity>
+            )}
+
+            {productRecs.length === 0 ? (
+              <Text style={s.openingLine}>
+                No product recommendations yet — rescan to get personalised picks.
+              </Text>
+            ) : (
+              visibleCategories.map(cat => {
+                const catRec = productRecs.find(p => p.category === cat);
+                const products = getProductsForBrands({
+                  category:     cat,
+                  preferredBrands,
+                  fallbackTier: 'budget',
+                  gender:       'men',
+                  limit:        3,
+                });
+                const isExpanded = expandedCategory === cat;
+                return (
+                  <View key={cat} style={s.catTile}>
+                    <TouchableOpacity
+                      style={s.catHeader}
+                      onPress={() => setExpandedCategory(isExpanded ? null : cat)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={s.catHeaderLeft}>
+                        <Text style={s.catName}>{formatCategoryName(cat)}</Text>
+                        {catRec && (
+                          <View style={s.matchBadge}>
+                            <Text style={s.matchBadgeText}>{catRec.match_score}% match</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={s.chevron}>{isExpanded ? '∧' : '∨'}</Text>
+                    </TouchableOpacity>
+
+                    {isExpanded && (
+                      <View style={s.catBody}>
+                        {catRec?.reason ? (
+                          <Text style={s.catReason}>{catRec.reason}</Text>
+                        ) : null}
+                        {products.length === 0 ? (
+                          <Text style={s.noProductsText}>No matching products found.</Text>
+                        ) : (
+                          products.map(product => (
+                            <View key={product.id} style={s.productRow}>
+                              <View style={s.productRowLeft}>
+                                {product.isPreferredBrand && (
+                                  <View style={s.preferredBadge}>
+                                    <Text style={s.preferredBadgeText}>Your brand</Text>
+                                  </View>
+                                )}
+                                <Text style={s.productRowName}>{product.name}</Text>
+                                <Text style={s.productRowMeta}>
+                                  {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
+                                </Text>
+                              </View>
+                              <TouchableOpacity
+                                style={s.buyBtn}
+                                onPress={() => handleBuyPress(product, cat)}
+                                activeOpacity={0.8}
+                              >
+                                <Text style={s.buyBtnText}>Buy</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })
+            )}
           </>
         )}
 
@@ -328,6 +449,47 @@ const s = StyleSheet.create({
   stepText:   { flex: 1, fontSize: Typography.size.md, color: Colors.textSecondary, lineHeight: 20 },
 
   openingLine: { fontSize: Typography.size.md, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.md },
+
+  // Collapsible category tiles
+  noBrandsBanner: {
+    backgroundColor: '#1A1412', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)',
+    borderRadius: 12, padding: 14, marginBottom: 8,
+  },
+  noBrandsTitle: { fontSize: 13, color: Colors.cream, fontWeight: '600', marginBottom: 3 },
+  noBrandsSub:   { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
+  noBrandsArrow: { position: 'absolute', right: 14, top: 14, fontSize: 22, color: Colors.gold },
+
+  catTile: {
+    backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420',
+    borderRadius: 12, marginBottom: 6, overflow: 'hidden',
+  },
+  catHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  catHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  catName:       { fontSize: 13, color: Colors.cream, fontWeight: '600' },
+  matchBadge:    { backgroundColor: 'rgba(201,168,76,0.1)', borderRadius: Radius.pill, paddingHorizontal: 7, paddingVertical: 2 },
+  matchBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
+  chevron:       { fontSize: 12, color: Colors.textSecondary },
+
+  catBody:       { borderTopWidth: 1, borderTopColor: '#2A2420', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 },
+  catReason:     { fontSize: 11, color: Colors.textSecondary, lineHeight: 16, marginBottom: 10 },
+  noProductsText:{ fontSize: 11, color: Colors.textTertiary, marginBottom: 10 },
+
+  productRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: 10, paddingVertical: 8,
+    borderTopWidth: 1, borderTopColor: '#222222',
+  },
+  productRowLeft:  { flex: 1 },
+  preferredBadge:  { alignSelf: 'flex-start', backgroundColor: 'rgba(201,168,76,0.12)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 3 },
+  preferredBadgeText: { fontSize: 8, color: Colors.gold, fontWeight: '500' },
+  productRowName:  { fontSize: 12, color: Colors.cream, fontWeight: '500', marginBottom: 2 },
+  productRowMeta:  { fontSize: 10, color: '#8A7A6A' },
+
+  buyBtn:          { backgroundColor: Colors.gold, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0 },
+  buyBtnText:      { fontSize: 10, color: Colors.background, fontWeight: '600' },
 
   productCard: {
     flexDirection: 'row', alignItems: 'flex-start',

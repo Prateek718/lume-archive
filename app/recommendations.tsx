@@ -9,10 +9,9 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { getLatestSavedScan } from '../services/scanService';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
-import { GUEST_PROFILE_KEY } from './_layout';
 import type { Scan } from '../types';
 
 export default function RecommendationsScreen() {
@@ -26,7 +25,6 @@ export default function RecommendationsScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!scanId && !scanJson) return;
     const load = async () => {
       if (scanJson) {
         setScan(JSON.parse(scanJson) as Scan);
@@ -34,11 +32,19 @@ export default function RecommendationsScreen() {
         const { data: scanData } = await supabase
           .from('scans').select('*').eq('id', scanId).single();
         if (scanData) setScan(scanData as Scan);
+      } else {
+        // No params — fall back to the most recently cached scan
+        const latest = await getLatestSavedScan();
+        if (latest) setScan(latest);
       }
 
       let g = 'man';
-      const raw = await AsyncStorage.getItem(GUEST_PROFILE_KEY);
-      if (raw) g = JSON.parse(raw).gender ?? 'man';
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('users').select('gender').eq('id', user.id).single();
+        if (profile?.gender) g = profile.gender as string;
+      }
 
       setGender(g);
       setLoading(false);

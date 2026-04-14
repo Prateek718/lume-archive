@@ -1,0 +1,4258 @@
+{
+  "generated_at": "2026-04-13T00:00:00.000Z",
+  "total_products": 226,
+  "products": [
+    {
+      "id": "cetaphil_gentle_cleanser",
+      "name": "Gentle Skin Cleanser",
+      "brand": "Cetaphil",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/cetaphil-gentle-skin-cleanser/p/18887?ref=lume",
+      "skin_types": [
+        "dry",
+        "sensitive",
+        "normal",
+        "combination"
+      ],
+      "concerns": [
+        "dryness",
+        "sensitivity"
+      ],
+      "why_good": "Soap-free, pH-balanced formula with niacinamide that cleanses without stripping \u2014 ideal for dry and sensitive Indian skin."
+    },
+    {
+      "id": "minimalist_salicylic_cleanser",
+      "name": "2% Salicylic Acid Face Wash",
+      "brand": "Minimalist",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 249,
+      "nykaa_url": "https://www.nykaa.com/minimalist-2-salicylic-acid-face-wash/p/1159489?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "acne_prone"
+      ],
+      "concerns": [
+        "acne",
+        "oiliness",
+        "pores"
+      ],
+      "why_good": "BHA exfoliant that dissolves sebum inside pores \u2014 perfect for India's humid climate where oiliness and acne are common."
+    },
+    {
+      "id": "plum_green_tea_cleanser",
+      "name": "Green Tea Pore Cleansing Face Wash",
+      "brand": "Plum",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 295,
+      "nykaa_url": "https://www.nykaa.com/plum-green-tea-pore-cleansing-face-wash/p/239635?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "pores",
+        "acne"
+      ],
+      "why_good": "Green tea antioxidants with glycolic acid control oil and minimise pores \u2014 vegan and suitable for Indian climate."
+    },
+    {
+      "id": "la_roche_effaclar",
+      "name": "Effaclar Purifying Foaming Gel",
+      "brand": "La Roche-Posay",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 895,
+      "nykaa_url": "https://www.nykaa.com/la-roche-posay-effaclar-purifying-foaming-gel/p/432156?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "acne",
+        "oiliness",
+        "pores"
+      ],
+      "why_good": "Dermatologist-recommended zinc-based formula that removes excess oil without disrupting skin barrier \u2014 excellent for acne-prone skin."
+    },
+    {
+      "id": "dot_key_barrier_cleanser",
+      "name": "Watermelon Cooling Cleanser",
+      "brand": "Dot & Key",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 395,
+      "nykaa_url": "https://www.nykaa.com/dot-key-watermelon-cooling-face-cleanser/p/1068234?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "normal"
+      ],
+      "concerns": [
+        "oiliness",
+        "dryness",
+        "brightening"
+      ],
+      "why_good": "Watermelon and niacinamide combo that cools and brightens \u2014 popular for Indian summers and humid weather."
+    },
+    {
+      "id": "bioderma_sensibio",
+      "name": "Sensibio H2O Micellar Water",
+      "brand": "Bioderma",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 799,
+      "nykaa_url": "https://www.nykaa.com/bioderma-sensibio-h2o/p/23456?ref=lume",
+      "skin_types": [
+        "sensitive",
+        "dry",
+        "normal"
+      ],
+      "concerns": [
+        "sensitivity",
+        "dryness"
+      ],
+      "why_good": "French pharmacy micellar water that removes makeup and cleanses with zero irritation \u2014 no-rinse formula loved by dermatologists."
+    },
+    {
+      "id": "clinique_liquid_soap",
+      "name": "Liquid Facial Soap Mild",
+      "brand": "Clinique",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/clinique-liquid-facial-soap-mild/p/67890?ref=lume",
+      "skin_types": [
+        "normal",
+        "dry",
+        "sensitive"
+      ],
+      "concerns": [
+        "sensitivity",
+        "dryness"
+      ],
+      "why_good": "Allergy-tested, dermatologist-developed formula with 30-year track record \u2014 fragrance-free and hypoallergenic."
+    },
+    {
+      "id": "fresh_soy_cleanser",
+      "name": "Soy Face Cleanser",
+      "brand": "Fresh",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3500,
+      "nykaa_url": "https://www.nykaa.com/fresh-soy-face-cleanser/p/34521?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "sensitivity",
+        "brightening"
+      ],
+      "why_good": "Amino acid-rich soy proteins with cucumber extract \u2014 removes makeup while improving skin elasticity over time."
+    },
+    {
+      "id": "sk2_facial_cleanser",
+      "name": "Facial Treatment Gentle Cleanser",
+      "brand": "SK-II",
+      "category": "face_cleanser",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 5500,
+      "nykaa_url": "https://www.nykaa.com/sk-ii-facial-treatment-gentle-cleanser/p/98765?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "brightening",
+        "anti_ageing",
+        "hydration"
+      ],
+      "why_good": "Pitera-enriched formula that maintains skin's natural pH while delivering the brand's signature brightening benefits."
+    },
+    {
+      "id": "minimalist_niacinamide_toner",
+      "name": "10% Niacinamide Toner",
+      "brand": "Minimalist",
+      "category": "toner",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/minimalist-10-niacinamide-toner/p/1159490?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "acne_prone"
+      ],
+      "concerns": [
+        "pores",
+        "oiliness",
+        "dark_spots",
+        "acne"
+      ],
+      "why_good": "High-strength niacinamide visibly reduces pores and controls oil within 4 weeks \u2014 perfect for Indian urban skin."
+    },
+    {
+      "id": "plum_glycolic_toner",
+      "name": "3% PHA & 3% AHA Toner",
+      "brand": "Plum",
+      "category": "toner",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 445,
+      "nykaa_url": "https://www.nykaa.com/plum-aha-pha-toner/p/876543?ref=lume",
+      "skin_types": [
+        "normal",
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "pores",
+        "uneven_texture",
+        "brightening"
+      ],
+      "why_good": "Gentle acid exfoliation that improves texture and brightness without irritation \u2014 suitable for Indian beginners."
+    },
+    {
+      "id": "cos_iq_aha_toner",
+      "name": "AHA BHA Clarifying Toner",
+      "brand": "Cos-IQ",
+      "category": "toner",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/cos-iq-aha-bha-toner/p/654321?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "acne",
+        "pores",
+        "oiliness"
+      ],
+      "why_good": "Indian brand with dermatologist-tested acids that work well in humid conditions without over-drying."
+    },
+    {
+      "id": "pixi_glow_tonic",
+      "name": "Glow Tonic",
+      "brand": "Pixi",
+      "category": "toner",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1500,
+      "nykaa_url": "https://www.nykaa.com/pixi-glow-tonic/p/456789?ref=lume",
+      "skin_types": [
+        "normal",
+        "combination",
+        "oily"
+      ],
+      "concerns": [
+        "brightening",
+        "uneven_texture",
+        "pores"
+      ],
+      "why_good": "5% glycolic acid cult favourite that exfoliates, tones and brightens \u2014 visible glow improvement in 2 weeks."
+    },
+    {
+      "id": "tatcha_essence",
+      "name": "The Essence Plumping Skin Softener",
+      "brand": "Tatcha",
+      "category": "toner",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1800,
+      "nykaa_url": "https://www.nykaa.com/tatcha-the-essence/p/234567?ref=lume",
+      "skin_types": [
+        "dry",
+        "sensitive",
+        "normal"
+      ],
+      "concerns": [
+        "hydration",
+        "anti_ageing",
+        "brightening"
+      ],
+      "why_good": "Japanese Hadasei-3 complex with fermented rice and green tea deeply hydrates and smooths within days."
+    },
+    {
+      "id": "klairs_supple_toner",
+      "name": "Supple Preparation Unscented Toner",
+      "brand": "Klairs",
+      "category": "toner",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1200,
+      "nykaa_url": "https://www.nykaa.com/klairs-supple-preparation-toner/p/345678?ref=lume",
+      "skin_types": [
+        "sensitive",
+        "dry",
+        "normal"
+      ],
+      "concerns": [
+        "sensitivity",
+        "hydration",
+        "brightening"
+      ],
+      "why_good": "Fragrance-free Korean hydrating toner with beta-glucan that calms redness and plumps skin."
+    },
+    {
+      "id": "estee_micro_essence",
+      "name": "Micro Essence Skin Activating Treatment Lotion",
+      "brand": "Est\u00e9e Lauder",
+      "category": "toner",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 4200,
+      "nykaa_url": "https://www.nykaa.com/estee-lauder-micro-essence/p/567890?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "brightening",
+        "hydration"
+      ],
+      "why_good": "Activates skin's natural repair process overnight \u2014 users report visibly younger skin in 4 weeks."
+    },
+    {
+      "id": "sk2_treatment_essence",
+      "name": "Facial Treatment Essence (Pitera)",
+      "brand": "SK-II",
+      "category": "toner",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 9500,
+      "nykaa_url": "https://www.nykaa.com/sk-ii-facial-treatment-essence/p/678901?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "brightening",
+        "anti_ageing",
+        "hydration",
+        "dark_spots"
+      ],
+      "why_good": "90% Pitera \u2014 the legendary Japanese essence with decades of clinical proof for crystal-clear skin."
+    },
+    {
+      "id": "sulwhasoo_first_care",
+      "name": "First Care Activating Serum",
+      "brand": "Sulwhasoo",
+      "category": "toner",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 7800,
+      "nykaa_url": "https://www.nykaa.com/sulwhasoo-first-care-serum/p/789012?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "brightening",
+        "anti_ageing",
+        "hydration"
+      ],
+      "why_good": "Korean luxury with 5 herbal extracts that improve absorption of subsequent skincare by 47%."
+    },
+    {
+      "id": "neutrogena_hydro_boost",
+      "name": "Hydro Boost Water Gel",
+      "brand": "Neutrogena",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/neutrogena-hydro-boost-water-gel/p/123456?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "normal"
+      ],
+      "concerns": [
+        "hydration",
+        "oiliness"
+      ],
+      "why_good": "Hyaluronic acid gel-cream that holds 1000x its weight in water \u2014 lightweight enough for India's humid summers."
+    },
+    {
+      "id": "minimalist_ceramide_moisturiser",
+      "name": "Ceramide & Hyaluronic Acid Moisturiser",
+      "brand": "Minimalist",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 449,
+      "nykaa_url": "https://www.nykaa.com/minimalist-ceramide-moisturiser/p/1159491?ref=lume",
+      "skin_types": [
+        "dry",
+        "sensitive",
+        "normal"
+      ],
+      "concerns": [
+        "dryness",
+        "sensitivity",
+        "hydration"
+      ],
+      "why_good": "Barrier-repairing ceramides with HA \u2014 rebuilds skin's protective layer, ideal for pollution-damaged urban skin."
+    },
+    {
+      "id": "cetaphil_moisturising_cream",
+      "name": "Moisturising Cream",
+      "brand": "Cetaphil",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 425,
+      "nykaa_url": "https://www.nykaa.com/cetaphil-moisturising-cream/p/18888?ref=lume",
+      "skin_types": [
+        "dry",
+        "sensitive",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "sensitivity"
+      ],
+      "why_good": "Dermatologist-prescribed classic with glycerine and petrolatum \u2014 provides 24-hour moisture even in dry winter months."
+    },
+    {
+      "id": "la_roche_toleriane",
+      "name": "Toleriane Double Repair Moisturiser",
+      "brand": "La Roche-Posay",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1495,
+      "nykaa_url": "https://www.nykaa.com/la-roche-posay-toleriane-double-repair/p/432157?ref=lume",
+      "skin_types": [
+        "sensitive",
+        "dry",
+        "normal"
+      ],
+      "concerns": [
+        "sensitivity",
+        "dryness",
+        "hydration"
+      ],
+      "why_good": "Prebiotic thermal water with ceramides repairs skin barrier in just 1 hour \u2014 dermatologist favourite for reactive skin."
+    },
+    {
+      "id": "dot_key_watermelon_moisturiser",
+      "name": "Watermelon Super Light Gel Moisturiser",
+      "brand": "Dot & Key",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 595,
+      "nykaa_url": "https://www.nykaa.com/dot-key-watermelon-gel-moisturiser/p/1068235?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "normal"
+      ],
+      "concerns": [
+        "oiliness",
+        "hydration",
+        "brightening"
+      ],
+      "why_good": "Feather-light gel with watermelon extract that hydrates without grease \u2014 perfect for Indian summer humidity."
+    },
+    {
+      "id": "plum_hello_aloe_moisturiser",
+      "name": "Hello Aloe Caring Day Lotion SPF 25",
+      "brand": "Plum",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 545,
+      "nykaa_url": "https://www.nykaa.com/plum-hello-aloe-day-lotion/p/239636?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "sensitive"
+      ],
+      "concerns": [
+        "oiliness",
+        "sensitivity",
+        "hydration"
+      ],
+      "why_good": "Aloe-based moisturiser with built-in SPF \u2014 2-in-1 that simplifies morning routine for busy users."
+    },
+    {
+      "id": "clinique_dramatically_different",
+      "name": "Dramatically Different Moisturizing Lotion+",
+      "brand": "Clinique",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/clinique-dramatically-different-moisturiser/p/67891?ref=lume",
+      "skin_types": [
+        "dry",
+        "normal",
+        "combination"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration"
+      ],
+      "why_good": "50-year bestseller with hyaluronic acid and barley extract \u2014 strengthens skin barrier over 3 months of consistent use."
+    },
+    {
+      "id": "tatcha_water_cream",
+      "name": "The Water Cream",
+      "brand": "Tatcha",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 6500,
+      "nykaa_url": "https://www.nykaa.com/tatcha-water-cream/p/234568?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "normal"
+      ],
+      "concerns": [
+        "oiliness",
+        "pores",
+        "hydration"
+      ],
+      "why_good": "Japanese wild rose and leopard lily control oil for 8 hours while maintaining deep hydration \u2014 no white cast."
+    },
+    {
+      "id": "estee_revitalizing_supreme",
+      "name": "Revitalizing Supreme+ World Trade Moisturiser",
+      "brand": "Est\u00e9e Lauder",
+      "category": "moisturiser",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 5200,
+      "nykaa_url": "https://www.nykaa.com/estee-lauder-revitalizing-supreme/p/567891?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "hydration",
+        "brightening"
+      ],
+      "why_good": "ChronoluxCB technology accelerates skin's natural renewal for firmer, more radiant skin in 4 weeks."
+    },
+    {
+      "id": "minimalist_spf50",
+      "name": "Mineral SPF 50 PA++++ Sunscreen",
+      "brand": "Minimalist",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 469,
+      "nykaa_url": "https://www.nykaa.com/minimalist-spf-50-sunscreen/p/1159492?ref=lume",
+      "skin_types": [
+        "oily",
+        "sensitive",
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness",
+        "sensitivity"
+      ],
+      "why_good": "Zinc oxide-based mineral sunscreen that works for Indian skin without white cast \u2014 reef-safe and no irritants."
+    },
+    {
+      "id": "re_pure_sunscreen",
+      "name": "Matte Finish Sunscreen SPF 60",
+      "brand": "Re'equil",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 395,
+      "nykaa_url": "https://www.nykaa.com/reequil-matte-sunscreen-spf60/p/543210?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots"
+      ],
+      "why_good": "Indian brand formulated for tropical climate \u2014 matte finish that lasts 8 hours even in monsoon humidity."
+    },
+    {
+      "id": "lacto_calamine_spf",
+      "name": "Daily Moisturising Lotion SPF 30",
+      "brand": "Lacto Calamine",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 199,
+      "nykaa_url": "https://www.nykaa.com/lacto-calamine-daily-lotion-spf30/p/765432?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "acne",
+        "dark_spots"
+      ],
+      "why_good": "Trusted Indian brand with kaolin clay that controls oil and provides sun protection \u2014 great drugstore option."
+    },
+    {
+      "id": "la_roche_anthelios",
+      "name": "Anthelios Invisible Fluid SPF 50+",
+      "brand": "La Roche-Posay",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1595,
+      "nykaa_url": "https://www.nykaa.com/la-roche-posay-anthelios-invisible-fluid/p/432158?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "sensitive"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness",
+        "sensitivity"
+      ],
+      "why_good": "Ultra-light fluid with Mexoryl SX that absorbs UVA/UVB with no white cast \u2014 Europe's #1 dermatologist-recommended SPF."
+    },
+    {
+      "id": "bioderma_photoderm",
+      "name": "Photoderm Cream SPF 50+",
+      "brand": "Bioderma",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1295,
+      "nykaa_url": "https://www.nykaa.com/bioderma-photoderm-spf50/p/23457?ref=lume",
+      "skin_types": [
+        "sensitive",
+        "dry",
+        "normal"
+      ],
+      "concerns": [
+        "sensitivity",
+        "dark_spots",
+        "dryness"
+      ],
+      "why_good": "Patented CELLULAR BIOprotection formula used in French hospitals \u2014 highest protection for sensitive Indian skin."
+    },
+    {
+      "id": "dot_key_spf",
+      "name": "SPF 50 PA++++ Mattifying Sunscreen",
+      "brand": "Dot & Key",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 595,
+      "nykaa_url": "https://www.nykaa.com/dot-key-spf50-sunscreen/p/1068236?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "normal"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots"
+      ],
+      "why_good": "Indian brand made for tropical skin \u2014 blue light protection plus antioxidants for urban pollution defence."
+    },
+    {
+      "id": "shiseido_urban_environment",
+      "name": "Urban Environment Oil-Free UV Protector SPF 42",
+      "brand": "Shiseido",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/shiseido-urban-environment-spf42/p/890123?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "normal"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness",
+        "anti_ageing"
+      ],
+      "why_good": "Japanese WetForce technology \u2014 sunscreen actually gets stronger when wet, ideal for humid Indian weather."
+    },
+    {
+      "id": "heliocare_360_gel",
+      "name": "360\u00b0 Gel SPF 50+",
+      "brand": "Heliocare",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/heliocare-360-gel-spf50/p/901234?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "dark_spots",
+        "anti_ageing",
+        "oiliness"
+      ],
+      "why_good": "Fernblock extract with 360\u00b0 protection against UV, visible light and infrared \u2014 clinically proven anti-ageing SPF."
+    },
+    {
+      "id": "anessa_perfect_uv",
+      "name": "Perfect UV Skincare Milk SPF 50+",
+      "brand": "Anessa",
+      "category": "spf_sunscreen",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2500,
+      "nykaa_url": "https://www.nykaa.com/anessa-perfect-uv-milk/p/012345?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness",
+        "hydration"
+      ],
+      "why_good": "Japan's #1 sunscreen with Aqua Booster technology \u2014 stronger protection when exposed to sweat and humidity."
+    },
+    {
+      "id": "minimalist_vitamin_c",
+      "name": "Vitamin C 10% Face Serum",
+      "brand": "Minimalist",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 599,
+      "nykaa_url": "https://www.nykaa.com/minimalist-vitamin-c-10-serum/p/1159493?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "brightening",
+        "anti_ageing"
+      ],
+      "why_good": "Stable ethyl ascorbic acid that brightens dark spots without oxidising \u2014 formulated for Indian pollution-induced hyperpigmentation."
+    },
+    {
+      "id": "mamaearth_vitamin_c_serum",
+      "name": "Vitamin C Face Serum",
+      "brand": "Mamaearth",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/mamaearth-vitamin-c-serum/p/543211?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "brightening",
+        "dryness"
+      ],
+      "why_good": "Turmeric-boosted vitamin C serum that targets tan and pigmentation \u2014 formulated with Indian skin concerns in mind."
+    },
+    {
+      "id": "good_vibes_vitamin_c",
+      "name": "Vitamin C Serum",
+      "brand": "Good Vibes",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 299,
+      "nykaa_url": "https://www.nykaa.com/good-vibes-vitamin-c-serum/p/654322?ref=lume",
+      "skin_types": [
+        "normal",
+        "combination",
+        "oily"
+      ],
+      "concerns": [
+        "brightening",
+        "dark_spots"
+      ],
+      "why_good": "Affordable entry-level vitamin C serum for brightening beginners \u2014 good starter before upgrading."
+    },
+    {
+      "id": "la_roche_pure_vitamin_c",
+      "name": "Pure Vitamin C10 Serum",
+      "brand": "La Roche-Posay",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/la-roche-posay-pure-vitamin-c10/p/432159?ref=lume",
+      "skin_types": [
+        "sensitive",
+        "normal",
+        "dry"
+      ],
+      "concerns": [
+        "dark_spots",
+        "brightening",
+        "anti_ageing",
+        "sensitivity"
+      ],
+      "why_good": "Stable pure vitamin C in water-based formula gentle enough for sensitive skin \u2014 dermatologist-approved brightener."
+    },
+    {
+      "id": "olehenriksen_banana_bright",
+      "name": "Banana Bright Vitamin C Serum",
+      "brand": "Ole Henriksen",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 3800,
+      "nykaa_url": "https://www.nykaa.com/ole-henriksen-banana-bright-serum/p/123457?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "brightening",
+        "dark_spots",
+        "anti_ageing"
+      ],
+      "why_good": "15% vitamin C with banana powder for immediate brightening \u2014 delivers visible glow in just 1 application."
+    },
+    {
+      "id": "Paula_choice_c15",
+      "name": "C15 Super Booster",
+      "brand": "Paula's Choice",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/paulas-choice-c15-booster/p/234569?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "brightening",
+        "dark_spots"
+      ],
+      "why_good": "15% vitamin C with vitamin E and ferulic acid \u2014 the gold standard antioxidant combination proven by clinical research."
+    },
+    {
+      "id": "skinceuticals_ce_ferulic",
+      "name": "C E Ferulic Serum",
+      "brand": "SkinCeuticals",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 12000,
+      "nykaa_url": "https://www.nykaa.com/skinceuticals-ce-ferulic/p/345679?ref=lume",
+      "skin_types": [
+        "normal",
+        "dry",
+        "combination"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "brightening",
+        "dark_spots"
+      ],
+      "why_good": "The original patented antioxidant combination \u2014 16 years of clinical data shows 41% reduction in oxidative damage."
+    },
+    {
+      "id": "drunk_elephant_c_firma",
+      "name": "C-Firma Fresh Day Serum",
+      "brand": "Drunk Elephant",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 6800,
+      "nykaa_url": "https://www.nykaa.com/drunk-elephant-c-firma/p/456790?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "brightening",
+        "anti_ageing",
+        "dark_spots"
+      ],
+      "why_good": "15% L-ascorbic acid in patented anhydrous formula \u2014 activated just before use for maximum potency and stability."
+    },
+    {
+      "id": "sunday_riley_ceo",
+      "name": "C.E.O. 15% Vitamin C Brightening Serum",
+      "brand": "Sunday Riley",
+      "category": "serum_vitamin_c",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 7500,
+      "nykaa_url": "https://www.nykaa.com/sunday-riley-ceo-vitamin-c/p/567892?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "brightening",
+        "anti_ageing",
+        "dark_spots"
+      ],
+      "why_good": "THD ascorbate \u2014 the most stable and bioavailable vitamin C derivative that works even on sensitive skin."
+    },
+    {
+      "id": "minimalist_niacinamide_serum",
+      "name": "Niacinamide 10% + Zinc 1% Serum",
+      "brand": "Minimalist",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 599,
+      "nykaa_url": "https://www.nykaa.com/minimalist-niacinamide-10-zinc-serum/p/1159494?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "acne_prone"
+      ],
+      "concerns": [
+        "pores",
+        "oiliness",
+        "acne",
+        "dark_spots"
+      ],
+      "why_good": "Clinical-grade niacinamide with zinc \u2014 reduces pore appearance by 16% and oil production by 40% in 8 weeks."
+    },
+    {
+      "id": "cosrx_niacinamide",
+      "name": "Niacinamide 15% Face Serum",
+      "brand": "COSRX",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 799,
+      "nykaa_url": "https://www.nykaa.com/cosrx-niacinamide-15-serum/p/765433?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "normal"
+      ],
+      "concerns": [
+        "pores",
+        "oiliness",
+        "dark_spots",
+        "brightening"
+      ],
+      "why_good": "Korean K-beauty niacinamide powerhouse that fades acne marks rapidly \u2014 popular in India's skincare community."
+    },
+    {
+      "id": "the_ordinary_niacinamide",
+      "name": "Niacinamide 10% + Zinc 1%",
+      "brand": "The Ordinary",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 650,
+      "nykaa_url": "https://www.nykaa.com/the-ordinary-niacinamide-10-zinc/p/876544?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "pores",
+        "oiliness",
+        "acne",
+        "dark_spots"
+      ],
+      "why_good": "The cult affordable niacinamide that started India's skincare revolution \u2014 10% active ingredient at drugstore price."
+    },
+    {
+      "id": "Paula_choice_niacinamide",
+      "name": "10% Niacinamide Booster",
+      "brand": "Paula's Choice",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/paulas-choice-10-niacinamide-booster/p/234570?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "pores",
+        "oiliness",
+        "dark_spots",
+        "brightening"
+      ],
+      "why_good": "Research-backed formula that also contains adenosine for anti-ageing benefits alongside pore minimisation."
+    },
+    {
+      "id": "la_roche_effaclar_serum",
+      "name": "Effaclar Serum",
+      "brand": "La Roche-Posay",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1895,
+      "nykaa_url": "https://www.nykaa.com/la-roche-posay-effaclar-serum/p/432160?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "acne_prone"
+      ],
+      "concerns": [
+        "acne",
+        "pores",
+        "oiliness",
+        "dark_spots"
+      ],
+      "why_good": "LHA + niacinamide combination that treats active acne while preventing post-acne marks \u2014 dermatologist prescribed."
+    },
+    {
+      "id": "isntree_niacinamide",
+      "name": "Hyaluronic Acid Niacinamide Serum",
+      "brand": "Isntree",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1400,
+      "nykaa_url": "https://www.nykaa.com/isntree-niacinamide-serum/p/345680?ref=lume",
+      "skin_types": [
+        "dry",
+        "sensitive",
+        "normal"
+      ],
+      "concerns": [
+        "hydration",
+        "dark_spots",
+        "pores",
+        "sensitivity"
+      ],
+      "why_good": "Korean formula combining hydration with brightening \u2014 gentle enough for dry sensitive skin that can't tolerate strong niacinamide."
+    },
+    {
+      "id": "shiseido_generic_serum",
+      "name": "Ultimune Power Infusing Concentrate III",
+      "brand": "Shiseido",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 7800,
+      "nykaa_url": "https://www.nykaa.com/shiseido-ultimune-iii/p/890124?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "brightening",
+        "anti_ageing",
+        "hydration",
+        "pores"
+      ],
+      "why_good": "ImuGeneration technology strengthens skin's immunity \u2014 visible improvement in radiance and resilience within 4 weeks."
+    },
+    {
+      "id": "tatcha_violet_c",
+      "name": "Violet-C Brightening Serum",
+      "brand": "Tatcha",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 8500,
+      "nykaa_url": "https://www.nykaa.com/tatcha-violet-c-serum/p/234571?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "brightening",
+        "dark_spots",
+        "anti_ageing"
+      ],
+      "why_good": "20% vitamin C complex with Japanese violet and niacinamide \u2014 triple brightening action for stubborn Indian pigmentation."
+    },
+    {
+      "id": "skinceuticals_metacell",
+      "name": "Metacell Renewal B3",
+      "brand": "SkinCeuticals",
+      "category": "serum_niacinamide",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 9800,
+      "nykaa_url": "https://www.nykaa.com/skinceuticals-metacell-b3/p/345681?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "brightening",
+        "pores",
+        "dark_spots"
+      ],
+      "why_good": "3% niacinamide with glycerin complex and fibronectin \u2014 clinically proven to reduce fine lines and increase firmness."
+    },
+    {
+      "id": "olay_retinol24",
+      "name": "Regenerist Retinol24 Night Serum",
+      "brand": "Olay",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 599,
+      "nykaa_url": "https://www.nykaa.com/olay-retinol24-night-serum/p/543212?ref=lume",
+      "skin_types": [
+        "normal",
+        "combination",
+        "oily"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "fine_lines",
+        "brightening"
+      ],
+      "why_good": "Retinol complex with vitamin B3 \u2014 24-hour hydration with anti-ageing benefits, good for retinol beginners."
+    },
+    {
+      "id": "minimalist_retinol",
+      "name": "Granactive Retinoid 2% Emulsion",
+      "brand": "Minimalist",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 689,
+      "nykaa_url": "https://www.nykaa.com/minimalist-granactive-retinoid/p/1159495?ref=lume",
+      "skin_types": [
+        "normal",
+        "combination",
+        "oily"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "fine_lines",
+        "dark_spots"
+      ],
+      "why_good": "Next-gen retinoid that's 10x less irritating than traditional retinol \u2014 perfect for Indian skin that's new to anti-ageing."
+    },
+    {
+      "id": "good_molecules_retinol",
+      "name": "Discoloration Correcting Serum",
+      "brand": "Good Molecules",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 799,
+      "nykaa_url": "https://www.nykaa.com/good-molecules-discoloration-serum/p/654323?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "anti_ageing",
+        "fine_lines"
+      ],
+      "why_good": "Tranexamic acid with niacinamide for stubborn discolouration \u2014 especially effective on Indian skin's post-inflammatory marks."
+    },
+    {
+      "id": "la_roche_retinol_b3",
+      "name": "Retinol B3 Serum",
+      "brand": "La Roche-Posay",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 2495,
+      "nykaa_url": "https://www.nykaa.com/la-roche-posay-retinol-b3/p/432161?ref=lume",
+      "skin_types": [
+        "sensitive",
+        "normal",
+        "combination"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "fine_lines",
+        "dark_spots"
+      ],
+      "why_good": "0.3% pure retinol with vitamin B3 and hyaluronic acid \u2014 gentler irritation profile than most retinol serums."
+    },
+    {
+      "id": "Paula_choice_retinol",
+      "name": "1% Retinol Treatment",
+      "brand": "Paula's Choice",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/paulas-choice-1-retinol-treatment/p/234572?ref=lume",
+      "skin_types": [
+        "normal",
+        "combination",
+        "oily"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "fine_lines",
+        "dark_spots"
+      ],
+      "why_good": "Clinical-strength 1% retinol for experienced users \u2014 visible wrinkle reduction and skin firming in 12 weeks."
+    },
+    {
+      "id": "drunk_elephant_a_passioni",
+      "name": "A-Passioni Retinol Cream",
+      "brand": "Drunk Elephant",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 5500,
+      "nykaa_url": "https://www.nykaa.com/drunk-elephant-a-passioni/p/456791?ref=lume",
+      "skin_types": [
+        "normal",
+        "combination"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "fine_lines",
+        "brightening"
+      ],
+      "why_good": "1% vegan retinol with passionfruit and kohlrabi \u2014 buffers irritation while delivering full retinol benefits."
+    },
+    {
+      "id": "skinceuticals_retinol1",
+      "name": "Retinol 1.0 Maximum Strength Refining Night Cream",
+      "brand": "SkinCeuticals",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 8500,
+      "nykaa_url": "https://www.nykaa.com/skinceuticals-retinol-1/p/345682?ref=lume",
+      "skin_types": [
+        "normal",
+        "combination",
+        "oily"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "fine_lines",
+        "dark_spots"
+      ],
+      "why_good": "Maximum-strength pure retinol with antioxidant support \u2014 clinical standard for visible anti-ageing results."
+    },
+    {
+      "id": "shiseido_benefiance_retinol",
+      "name": "Benefiance Wrinkle Smoothing Cream",
+      "brand": "Shiseido",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 6800,
+      "nykaa_url": "https://www.nykaa.com/shiseido-benefiance-wrinkle-cream/p/890125?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "fine_lines",
+        "hydration"
+      ],
+      "why_good": "KOMBU-Extract with retinol and hyaluronic acid \u2014 deeply hydrating anti-ageing suitable for Indian women 35+."
+    },
+    {
+      "id": "estee_advanced_night_repair",
+      "name": "Advanced Night Repair Synchronized Multi-Recovery Complex",
+      "brand": "Est\u00e9e Lauder",
+      "category": "serum_retinol",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 7200,
+      "nykaa_url": "https://www.nykaa.com/estee-lauder-advanced-night-repair/p/567893?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "anti_ageing",
+        "brightening",
+        "hydration",
+        "fine_lines"
+      ],
+      "why_good": "ChronoluxCB technology with hyaluronic acid boosts skin's repair overnight \u2014 India's top-selling luxury serum."
+    },
+    {
+      "id": "mamaearth_under_eye",
+      "name": "Bye Bye Dark Circles Eye Cream",
+      "brand": "Mamaearth",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/mamaearth-eye-cream/p/543213?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_circles",
+        "fine_lines"
+      ],
+      "why_good": "Cucumber and green tea eye cream formulated for Indian dark circles caused by stress and screen time."
+    },
+    {
+      "id": "wow_skin_eye_cream",
+      "name": "Anti-Ageing Eye Cream",
+      "brand": "WOW Skin Science",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/wow-anti-ageing-eye-cream/p/654324?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_circles",
+        "fine_lines",
+        "puffiness"
+      ],
+      "why_good": "Retinol and hyaluronic acid eye cream at an accessible price \u2014 visible improvement in dark circles in 4 weeks."
+    },
+    {
+      "id": "plum_bright_years_eye",
+      "name": "Bright Years Under-Eye Recovery Gel",
+      "brand": "Plum",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/plum-bright-years-eye-gel/p/239637?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_circles",
+        "puffiness",
+        "fine_lines"
+      ],
+      "why_good": "Peptide-rich gel with antioxidants that cools and de-puffs \u2014 ideal for Indian lifestyle with late nights and early mornings."
+    },
+    {
+      "id": "la_roche_pigmentclar_eye",
+      "name": "Pigmentclar Eyes",
+      "brand": "La Roche-Posay",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1895,
+      "nykaa_url": "https://www.nykaa.com/la-roche-posay-pigmentclar-eyes/p/432162?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_circles",
+        "brightening",
+        "fine_lines"
+      ],
+      "why_good": "LHA and caffeine specifically target dark circles \u2014 clinically tested on diverse skin tones including Indian complexions."
+    },
+    {
+      "id": "kiehl_creamy_eye",
+      "name": "Creamy Eye Treatment with Avocado",
+      "brand": "Kiehl's",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 2400,
+      "nykaa_url": "https://www.nykaa.com/kiehls-creamy-eye-treatment/p/123458?ref=lume",
+      "skin_types": [
+        "dry",
+        "normal",
+        "combination"
+      ],
+      "concerns": [
+        "dark_circles",
+        "dryness",
+        "fine_lines"
+      ],
+      "why_good": "Rich avocado-based cream that deeply nourishes the under-eye \u2014 cult product for dry skin and mature users."
+    },
+    {
+      "id": "origins_ginzing_eye",
+      "name": "GinZing Refreshing Eye Cream",
+      "brand": "Origins",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/origins-ginzing-eye-cream/p/234573?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_circles",
+        "puffiness"
+      ],
+      "why_good": "Coffee and ginseng combination that instantly brightens and de-puffs \u2014 morning essential for tired Indian eyes."
+    },
+    {
+      "id": "shiseido_benefiance_eye",
+      "name": "Benefiance Wrinkle Smoothing Eye Cream",
+      "brand": "Shiseido",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 5800,
+      "nykaa_url": "https://www.nykaa.com/shiseido-benefiance-eye-cream/p/890126?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "fine_lines",
+        "dark_circles",
+        "anti_ageing"
+      ],
+      "why_good": "ReNeura Technology+ addresses micro-expressions that cause crow's feet \u2014 visible smoothing in 6 weeks."
+    },
+    {
+      "id": "la_mer_eye_concentrate",
+      "name": "The Eye Concentrate",
+      "brand": "La Mer",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 18000,
+      "nykaa_url": "https://www.nykaa.com/la-mer-eye-concentrate/p/456792?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_circles",
+        "anti_ageing",
+        "fine_lines",
+        "puffiness"
+      ],
+      "why_good": "Miracle Broth with seaweed ferment \u2014 luxurious treatment that transforms the eye area with continued use."
+    },
+    {
+      "id": "sk2_signs_eye",
+      "name": "Signs Eye Mask",
+      "brand": "SK-II",
+      "category": "eye_cream",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 4800,
+      "nykaa_url": "https://www.nykaa.com/sk-ii-signs-eye-mask/p/678902?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_circles",
+        "fine_lines",
+        "puffiness"
+      ],
+      "why_good": "Pitera-soaked under-eye mask for intensive overnight treatment \u2014 instant brightening for special occasions."
+    },
+    {
+      "id": "wow_hair_shampoo",
+      "name": "Apple Cider Vinegar Shampoo",
+      "brand": "WOW Skin Science",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/wow-apple-cider-vinegar-shampoo/p/654325?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dandruff",
+        "oiliness",
+        "hair_fall"
+      ],
+      "why_good": "ACV balances scalp pH and removes product buildup \u2014 popular for Indian hard water and pollution damage."
+    },
+    {
+      "id": "mamaearth_onion_shampoo",
+      "name": "Onion Shampoo for Hair Fall Control",
+      "brand": "Mamaearth",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/mamaearth-onion-shampoo/p/543214?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "dandruff"
+      ],
+      "why_good": "Onion extract with plant keratin clinically proven to reduce hair fall by 55% \u2014 India's bestselling hair fall shampoo."
+    },
+    {
+      "id": "tresemme_smooth",
+      "name": "Smooth & Shine Shampoo",
+      "brand": "TRESemm\u00e9",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 299,
+      "nykaa_url": "https://www.nykaa.com/tresemme-smooth-shine-shampoo/p/765434?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness"
+      ],
+      "why_good": "Salon-quality keratin formula that tames frizz in India's humidity \u2014 7x smoother hair after first wash."
+    },
+    {
+      "id": "loreal_dream_lengths",
+      "name": "Dream Lengths Shampoo",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/loreal-dream-lengths-shampoo/p/876545?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "split_ends",
+        "hair_fall",
+        "frizz"
+      ],
+      "why_good": "Castor oil and vitamins strengthen hair from root to tip \u2014 reduces breakage for longer, healthier hair growth."
+    },
+    {
+      "id": "matrix_biolage",
+      "name": "Biolage Smoothproof Shampoo",
+      "brand": "Matrix",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 649,
+      "nykaa_url": "https://www.nykaa.com/matrix-biolage-smoothproof-shampoo/p/987656?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends"
+      ],
+      "why_good": "Camellia-inspired anti-humidity complex \u2014 keeps Indian hair smooth through monsoon season."
+    },
+    {
+      "id": "kerastase_nutritive",
+      "name": "Bain Satin Shampoo",
+      "brand": "K\u00e9rastase",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1800,
+      "nykaa_url": "https://www.nykaa.com/kerastase-bain-satin/p/098767?ref=lume",
+      "skin_types": [
+        "dry",
+        "normal"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz",
+        "split_ends"
+      ],
+      "why_good": "Irisome complex with proteins and lipids \u2014 deeply nourishing for dry, chemically treated Indian hair."
+    },
+    {
+      "id": "olaplex_shampoo",
+      "name": "No.4 Bond Maintenance Shampoo",
+      "brand": "Olaplex",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/olaplex-no4-shampoo/p/109878?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "split_ends",
+        "hair_fall",
+        "frizz",
+        "colour_protection"
+      ],
+      "why_good": "Patented bis-aminopropyl diglycol dimaleate repairs broken disulfide bonds \u2014 essential for colour-treated or chemically processed hair."
+    },
+    {
+      "id": "dyson_supersonic_shampoo",
+      "name": "Hair Perfector No.3 (Pre-Shampoo)",
+      "brand": "Olaplex",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/olaplex-no3-hair-perfector/p/210989?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "split_ends",
+        "hair_fall",
+        "colour_protection"
+      ],
+      "why_good": "Weekly repair treatment used before shampooing \u2014 rebuilds internal hair structure damaged by heat and chemicals."
+    },
+    {
+      "id": "davines_nounou",
+      "name": "Nourishing Shampoo",
+      "brand": "Davines",
+      "category": "shampoo",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/davines-nounou-shampoo/p/321090?ref=lume",
+      "skin_types": [
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz",
+        "split_ends"
+      ],
+      "why_good": "Italian sustainable formula with Rhubarb extract \u2014 intensely nourishing for very dry, coarse Indian hair textures."
+    },
+    {
+      "id": "mamaearth_onion_conditioner",
+      "name": "Onion Conditioner for Hair Fall Control",
+      "brand": "Mamaearth",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/mamaearth-onion-conditioner/p/543215?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "dryness"
+      ],
+      "why_good": "Pairs with onion shampoo for complete hair fall control \u2014 detangles and strengthens weak Indian hair."
+    },
+    {
+      "id": "loreal_total_repair_conditioner",
+      "name": "Total Repair 5 Conditioner",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/loreal-total-repair-5-conditioner/p/876546?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "split_ends",
+        "dryness",
+        "frizz"
+      ],
+      "why_good": "Pro-Keratin and Ceramide repair 5 signs of damage simultaneously \u2014 affordable salon-style conditioning."
+    },
+    {
+      "id": "pantene_damage_repair",
+      "name": "Damage Repair Conditioner",
+      "brand": "Pantene",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 249,
+      "nykaa_url": "https://www.nykaa.com/pantene-damage-repair-conditioner/p/987657?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "split_ends",
+        "dryness",
+        "frizz"
+      ],
+      "why_good": "Pro-Vitamin B5 formula strengthens hair up to 10x against breakage \u2014 trusted drugstore conditioner for Indian hair."
+    },
+    {
+      "id": "kerastase_conditioner",
+      "name": "Lait Vital Conditioner",
+      "brand": "K\u00e9rastase",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1600,
+      "nykaa_url": "https://www.nykaa.com/kerastase-lait-vital/p/098768?ref=lume",
+      "skin_types": [
+        "normal",
+        "dry"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz"
+      ],
+      "why_good": "Lightweight milk formula that detangles without weighing down fine Indian hair textures."
+    },
+    {
+      "id": "matrix_biolage_conditioner",
+      "name": "Biolage HydraSource Conditioner",
+      "brand": "Matrix",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 649,
+      "nykaa_url": "https://www.nykaa.com/matrix-biolage-hydrasource-conditioner/p/987658?ref=lume",
+      "skin_types": [
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz",
+        "split_ends"
+      ],
+      "why_good": "Aloe vera-inspired formula delivers intense moisture retention in India's dry winter and AC-heavy environments."
+    },
+    {
+      "id": "tresemme_pro_collection",
+      "name": "Keratin Smooth Conditioner",
+      "brand": "TRESemm\u00e9",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/tresemme-keratin-smooth-conditioner/p/765435?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness"
+      ],
+      "why_good": "Keratin protein seals the hair cuticle against Indian humidity \u2014 5x smoother, more manageable hair."
+    },
+    {
+      "id": "olaplex_conditioner",
+      "name": "No.5 Bond Maintenance Conditioner",
+      "brand": "Olaplex",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/olaplex-no5-conditioner/p/210990?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "split_ends",
+        "colour_protection",
+        "dryness"
+      ],
+      "why_good": "Continues bond repair from No.4 shampoo \u2014 leaves hair 3x stronger with visible improvement in split ends."
+    },
+    {
+      "id": "moroccanoil_conditioner",
+      "name": "Moisture Repair Conditioner",
+      "brand": "Moroccanoil",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/moroccanoil-moisture-repair-conditioner/p/432163?ref=lume",
+      "skin_types": [
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "split_ends",
+        "frizz"
+      ],
+      "why_good": "Argan oil and keratin reconstruct chemically damaged hair \u2014 iconic orange bottle loved by Indian salon professionals."
+    },
+    {
+      "id": "davines_nounou_conditioner",
+      "name": "Nourishing Conditioner",
+      "brand": "Davines",
+      "category": "conditioner",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3000,
+      "nykaa_url": "https://www.nykaa.com/davines-nounou-conditioner/p/321091?ref=lume",
+      "skin_types": [
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz",
+        "split_ends"
+      ],
+      "why_good": "Rhubarb extract with proteins provides immediate detangling and long-term nourishment for coarse Indian hair."
+    },
+    {
+      "id": "wow_hair_oil",
+      "name": "10-in-1 Active Milli Miracle Hair Oil",
+      "brand": "WOW Skin Science",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 449,
+      "nykaa_url": "https://www.nykaa.com/wow-10-in-1-hair-oil/p/654326?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "dryness",
+        "dandruff"
+      ],
+      "why_good": "10 cold-pressed oils including argan and castor \u2014 comprehensive nourishment for all Indian hair concerns."
+    },
+    {
+      "id": "mamaearth_argan_oil",
+      "name": "Argan Hair Oil",
+      "brand": "Mamaearth",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/mamaearth-argan-hair-oil/p/543216?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends"
+      ],
+      "why_good": "Argan and onion oil blend that adds shine and reduces frizz in Indian humidity \u2014 affordable luxury hair oil."
+    },
+    {
+      "id": "indulekha_bringha",
+      "name": "Bringha Hair Oil",
+      "brand": "Indulekha",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 299,
+      "nykaa_url": "https://www.nykaa.com/indulekha-bringha-hair-oil/p/765436?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "dandruff"
+      ],
+      "why_good": "Ayurvedic bringharaj formula with 9 herbs \u2014 India's most trusted hair fall oil with clinical studies showing 45% reduction."
+    },
+    {
+      "id": "kama_ayurveda_hair_oil",
+      "name": "Bringadi Intensive Hair Treatment",
+      "brand": "Kama Ayurveda",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 895,
+      "nykaa_url": "https://www.nykaa.com/kama-ayurveda-bringadi-oil/p/109879?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "dandruff",
+        "dryness"
+      ],
+      "why_good": "Traditional Kerala Ayurveda formula with Indigo and Balloon vine in sesame base \u2014 salon-preferred pre-wash treatment."
+    },
+    {
+      "id": "moroccanoil_treatment",
+      "name": "Moroccanoil Treatment",
+      "brand": "Moroccanoil",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/moroccanoil-treatment/p/432164?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends",
+        "colour_protection"
+      ],
+      "why_good": "The original argan oil treatment \u2014 a few drops control frizz instantly in India's humid weather."
+    },
+    {
+      "id": "loreal_elvive_oil",
+      "name": "Elvive Extraordinary Oil",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 699,
+      "nykaa_url": "https://www.nykaa.com/loreal-elvive-extraordinary-oil/p/876547?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends"
+      ],
+      "why_good": "6 rare oils blend that absorbs instantly without greasiness \u2014 lightweight enough for fine Indian hair."
+    },
+    {
+      "id": "olaplex_no7",
+      "name": "No.7 Bonding Oil",
+      "brand": "Olaplex",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2500,
+      "nykaa_url": "https://www.nykaa.com/olaplex-no7-bonding-oil/p/210991?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "split_ends",
+        "colour_protection",
+        "frizz",
+        "hair_fall"
+      ],
+      "why_good": "Lightweight bond-building oil with UVA/UVB protection \u2014 repairs damage while protecting from heat styling."
+    },
+    {
+      "id": "kerastase_elixir_ultime",
+      "name": "Elixir Ultime L'Huile Originale",
+      "brand": "K\u00e9rastase",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/kerastase-elixir-ultime/p/098769?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "colour_protection"
+      ],
+      "why_good": "4 noble oils blend that seals the cuticle \u2014 professional treatment oil used in top Indian hair salons."
+    },
+    {
+      "id": "davines_oi_oil",
+      "name": "OI All in One Milk",
+      "brand": "Davines",
+      "category": "hair_oil",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3500,
+      "nykaa_url": "https://www.nykaa.com/davines-oi-all-in-one-milk/p/321092?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends"
+      ],
+      "why_good": "Roucou oil with silicones provides 10 benefits \u2014 heat protection, shine, frizz control and softness in one product."
+    },
+    {
+      "id": "beardo_beard_oil",
+      "name": "Beard Growth Oil",
+      "brand": "Beardo",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/beardo-beard-growth-oil/p/543217?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness",
+        "hair_fall"
+      ],
+      "why_good": "Indian brand with argan, almond and jojoba \u2014 promotes beard growth and softness for Indian men's coarser beard texture."
+    },
+    {
+      "id": "man_arden_beard_oil",
+      "name": "7X Beard Oil",
+      "brand": "Man Arden",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/man-arden-beard-oil/p/654327?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness"
+      ],
+      "why_good": "7 essential oils blend that conditions beard and moisturises the skin underneath \u2014 reduces itchiness during growing phase."
+    },
+    {
+      "id": "ustraa_beard_oil",
+      "name": "Beard Softener Oil",
+      "brand": "Ustraa",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 299,
+      "nykaa_url": "https://www.nykaa.com/ustraa-beard-softener-oil/p/765437?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness"
+      ],
+      "why_good": "Indian grooming brand formulated for South Asian beard texture \u2014 softens coarse beard within 2 weeks."
+    },
+    {
+      "id": "bombay_shaving_beard_oil",
+      "name": "Beard Oil with Vitamin E",
+      "brand": "Bombay Shaving Company",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/bombay-shaving-beard-oil/p/876548?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness",
+        "sensitivity"
+      ],
+      "why_good": "Vitamin E and jojoba cold-pressed oil that repairs beard and moisturises dry skin underneath \u2014 no synthetic fragrance."
+    },
+    {
+      "id": "captain_zack_beard_oil",
+      "name": "Beard Nourishment Oil",
+      "brand": "Captain Zack",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 599,
+      "nykaa_url": "https://www.nykaa.com/captain-zack-beard-oil/p/987659?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hair_fall",
+        "dryness"
+      ],
+      "why_good": "Premium Indian brand with biotin and keratin \u2014 specifically addresses beard patchiness and promotes fuller growth."
+    },
+    {
+      "id": "l_occitane_beard_oil",
+      "name": "Cade For Men Beard Oil",
+      "brand": "L'Occitane",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/loccitane-cade-beard-oil/p/098770?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness"
+      ],
+      "why_good": "Cade wood oil from Provence with argan \u2014 European luxury beard care that tames and conditions most beard types."
+    },
+    {
+      "id": "murdock_beard_oil",
+      "name": "Beard Oil",
+      "brand": "Murdock London",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 3500,
+      "nykaa_url": "https://www.nykaa.com/murdock-london-beard-oil/p/109880?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness"
+      ],
+      "why_good": "British barbershop formula with 5 carrier oils \u2014 used in London's finest barbershops, premium beard conditioning."
+    },
+    {
+      "id": "proraso_beard_oil",
+      "name": "Beard Oil Azur Lime",
+      "brand": "Proraso",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/proraso-beard-oil/p/210992?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness"
+      ],
+      "why_good": "Italian barber heritage with azur lime and macadamia \u2014 nourishes while giving a fresh masculine scent."
+    },
+    {
+      "id": "jack_black_beard_oil",
+      "name": "Beard Oil",
+      "brand": "Jack Black",
+      "category": "beard_oil",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/jack-black-beard-oil/p/321093?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness",
+        "sensitivity"
+      ],
+      "why_good": "Passion fruit, kiwi and olive squalane \u2014 pure oils without silicones that absorb completely into beard and skin."
+    },
+    {
+      "id": "maybelline_fit_me_fair",
+      "name": "Fit Me Matte + Poreless Foundation N10/N15/N20",
+      "brand": "Maybelline",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/maybelline-fit-me-foundation/p/543218?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "pores"
+      ],
+      "why_good": "Oil-free formula with micro-powders that blur pores \u2014 shades N10 to N20 cover Indian fair to light skin tones perfectly."
+    },
+    {
+      "id": "loreal_infallible_fair",
+      "name": "Infallible 24HR Fresh Wear Foundation 100/110",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 649,
+      "nykaa_url": "https://www.nykaa.com/loreal-infallible-foundation/p/876549?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots"
+      ],
+      "why_good": "24-hour wear with SPF 25 \u2014 porcelain to ivory shades ideal for Indian fair and light skin, no oxidation."
+    },
+    {
+      "id": "nykaa_skinsense_fair",
+      "name": "SkinSense Longwear Foundation 01W/02W",
+      "brand": "Nykaa Cosmetics",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/nykaa-skinsense-foundation/p/987660?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness"
+      ],
+      "why_good": "Indian brand with shades specifically developed for Indian fair to light skin undertones \u2014 warm undertone options included."
+    },
+    {
+      "id": "mac_studio_fix_fair",
+      "name": "Studio Fix Fluid SPF 15 Foundation NC05/NC10/NC15",
+      "brand": "MAC",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/mac-studio-fix-fluid/p/109881?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "normal"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots",
+        "pores"
+      ],
+      "why_good": "Professional matte finish with buildable coverage \u2014 NC range covers Indian fair skin with yellow undertones perfectly."
+    },
+    {
+      "id": "estee_double_wear_fair",
+      "name": "Double Wear Stay-in-Place Foundation 1N1/1N2",
+      "brand": "Est\u00e9e Lauder",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 3500,
+      "nykaa_url": "https://www.nykaa.com/estee-lauder-double-wear/p/567894?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots"
+      ],
+      "why_good": "24-hour transfer-resistant formula \u2014 India's top-rated foundation for weddings and long events in humid weather."
+    },
+    {
+      "id": "fenty_beauty_fair",
+      "name": "Pro Filt'r Soft Matte Foundation 100/110/120",
+      "brand": "Fenty Beauty",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 3800,
+      "nykaa_url": "https://www.nykaa.com/fenty-beauty-pro-filtr/p/432165?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots",
+        "pores"
+      ],
+      "why_good": "Rihanna's inclusive 50-shade range \u2014 100 to 120 shades cover Indian fair skin with cool to neutral undertones."
+    },
+    {
+      "id": "armani_luminous_fair",
+      "name": "Luminous Silk Foundation 1/2/3",
+      "brand": "Giorgio Armani",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 6200,
+      "nykaa_url": "https://www.nykaa.com/armani-luminous-silk/p/210993?ref=lume",
+      "skin_types": [
+        "normal",
+        "dry",
+        "combination"
+      ],
+      "concerns": [
+        "dark_spots",
+        "brightening"
+      ],
+      "why_good": "Micro-fil technology creates a second-skin effect \u2014 shades 1-3 designed for fair skin giving natural luminosity."
+    },
+    {
+      "id": "charlotte_tilbury_fair",
+      "name": "Airbrush Flawless Foundation 1N/2N/1C",
+      "brand": "Charlotte Tilbury",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 5500,
+      "nykaa_url": "https://www.nykaa.com/charlotte-tilbury-airbrush-foundation/p/321094?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "pores",
+        "brightening"
+      ],
+      "why_good": "Skincare-infused buildable foundation with hyaluronic acid \u2014 fair shades suitable for Indian light skin with pink/neutral undertones."
+    },
+    {
+      "id": "nars_sheer_glow_fair",
+      "name": "Sheer Glow Foundation Syracuse/Deauville",
+      "brand": "NARS",
+      "category": "foundation_fair",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 5800,
+      "nykaa_url": "https://www.nykaa.com/nars-sheer-glow-foundation/p/456793?ref=lume",
+      "skin_types": [
+        "dry",
+        "normal",
+        "combination"
+      ],
+      "concerns": [
+        "brightening",
+        "dark_spots"
+      ],
+      "why_good": "Skin-perfecting luminous finish with buildable coverage \u2014 Syracuse and Deauville are top choices for Indian fair skin."
+    },
+    {
+      "id": "maybelline_fit_me_medium",
+      "name": "Fit Me Matte + Poreless Foundation N220/N228/N230",
+      "brand": "Maybelline",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/maybelline-fit-me-foundation-medium/p/543219?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "pores",
+        "dark_spots"
+      ],
+      "why_good": "N220-N230 shades match Indian wheatish and medium skin tones with warm yellow undertones \u2014 oil-free all day."
+    },
+    {
+      "id": "loreal_true_match_medium",
+      "name": "True Match Liquid Foundation W3/W4/C3",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 549,
+      "nykaa_url": "https://www.nykaa.com/loreal-true-match-medium/p/876550?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness"
+      ],
+      "why_good": "Colour-matching technology with warm and cool undertone options for Indian medium skin \u2014 SPF 17 included."
+    },
+    {
+      "id": "colorbar_perfect_match_medium",
+      "name": "Perfect Match Foundation Honey/Beige",
+      "brand": "Colorbar",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 599,
+      "nykaa_url": "https://www.nykaa.com/colorbar-perfect-match-foundation/p/987661?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness"
+      ],
+      "why_good": "Indian brand with honey and beige shades developed specifically for South Asian medium skin tones."
+    },
+    {
+      "id": "mac_studio_fix_medium",
+      "name": "Studio Fix Fluid Foundation NC25/NC30/NC35",
+      "brand": "MAC",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/mac-studio-fix-fluid-medium/p/109882?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots",
+        "pores"
+      ],
+      "why_good": "NC25-NC35 are among India's most popular MAC shades \u2014 professional matte coverage for medium warm skin."
+    },
+    {
+      "id": "fenty_beauty_medium",
+      "name": "Pro Filt'r Foundation 230/240/250",
+      "brand": "Fenty Beauty",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 3800,
+      "nykaa_url": "https://www.nykaa.com/fenty-beauty-medium/p/432166?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots"
+      ],
+      "why_good": "230-250 shades cover Indian medium wheatish skin with neutral to warm undertones \u2014 diverse range representation."
+    },
+    {
+      "id": "huda_fauxfilter_medium",
+      "name": "FauxFilter Foundation Toffee/Praline",
+      "brand": "Huda Beauty",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 4200,
+      "nykaa_url": "https://www.nykaa.com/huda-fauxfilter-medium/p/234574?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "pores",
+        "oiliness"
+      ],
+      "why_good": "Middle Eastern-developed shades Toffee and Praline perfectly match Indian medium skin \u2014 full coverage, transfer-proof."
+    },
+    {
+      "id": "armani_luminous_medium",
+      "name": "Luminous Silk Foundation 5/6/5.5",
+      "brand": "Giorgio Armani",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 6200,
+      "nykaa_url": "https://www.nykaa.com/armani-luminous-silk-medium/p/210994?ref=lume",
+      "skin_types": [
+        "normal",
+        "dry",
+        "combination"
+      ],
+      "concerns": [
+        "brightening",
+        "dark_spots"
+      ],
+      "why_good": "Shades 5-6 are cult favourites for Indian medium skin \u2014 weightless luminosity with second-skin finish."
+    },
+    {
+      "id": "lancome_teint_idole_medium",
+      "name": "Teint Id\u00f4le Ultra Wear Foundation 035W/040W",
+      "brand": "Lanc\u00f4me",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 5200,
+      "nykaa_url": "https://www.nykaa.com/lancome-teint-idole-medium/p/345683?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness",
+        "brightening"
+      ],
+      "why_good": "French luxury formula with 24-hour wear \u2014 035W and 040W are top choices for Indian medium skin with warm undertones."
+    },
+    {
+      "id": "nars_sheer_glow_medium",
+      "name": "Sheer Glow Foundation Barcelona/Macao",
+      "brand": "NARS",
+      "category": "foundation_medium",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 5800,
+      "nykaa_url": "https://www.nykaa.com/nars-sheer-glow-medium/p/456794?ref=lume",
+      "skin_types": [
+        "dry",
+        "normal"
+      ],
+      "concerns": [
+        "brightening",
+        "dark_spots"
+      ],
+      "why_good": "Barcelona and Macao shades give Indian medium skin a radiant, natural finish \u2014 beloved for glass skin look."
+    },
+    {
+      "id": "maybelline_fit_me_deep",
+      "name": "Fit Me Matte + Poreless Foundation N330/N355/N380",
+      "brand": "Maybelline",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/maybelline-fit-me-deep/p/543220?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "pores",
+        "dark_spots"
+      ],
+      "why_good": "N330-N380 range represents Indian dusky to deep skin tones with warm undertones \u2014 one of few affordable deep shades."
+    },
+    {
+      "id": "loreal_true_match_deep",
+      "name": "True Match Foundation W6/W7/C6",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 549,
+      "nykaa_url": "https://www.nykaa.com/loreal-true-match-deep/p/876551?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness"
+      ],
+      "why_good": "One of few drugstore brands with quality deep Indian skin shades \u2014 W6 and W7 match dusky warm skin beautifully."
+    },
+    {
+      "id": "nykaa_skinsense_deep",
+      "name": "SkinSense Foundation 07D/08D",
+      "brand": "Nykaa Cosmetics",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/nykaa-skinsense-deep/p/987662?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness"
+      ],
+      "why_good": "Indian brand that genuinely celebrates deep skin tones \u2014 developed with Indian dusky and deep women in mind."
+    },
+    {
+      "id": "mac_studio_fix_deep",
+      "name": "Studio Fix Fluid Foundation NC42/NC45/NC50",
+      "brand": "MAC",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/mac-studio-fix-deep/p/109883?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots",
+        "pores"
+      ],
+      "why_good": "NC42-NC50 are classic choices for Indian deep and dusky skin \u2014 professional coverage without ashiness."
+    },
+    {
+      "id": "fenty_beauty_deep",
+      "name": "Pro Filt'r Foundation 370/385/400",
+      "brand": "Fenty Beauty",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 3800,
+      "nykaa_url": "https://www.nykaa.com/fenty-beauty-deep/p/432167?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "oiliness",
+        "dark_spots"
+      ],
+      "why_good": "370-400 shades celebrate deep Indian skin \u2014 Rihanna's brand revolutionised deep shade availability in India."
+    },
+    {
+      "id": "huda_fauxfilter_deep",
+      "name": "FauxFilter Foundation Mochaccino/Tiramisu",
+      "brand": "Huda Beauty",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 4200,
+      "nykaa_url": "https://www.nykaa.com/huda-fauxfilter-deep/p/234575?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "pores",
+        "oiliness"
+      ],
+      "why_good": "Mochaccino and Tiramisu perfectly represent deep Indian skin \u2014 full coverage with no grey or chalky undertone."
+    },
+    {
+      "id": "armani_luminous_deep",
+      "name": "Luminous Silk Foundation 10/11/12",
+      "brand": "Giorgio Armani",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 6200,
+      "nykaa_url": "https://www.nykaa.com/armani-luminous-silk-deep/p/210995?ref=lume",
+      "skin_types": [
+        "normal",
+        "dry"
+      ],
+      "concerns": [
+        "brightening",
+        "dark_spots"
+      ],
+      "why_good": "Shades 10-12 give deep Indian skin a luxurious glow \u2014 weightless formula that never looks cakey or flat."
+    },
+    {
+      "id": "nars_radiant_creamy_deep",
+      "name": "Radiant Creamy Foundation Macao/Marquises",
+      "brand": "NARS",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 5800,
+      "nykaa_url": "https://www.nykaa.com/nars-radiant-creamy-deep/p/456795?ref=lume",
+      "skin_types": [
+        "dry",
+        "normal"
+      ],
+      "concerns": [
+        "brightening",
+        "dark_spots"
+      ],
+      "why_good": "Serum-infused formula with hyaluronic acid \u2014 Marquises and Syracuse shades flatter deep warm Indian tones."
+    },
+    {
+      "id": "bobbi_brown_skin_long_deep",
+      "name": "Skin Long-Wear Weightless Foundation W-086/W-090",
+      "brand": "Bobbi Brown",
+      "category": "foundation_deep",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 5500,
+      "nykaa_url": "https://www.nykaa.com/bobbi-brown-skin-deep/p/345684?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dark_spots",
+        "oiliness",
+        "brightening"
+      ],
+      "why_good": "Renowned for deep shade accuracy \u2014 W-086 and W-090 are go-to shades for Indian deep skin professionals."
+    },
+    {
+      "id": "maybelline_superstay_nude",
+      "name": "SuperStay Matte Ink Lipstick Seductress/Pioneer",
+      "brand": "Maybelline",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/maybelline-superstay-nude/p/543221?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "16-hour matte wear \u2014 Seductress (warm nude) and Pioneer (cool nude) work across all Indian skin tones."
+    },
+    {
+      "id": "loreal_color_riche_nude",
+      "name": "Color Riche Lipstick Beige a Nu/Nude Ingenue",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 549,
+      "nykaa_url": "https://www.nykaa.com/loreal-color-riche-nude/p/876552?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Classic creamy formula in nude shades that complement Indian warm undertones \u2014 moisturising wear all day."
+    },
+    {
+      "id": "colorbar_sinful_nude",
+      "name": "Sinful Matte Lipstick Bare Skin/Caramel Kiss",
+      "brand": "Colorbar",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 449,
+      "nykaa_url": "https://www.nykaa.com/colorbar-sinful-nude/p/987663?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Indian brand nude shades formulated for South Asian skin tones \u2014 Caramel Kiss is a cult MLBB shade for Indian women."
+    },
+    {
+      "id": "mac_velvet_teddy",
+      "name": "Matte Lipstick Velvet Teddy/Kinda Sexy",
+      "brand": "MAC",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 1800,
+      "nykaa_url": "https://www.nykaa.com/mac-velvet-teddy/p/109884?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Velvet Teddy is India's most loved nude lipstick \u2014 warm beige that looks like your lips but better on all Indian skin tones."
+    },
+    {
+      "id": "nykaa_so_matte_nude",
+      "name": "So Matte! Lipstick Nude Obsession/Blushing Bride",
+      "brand": "Nykaa Cosmetics",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/nykaa-so-matte-nude/p/432168?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Indian brand bestseller with shades curated for Indian skin \u2014 Blushing Bride is a top choice for Indian weddings."
+    },
+    {
+      "id": "charlotte_tilbury_pillow_talk",
+      "name": "Matte Revolution Lipstick Pillow Talk",
+      "brand": "Charlotte Tilbury",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/charlotte-tilbury-pillow-talk/p/234576?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "The world's most searched lipstick \u2014 medium nude pink that flatters most Indian skin tones, creamy 8-hour wear."
+    },
+    {
+      "id": "dior_rouge_nude",
+      "name": "Rouge Dior Lipstick 100 Nude Look/219 Rose Montaigne",
+      "brand": "Dior",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4500,
+      "nykaa_url": "https://www.nykaa.com/dior-rouge-nude/p/210996?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Floral wax-infused formula with built-in couture case \u2014 219 Rose Montaigne is iconic for Indian brides seeking elegant nude."
+    },
+    {
+      "id": "chanel_rouge_coco_nude",
+      "name": "Rouge Coco Flash Lipstick 54 Boy/90 Jour",
+      "brand": "Chanel",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4800,
+      "nykaa_url": "https://www.nykaa.com/chanel-rouge-coco-nude/p/321095?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Hydrating glossy formula \u2014 Boy (warm nude) and Jour (natural rose) complement Indian skin with natural finish."
+    },
+    {
+      "id": "ysl_nude_lipstick",
+      "name": "Rouge Pur Couture Lipstick 01 Le Nude/13 Le Orange",
+      "brand": "YSL Beauty",
+      "category": "lipstick_nude",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4200,
+      "nykaa_url": "https://www.nykaa.com/ysl-rouge-pur-couture-nude/p/456796?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "French couture in a lipstick \u2014 01 Le Nude is a universally flattering shade for Indian women's warm undertones."
+    },
+    {
+      "id": "loreal_red_lipstick",
+      "name": "Color Riche Lipstick Red Passion/Pure Red",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 549,
+      "nykaa_url": "https://www.nykaa.com/loreal-red-lipstick/p/876553?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Classic blue-toned red that brightens Indian skin \u2014 Red Passion is India's bestselling drugstore red lipstick."
+    },
+    {
+      "id": "maybelline_red",
+      "name": "SuperStay Matte Ink Ruler/Amazonian",
+      "brand": "Maybelline",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/maybelline-red-lipstick/p/543222?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "16-hour orange-red and classic red options \u2014 Amazonian (warm red) complements Indian warm skin tones beautifully."
+    },
+    {
+      "id": "colorbar_red",
+      "name": "Sinful Matte Lipstick Red Carpet/Classic Red",
+      "brand": "Colorbar",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 449,
+      "nykaa_url": "https://www.nykaa.com/colorbar-red-lipstick/p/987664?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Indian brand red shades that photograph beautifully against Indian skin \u2014 popular for festivals and celebrations."
+    },
+    {
+      "id": "mac_russian_red",
+      "name": "Matte Lipstick Russian Red/Ruby Woo",
+      "brand": "MAC",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 1800,
+      "nykaa_url": "https://www.nykaa.com/mac-russian-red/p/109885?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Russian Red (blue-toned) and Ruby Woo (true red) \u2014 MAC's cult reds that flatter every Indian skin tone."
+    },
+    {
+      "id": "nars_red_lipstick",
+      "name": "Audacious Lipstick Claudia/Rita",
+      "brand": "NARS",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/nars-red-lipstick/p/456797?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Claudia (warm red) and Rita (true red) \u2014 creamy formula that stays vibrant for 8 hours without drying."
+    },
+    {
+      "id": "huda_red_lipstick",
+      "name": "Power Bullet Matte Lipstick Bombshell/Boss Babe",
+      "brand": "Huda Beauty",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/huda-power-bullet-red/p/234577?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Middle Eastern-formulated reds that work on deep Indian skin \u2014 Boss Babe is an intense brick red that's bold and modern."
+    },
+    {
+      "id": "dior_rouge_red",
+      "name": "Rouge Dior Lipstick 999/080 Red Smile",
+      "brand": "Dior",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4500,
+      "nykaa_url": "https://www.nykaa.com/dior-rouge-red/p/210997?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "999 is Dior's iconic true red \u2014 a timeless classic that makes every Indian woman feel like a screen goddess."
+    },
+    {
+      "id": "chanel_rouge_coco_red",
+      "name": "Rouge Allure Velvet 51 La Bouleversante",
+      "brand": "Chanel",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4800,
+      "nykaa_url": "https://www.nykaa.com/chanel-rouge-allure-red/p/321096?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "La Bouleversante is a velvet blue-toned red that adds brightness to any Indian skin tone \u2014 French elegance."
+    },
+    {
+      "id": "ysl_rouge_pur_red",
+      "name": "Rouge Pur Couture Lipstick 01 Le Rouge",
+      "brand": "YSL Beauty",
+      "category": "lipstick_red",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4200,
+      "nykaa_url": "https://www.nykaa.com/ysl-rouge-pur-couture-red/p/456798?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "YSL's signature red \u2014 satin finish with argan oil that's comfortable enough for Indian weddings lasting 12+ hours."
+    },
+    {
+      "id": "loreal_berry_lipstick",
+      "name": "Color Riche Lipstick Plum Adagio/Berry Cherie",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 549,
+      "nykaa_url": "https://www.nykaa.com/loreal-berry-lipstick/p/876554?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Plum and berry shades that glow on Indian skin \u2014 especially flattering on medium to deep Indian complexions."
+    },
+    {
+      "id": "maybelline_berry",
+      "name": "SuperStay Matte Ink Loyalist/Protector",
+      "brand": "Maybelline",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 499,
+      "nykaa_url": "https://www.nykaa.com/maybelline-berry-lipstick/p/543223?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Long-lasting berry and plum shades \u2014 Loyalist (dark berry) looks stunning on Indian medium to deep skin tones."
+    },
+    {
+      "id": "nykaa_matte_berry",
+      "name": "So Matte! Lipstick Plum Affair/Berry Mojito",
+      "brand": "Nykaa Cosmetics",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 349,
+      "nykaa_url": "https://www.nykaa.com/nykaa-berry-lipstick/p/987665?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Plum Affair and Berry Mojito are cult shades for Indian women \u2014 deep berry tones that complement warm undertones."
+    },
+    {
+      "id": "mac_diva_lipstick",
+      "name": "Matte Lipstick Diva/Rebel",
+      "brand": "MAC",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 1800,
+      "nykaa_url": "https://www.nykaa.com/mac-diva-lipstick/p/109886?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Diva (dark plum) and Rebel (dark berry) \u2014 MAC classics that make Indian skin pop, especially for evenings and weddings."
+    },
+    {
+      "id": "huda_berry_lipstick",
+      "name": "Power Bullet Matte Lipstick Heartbreaker/Bad Habit",
+      "brand": "Huda Beauty",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/huda-berry-lipstick/p/234578?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Heartbreaker (raspberry) and Bad Habit (dark plum) \u2014 Middle Eastern-developed shades that look luxurious on Indian skin."
+    },
+    {
+      "id": "nars_audacious_berry",
+      "name": "Audacious Lipstick Anita/Barbara",
+      "brand": "NARS",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/nars-audacious-berry/p/456799?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Anita (berry) and Barbara (plum) \u2014 creamy pigmented formula that makes a statement on all Indian skin tones."
+    },
+    {
+      "id": "dior_rouge_berry",
+      "name": "Rouge Dior Lipstick 962 Feminine/972 Soiree",
+      "brand": "Dior",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4500,
+      "nykaa_url": "https://www.nykaa.com/dior-rouge-berry/p/210998?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Soiree (deep berry-plum) complements Indian deep and dusky skin magnificently \u2014 signature Dior couture finish."
+    },
+    {
+      "id": "chanel_rouge_allure_plum",
+      "name": "Rouge Allure Velvet 38 La Fascinante",
+      "brand": "Chanel",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4800,
+      "nykaa_url": "https://www.nykaa.com/chanel-rouge-allure-plum/p/321097?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "La Fascinante (deep plum) in Chanel's velvet formula \u2014 a sophisticated berry that elevates any Indian evening look."
+    },
+    {
+      "id": "ysl_rouge_plum",
+      "name": "Rouge Pur Couture 19 Le Fuchsia/52 Rosy Coral",
+      "brand": "YSL Beauty",
+      "category": "lipstick_berry",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4200,
+      "nykaa_url": "https://www.nykaa.com/ysl-rouge-pur-couture-plum/p/456800?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Le Fuchsia is a bold berry-pink that's iconic on Indian skin \u2014 YSL's most worn shade for Indian weddings and parties."
+    },
+    {
+      "id": "loreal_kajal",
+      "name": "Le Kajal Liner Black",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 299,
+      "nykaa_url": "https://www.nykaa.com/loreal-kajal/p/876555?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Smudge-proof formula that lasts 16 hours \u2014 intense black pigment that makes Indian eyes appear more defined."
+    },
+    {
+      "id": "maybelline_colossal_kajal",
+      "name": "Colossal Kajal Black",
+      "brand": "Maybelline",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 249,
+      "nykaa_url": "https://www.nykaa.com/maybelline-colossal-kajal/p/543224?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "India's bestselling kajal \u2014 jet black pigment with 12-hour smudge-proof formula, perfect for daily use."
+    },
+    {
+      "id": "nykaa_kohl_kajal",
+      "name": "Kohl Kajal Black/Brown",
+      "brand": "Nykaa Cosmetics",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 199,
+      "nykaa_url": "https://www.nykaa.com/nykaa-kohl-kajal/p/987666?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Affordable Indian kajal in black and brown \u2014 soft formula easy to blend for smoky eye, great for beginners."
+    },
+    {
+      "id": "mac_kohl_power",
+      "name": "Kohl Power Eye Pencil Feline/Smolder",
+      "brand": "MAC",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 1600,
+      "nykaa_url": "https://www.nykaa.com/mac-kohl-power/p/109887?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Smolder (black) and Feline (dark brown) \u2014 professional-grade kohl pencil used by Indian makeup artists."
+    },
+    {
+      "id": "bobbi_brown_long_wear_liner",
+      "name": "Long-Wear Gel Liner Caviar Ink",
+      "brand": "Bobbi Brown",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2800,
+      "nykaa_url": "https://www.nykaa.com/bobbi-brown-long-wear-liner/p/345685?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Waterproof gel liner that stays put through Indian humidity and monsoon \u2014 precise application with a twist."
+    },
+    {
+      "id": "urban_decay_24_7_liner",
+      "name": "24/7 Glide-On Eye Pencil Zero/Demolition",
+      "brand": "Urban Decay",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/urban-decay-247-liner/p/234579?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Creamy waterproof formula that glides on and sets to all-day wear \u2014 Zero (black) is a global cult eyeliner."
+    },
+    {
+      "id": "charlotte_tilbury_rock_liner",
+      "name": "Rock 'N' Kohl Eyeliner Eye Rock/Audrey Diamonds",
+      "brand": "Charlotte Tilbury",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 3200,
+      "nykaa_url": "https://www.nykaa.com/charlotte-tilbury-rock-kohl/p/321098?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Ophthalmologist-tested kohl liner with 10-hour wear \u2014 Eye Rock (intense black) creates the perfect smoky Indian eye."
+    },
+    {
+      "id": "dior_diorshow_liner",
+      "name": "Diorshow On Stage Liner",
+      "brand": "Dior",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 3800,
+      "nykaa_url": "https://www.nykaa.com/dior-diorshow-liner/p/210999?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Felt-tip precision liner with intense pigment \u2014 waterproof formula lasts through Indian humidity and celebrations."
+    },
+    {
+      "id": "chanel_stylo_liner",
+      "name": "Stylo Yeux Waterproof Long-Lasting Eyeliner 88 Noir Intense",
+      "brand": "Chanel",
+      "category": "kajal_eyeliner",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 4200,
+      "nykaa_url": "https://www.nykaa.com/chanel-stylo-yeux/p/432169?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Intense noir with 12-hour waterproof formula \u2014 Chanel's precision liner for the most defined Indian cat eye."
+    },
+    {
+      "id": "nykaa_brow_pencil",
+      "name": "Shape My Brow Brow Pencil Dark Brown/Soft Brown",
+      "brand": "Nykaa Cosmetics",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 299,
+      "nykaa_url": "https://www.nykaa.com/nykaa-shape-my-brow/p/987667?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Dark Brown and Soft Brown shades match most Indian hair colours \u2014 affordable micro-tip for natural brow filling."
+    },
+    {
+      "id": "maybelline_brow_pencil",
+      "name": "Fashion Brow Duo Shaper Dark Brown/Natural Brown",
+      "brand": "Maybelline",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 299,
+      "nykaa_url": "https://www.nykaa.com/maybelline-fashion-brow/p/543225?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "2-in-1 pencil and spoolie \u2014 Dark Brown is perfect for Indian black to dark brown hair, creates natural brow look."
+    },
+    {
+      "id": "loreal_brow_artist",
+      "name": "Brow Artist Designer Dark Brunette/Light Brunette",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "budget",
+      "price_inr": 399,
+      "nykaa_url": "https://www.nykaa.com/loreal-brow-artist/p/876556?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Micro-tip precision pencil with brow brush \u2014 Dark Brunette matches Indian dark hair for defined, natural brows."
+    },
+    {
+      "id": "mac_brow_pencil",
+      "name": "Veluxe Brow Liner Brunette/Spiked",
+      "brand": "MAC",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 1600,
+      "nykaa_url": "https://www.nykaa.com/mac-veluxe-brow-liner/p/109888?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Professional micro-precision tip \u2014 Brunette and Spiked shades complement Indian dark brown to black hair perfectly."
+    },
+    {
+      "id": "benefit_precisely_brow",
+      "name": "Precisely, My Brow Pencil 3.75/4/4.5",
+      "brand": "Benefit",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2200,
+      "nykaa_url": "https://www.nykaa.com/benefit-precisely-my-brow/p/234580?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Ultra-fine tip pencil \u2014 shades 3.75-4.5 range covers Indian hair from medium brown to dark black."
+    },
+    {
+      "id": "anastasia_brow_pencil",
+      "name": "Brow Wiz Dark Brown/Ebony",
+      "brand": "Anastasia Beverly Hills",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "mid",
+      "price_inr": 2500,
+      "nykaa_url": "https://www.nykaa.com/anastasia-brow-wiz/p/345686?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "The gold standard micro brow pencil \u2014 Dark Brown and Ebony are the go-to shades for Indian women with dark hair."
+    },
+    {
+      "id": "charlotte_tilbury_brow",
+      "name": "Brow Cheat Medium Brown/Dark Brown",
+      "brand": "Charlotte Tilbury",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 3000,
+      "nykaa_url": "https://www.nykaa.com/charlotte-tilbury-brow-cheat/p/321099?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Precision tip that mimics real brow hairs \u2014 Dark Brown matches Indian hair for feathered, Instagram-worthy brows."
+    },
+    {
+      "id": "dior_brow_styler",
+      "name": "Diorshow Brow Styler Ultra-Fine Precision Brow Pencil 032/052",
+      "brand": "Dior",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 3500,
+      "nykaa_url": "https://www.nykaa.com/dior-brow-styler/p/211000?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Ultra-fine mechanical pencil \u2014 shade 052 (Dark Brown) is ideal for Indian dark hair for precise brow architecture."
+    },
+    {
+      "id": "chanel_brow_pencil",
+      "name": "La Crayon Sourcils Brow Pencil 60 Brun/70 Brun Naturel",
+      "brand": "Chanel",
+      "category": "eyebrow_pencil",
+      "gender": "women",
+      "tier": "premium",
+      "price_inr": 3800,
+      "nykaa_url": "https://www.nykaa.com/chanel-la-crayon-sourcils/p/432170?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [],
+      "why_good": "Brun and Brun Naturel match Indian dark brown to black brows \u2014 Chanel's precision pencil for sophisticated brow definition."
+    },
+    {
+      "id": "plum_litsea_lip_balm",
+      "name": "Plum Litsea Cubeba Lip Balm",
+      "brand": "Plum",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 149,
+      "rating": 4.3,
+      "nykaa_url": "https://www.nykaa.com/plum-litsea-cubeba-lip-balm/p/239638?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration"
+      ],
+      "why_good": "Litsea cubeba essential oil with shea butter soothes and heals dry lips \u2014 vegan formula popular in Indian climate."
+    },
+    {
+      "id": "mamaearth_vitamin_c_lip_balm",
+      "name": "Mamaearth Vitamin C Lip Balm",
+      "brand": "Mamaearth",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 199,
+      "rating": 4.2,
+      "nykaa_url": "https://www.nykaa.com/mamaearth-vitamin-c-lip-balm/p/543226?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration",
+        "brightening"
+      ],
+      "why_good": "Vitamin C with turmeric brightens pigmented lips \u2014 addresses common lip darkening from Indian sun exposure."
+    },
+    {
+      "id": "nykaa_butter_lip_balm",
+      "name": "Nykaa Butter Lip Balm - Cocoa",
+      "brand": "Nykaa",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 179,
+      "rating": 4.1,
+      "nykaa_url": "https://www.nykaa.com/nykaa-butter-lip-balm-cocoa/p/987668?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration"
+      ],
+      "why_good": "Cocoa butter and shea formula that melts on contact \u2014 rich moisture for dry lips in AC and winter environments."
+    },
+    {
+      "id": "dot_key_watermelon_lip_mask",
+      "name": "Dot & Key Watermelon Lip Sleeping Mask",
+      "brand": "Dot & Key",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 595,
+      "rating": 4.4,
+      "nykaa_url": "https://www.nykaa.com/dot-key-watermelon-lip-sleeping-mask/p/1068237?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration",
+        "fine_lines"
+      ],
+      "why_good": "Overnight watermelon extract mask with hyaluronic acid \u2014 plumps and restores lips while sleeping."
+    },
+    {
+      "id": "kiehls_lip_balm_1",
+      "name": "Kiehl's Lip Balm #1",
+      "brand": "Kiehl's",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1050,
+      "rating": 4.6,
+      "nykaa_url": "https://www.nykaa.com/kiehls-lip-balm-1/p/123459?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration",
+        "sensitivity"
+      ],
+      "why_good": "Squalane and sweet almond oil cult formula \u2014 deeply moisturising without fragrance, safe for sensitive lips."
+    },
+    {
+      "id": "la_roche_cicaplast_lip",
+      "name": "La Roche-Posay Cicaplast Baume B5 Lip",
+      "brand": "La Roche-Posay",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 850,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/la-roche-posay-cicaplast-lip/p/432171?ref=lume",
+      "skin_types": [
+        "sensitive",
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration",
+        "sensitivity"
+      ],
+      "why_good": "Panthenol B5 with shea butter repairs severely chapped lips \u2014 dermatologist recommended for chronic dryness."
+    },
+    {
+      "id": "dior_addict_lip_glow",
+      "name": "Dior Addict Lip Glow Balm - Universal Clear",
+      "brand": "Dior",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3900,
+      "rating": 4.7,
+      "nykaa_url": "https://www.nykaa.com/dior-addict-lip-glow/p/211001?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration",
+        "brightening"
+      ],
+      "why_good": "Cherry oil formula that reacts with natural lip pH \u2014 gives a personalised tint while deeply hydrating."
+    },
+    {
+      "id": "charlotte_tilbury_superstar_lips",
+      "name": "Charlotte Tilbury Superstar Lips Lip Treatment",
+      "brand": "Charlotte Tilbury",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3200,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/charlotte-tilbury-superstar-lips/p/321100?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration",
+        "fine_lines"
+      ],
+      "why_good": "Collagen-boosting peptides with hyaluronic acid \u2014 plumps and smooths lip lines for a fuller appearance."
+    },
+    {
+      "id": "clinique_moisture_surge_lip",
+      "name": "Clinique Moisture Surge Lip Hydro-Plumping Treatment",
+      "brand": "Clinique",
+      "category": "lip_balm",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2700,
+      "rating": 4.4,
+      "nykaa_url": "https://www.nykaa.com/clinique-moisture-surge-lip/p/67892?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "hydration",
+        "fine_lines"
+      ],
+      "why_good": "Activated aloe water with hyaluronic acid delivers 24-hour hydration \u2014 allergy tested, 100% fragrance free."
+    },
+    {
+      "id": "wow_acv_hair_mask",
+      "name": "WOW Skin Science Apple Cider Vinegar Hair Mask",
+      "brand": "WOW Skin Science",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 399,
+      "rating": 4.2,
+      "nykaa_url": "https://www.nykaa.com/wow-acv-hair-mask/p/654328?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dandruff",
+        "frizz",
+        "hair_fall"
+      ],
+      "why_good": "ACV restores scalp pH and removes buildup \u2014 effective for Indian hard water damage and monsoon frizz."
+    },
+    {
+      "id": "mamaearth_onion_hair_mask",
+      "name": "Mamaearth Onion Hair Mask for Hair Growth & Frizz Control",
+      "brand": "Mamaearth",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 299,
+      "rating": 4.1,
+      "nykaa_url": "https://www.nykaa.com/mamaearth-onion-hair-mask/p/543227?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "frizz",
+        "dandruff"
+      ],
+      "why_good": "Onion extract with plant keratin strengthens roots and reduces hair fall \u2014 weekly treatment for Indian hair."
+    },
+    {
+      "id": "plum_banana_rice_hair_mask",
+      "name": "Plum BaePlum All Day Strong Banana & Rice Water Strengthening Hair Mask",
+      "brand": "Plum",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 349,
+      "rating": 4.0,
+      "nykaa_url": "https://www.nykaa.com/plum-banana-rice-hair-mask/p/239639?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "frizz",
+        "split_ends"
+      ],
+      "why_good": "Rice water proteins with banana strengthen hair shaft \u2014 reduces breakage and adds shine to dull Indian hair."
+    },
+    {
+      "id": "loreal_extraordinary_oil_mask",
+      "name": "L'Or\u00e9al Paris Extraordinary Oil Nourishing Hair Mask",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 449,
+      "rating": 4.3,
+      "nykaa_url": "https://www.nykaa.com/loreal-extraordinary-oil-mask/p/876557?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends"
+      ],
+      "why_good": "6 rare flower oils deeply nourish and restore shine \u2014 1-minute treatment for busy Indian routines."
+    },
+    {
+      "id": "matrix_biolage_hydrasource_mask",
+      "name": "Matrix Biolage Ultra Hydrasource Mask",
+      "brand": "Matrix",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 899,
+      "rating": 4.4,
+      "nykaa_url": "https://www.nykaa.com/matrix-biolage-hydrasource-mask/p/987659?ref=lume",
+      "skin_types": [
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz",
+        "hydration"
+      ],
+      "why_good": "Aloe vera moisture complex penetrates deeply \u2014 repairs dehydrated Indian hair from AC and heat styling."
+    },
+    {
+      "id": "kerastase_masquintense",
+      "name": "K\u00e9rastase Nutritive Masquintense Thick Hair Mask",
+      "brand": "K\u00e9rastase",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1950,
+      "rating": 4.6,
+      "nykaa_url": "https://www.nykaa.com/kerastase-masquintense/p/098771?ref=lume",
+      "skin_types": [
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz",
+        "hydration"
+      ],
+      "why_good": "Irisome complex with concentrated nutrition \u2014 intensive weekly treatment for thick, coarse Indian hair."
+    },
+    {
+      "id": "kiehls_olive_hair_pak",
+      "name": "Kiehl's Olive Fruit Oil Deeply Repairative Hair Pak",
+      "brand": "Kiehl's",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1750,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/kiehls-olive-fruit-oil-hair-pak/p/123460?ref=lume",
+      "skin_types": [
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz",
+        "split_ends"
+      ],
+      "why_good": "Olive fruit oil with lemon extract deeply repairs and adds luminosity \u2014 excellent for chemically treated Indian hair."
+    },
+    {
+      "id": "olaplex_no3_hair_mask",
+      "name": "Olaplex No.3 Hair Perfector",
+      "brand": "Olaplex",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2800,
+      "rating": 4.7,
+      "nykaa_url": "https://www.nykaa.com/olaplex-no3-hair-perfector/p/210989?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "split_ends",
+        "frizz"
+      ],
+      "why_good": "Patented bond-building technology repairs broken disulfide bonds \u2014 weekly at-home treatment used by Indian salon professionals."
+    },
+    {
+      "id": "moroccanoil_intense_hydrating_mask",
+      "name": "Moroccanoil Intense Hydrating Mask",
+      "brand": "Moroccanoil",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3200,
+      "rating": 4.6,
+      "nykaa_url": "https://www.nykaa.com/moroccanoil-intense-hydrating-mask/p/432172?ref=lume",
+      "skin_types": [
+        "dry",
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "frizz",
+        "hydration"
+      ],
+      "why_good": "Argan oil with red algae extract \u2014 intensive moisture restoration for severely dry or colour-damaged Indian hair."
+    },
+    {
+      "id": "kerastase_blond_absolu_mask",
+      "name": "K\u00e9rastase Blond Absolu Masque Cicaextreme",
+      "brand": "K\u00e9rastase",
+      "category": "hair_mask",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2650,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/kerastase-blond-absolu-mask/p/098772?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "dryness",
+        "colour_protection",
+        "split_ends"
+      ],
+      "why_good": "Hyaluronic acid with edelweiss flower \u2014 specifically protects colour-treated and highlighted Indian hair."
+    },
+    {
+      "id": "wow_acv_hair_serum",
+      "name": "WOW Skin Science Apple Cider Vinegar Hair Serum",
+      "brand": "WOW Skin Science",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 299,
+      "rating": 4.1,
+      "nykaa_url": "https://www.nykaa.com/wow-acv-hair-serum/p/654329?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dandruff",
+        "hair_fall"
+      ],
+      "why_good": "ACV with argan oil controls frizz and adds shine \u2014 lightweight serum for Indian humidity without greasiness."
+    },
+    {
+      "id": "mamaearth_argan_hair_serum",
+      "name": "Mamaearth Argan Hair Serum with Argan Oil & Avocado",
+      "brand": "Mamaearth",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 249,
+      "rating": 4.0,
+      "nykaa_url": "https://www.nykaa.com/mamaearth-argan-hair-serum/p/543228?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "split_ends",
+        "dryness"
+      ],
+      "why_good": "Argan oil and avocado tame frizz and add lustre \u2014 affordable daily serum for Indian hair in humid weather."
+    },
+    {
+      "id": "loreal_smooth_intense_serum",
+      "name": "L'Or\u00e9al Paris Smooth Intense Anti-Frizz Serum",
+      "brand": "L'Or\u00e9al Paris",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "budget",
+      "price_inr": 399,
+      "rating": 4.2,
+      "nykaa_url": "https://www.nykaa.com/loreal-smooth-intense-serum/p/876558?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "split_ends",
+        "colour_protection"
+      ],
+      "why_good": "Pro-Keratin with ceramide seals the cuticle \u2014 smooths Indian hair in seconds and lasts through monsoon humidity."
+    },
+    {
+      "id": "matrix_biolage_smoothproof_serum",
+      "name": "Matrix Biolage SmoothProof Deep Smoothing Serum",
+      "brand": "Matrix",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 699,
+      "rating": 4.3,
+      "nykaa_url": "https://www.nykaa.com/matrix-biolage-smoothproof-serum/p/987660?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "split_ends",
+        "colour_protection"
+      ],
+      "why_good": "Camellia oil anti-humidity complex \u2014 keeps Indian hair smooth for 72 hours even in peak monsoon."
+    },
+    {
+      "id": "kiehls_magic_elixir_serum",
+      "name": "Kiehl's Magic Elixir Hair Restructuring Concentrate",
+      "brand": "Kiehl's",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1850,
+      "rating": 4.4,
+      "nykaa_url": "https://www.nykaa.com/kiehls-magic-elixir-serum/p/123461?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "hair_fall",
+        "frizz",
+        "dryness"
+      ],
+      "why_good": "Rosemary leaf oil with avocado and sweet almond \u2014 scalp-stimulating serum that strengthens hair from roots."
+    },
+    {
+      "id": "kerastase_discipline_serum",
+      "name": "K\u00e9rastase Discipline Ol\u00e9o-Relax Serum",
+      "brand": "K\u00e9rastase",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "mid",
+      "price_inr": 1650,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/kerastase-discipline-serum/p/098773?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends"
+      ],
+      "why_good": "Oleo-fusion technology controls volume and eliminates frizz \u2014 used in Indian salons for blowout longevity."
+    },
+    {
+      "id": "olaplex_no7_bonding_oil",
+      "name": "Olaplex No.7 Bonding Oil",
+      "brand": "Olaplex",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2800,
+      "rating": 4.6,
+      "nykaa_url": "https://www.nykaa.com/olaplex-no7-bonding-oil/p/210991?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "split_ends",
+        "colour_protection",
+        "frizz"
+      ],
+      "why_good": "Ultra-concentrated bonding oil with heat protection to 230\u00b0C \u2014 repairs damage while styling Indian hair."
+    },
+    {
+      "id": "moroccanoil_treatment_original",
+      "name": "Moroccanoil Treatment Original",
+      "brand": "Moroccanoil",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 3200,
+      "rating": 4.7,
+      "nykaa_url": "https://www.nykaa.com/moroccanoil-treatment-original/p/432164?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends"
+      ],
+      "why_good": "Argan oil with protein complex \u2014 the original salon treatment that eliminates frizz instantly in Indian humidity."
+    },
+    {
+      "id": "kerastase_elixir_ultime_serum",
+      "name": "K\u00e9rastase Elixir Ultime Original Oil Serum",
+      "brand": "K\u00e9rastase",
+      "category": "hair_serum",
+      "gender": "all",
+      "tier": "premium",
+      "price_inr": 2900,
+      "rating": 4.6,
+      "nykaa_url": "https://www.nykaa.com/kerastase-elixir-ultime-serum/p/098774?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "frizz",
+        "dryness",
+        "split_ends"
+      ],
+      "why_good": "4 noble oils in a weightless formula seal the cuticle \u2014 professional finish used by top Indian hairstylists."
+    },
+    {
+      "id": "ustraa_beard_wash_neem",
+      "name": "Ustraa Beard Wash - Neem & Tea Tree",
+      "brand": "Ustraa",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 295,
+      "rating": 4.3,
+      "nykaa_url": "https://www.nykaa.com/ustraa-beard-wash-neem/p/765438?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "all"
+      ],
+      "concerns": [
+        "acne",
+        "oiliness",
+        "beard_care"
+      ],
+      "why_good": "Neem and tea tree target beard acne and skin underneath \u2014 Indian brand formulated for South Asian skin concerns."
+    },
+    {
+      "id": "beardo_godfather_beard_wash",
+      "name": "Beardo Godfather Beard Wash",
+      "brand": "Beardo",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 349,
+      "rating": 4.2,
+      "nykaa_url": "https://www.nykaa.com/beardo-godfather-beard-wash/p/543229?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hydration",
+        "dryness"
+      ],
+      "why_good": "Charcoal and natural extracts cleanse beard without stripping \u2014 bestselling Indian beard wash."
+    },
+    {
+      "id": "wow_charcoal_beard_wash",
+      "name": "WOW Skin Science Activated Charcoal Beard Wash",
+      "brand": "WOW Skin Science",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 399,
+      "rating": 4.1,
+      "nykaa_url": "https://www.nykaa.com/wow-charcoal-beard-wash/p/654330?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination"
+      ],
+      "concerns": [
+        "oiliness",
+        "acne",
+        "pores"
+      ],
+      "why_good": "Activated charcoal draws out impurities from pores under beard \u2014 deep cleanses without drying skin."
+    },
+    {
+      "id": "bombay_shaving_beard_wash",
+      "name": "Bombay Shaving Company Beard Wash with Eucalyptus & Tea Tree",
+      "brand": "Bombay Shaving Company",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 599,
+      "rating": 4.4,
+      "nykaa_url": "https://www.nykaa.com/bombay-shaving-beard-wash/p/876559?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dandruff",
+        "acne"
+      ],
+      "why_good": "Eucalyptus and tea tree combat beard dandruff \u2014 refreshing formula popular with Indian professionals."
+    },
+    {
+      "id": "kiehls_beard_grooming_wash",
+      "name": "Kiehl's Nourishing Beard Grooming Oil & Wash",
+      "brand": "Kiehl's",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 1450,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/kiehls-beard-wash/p/123462?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hydration",
+        "dryness"
+      ],
+      "why_good": "Cedarwood and neroli cleanse and condition simultaneously \u2014 premium daily beard wash for well-groomed Indian men."
+    },
+    {
+      "id": "man_arden_beard_wash",
+      "name": "Man Arden 7X Beard Wash with Shea Butter & Aloe Vera",
+      "brand": "Man Arden",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 749,
+      "rating": 4.3,
+      "nykaa_url": "https://www.nykaa.com/man-arden-beard-wash/p/654331?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hydration",
+        "dryness"
+      ],
+      "why_good": "Shea butter and aloe vera hydrate beard and skin underneath \u2014 gentle enough for daily use in Indian climate."
+    },
+    {
+      "id": "lab_series_beard_wash",
+      "name": "Lab Series Multi-Action Face Wash & Beard Wash",
+      "brand": "Lab Series",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 2800,
+      "rating": 4.4,
+      "nykaa_url": "https://www.nykaa.com/lab-series-beard-wash/p/345687?ref=lume",
+      "skin_types": [
+        "oily",
+        "combination",
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "acne",
+        "oiliness"
+      ],
+      "why_good": "Multi-action formula cleanses face and beard simultaneously \u2014 dermatologist tested for men's skin needs."
+    },
+    {
+      "id": "clinique_men_beard_wash",
+      "name": "Clinique For Men Face Wash & Beard Cleanser",
+      "brand": "Clinique",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 3200,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/clinique-men-beard-wash/p/67893?ref=lume",
+      "skin_types": [
+        "sensitive",
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "sensitivity",
+        "hydration"
+      ],
+      "why_good": "Allergy-tested soap-free formula \u2014 gentle enough for Indian men with sensitive skin under the beard."
+    },
+    {
+      "id": "moroccanoil_beard_wash",
+      "name": "Moroccanoil Beard Wash & Treatment",
+      "brand": "Moroccanoil",
+      "category": "beard_wash",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 3750,
+      "rating": 4.6,
+      "nykaa_url": "https://www.nykaa.com/moroccanoil-beard-wash/p/432173?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "frizz",
+        "dryness"
+      ],
+      "why_good": "Argan oil treatment cleanser that softens even the coarsest South Asian beard texture with one wash."
+    },
+    {
+      "id": "ustraa_beard_balm",
+      "name": "Ustraa Beard Balm - Light Hold & Conditioning",
+      "brand": "Ustraa",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 349,
+      "rating": 4.2,
+      "nykaa_url": "https://www.nykaa.com/ustraa-beard-balm/p/765439?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness",
+        "hydration"
+      ],
+      "why_good": "Beeswax with shea butter gives light hold and deep conditioning \u2014 perfect for Indian men shaping their first beard."
+    },
+    {
+      "id": "beardo_beard_balm",
+      "name": "Beardo Beard Balm",
+      "brand": "Beardo",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 299,
+      "rating": 4.1,
+      "nykaa_url": "https://www.nykaa.com/beardo-beard-balm/p/543230?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness",
+        "frizz"
+      ],
+      "why_good": "Indian brand beard balm with natural waxes \u2014 tames unruly Indian beard texture without leaving residue."
+    },
+    {
+      "id": "wow_argan_beard_balm",
+      "name": "WOW Skin Science Beard Balm with Argan & Jojoba Oils",
+      "brand": "WOW Skin Science",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "budget",
+      "price_inr": 399,
+      "rating": 4.0,
+      "nykaa_url": "https://www.nykaa.com/wow-beard-balm/p/654332?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hydration",
+        "sensitivity"
+      ],
+      "why_good": "Argan and jojoba oils moisturise beard and skin underneath \u2014 fragrance-free option for sensitive skin."
+    },
+    {
+      "id": "bombay_shaving_beard_balm",
+      "name": "Bombay Shaving Company Beard Balm",
+      "brand": "Bombay Shaving Company",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 599,
+      "rating": 4.3,
+      "nykaa_url": "https://www.nykaa.com/bombay-shaving-beard-balm/p/876560?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hydration",
+        "frizz"
+      ],
+      "why_good": "Kokum butter with essential oils styles and conditions simultaneously \u2014 popular for Indian office professionals."
+    },
+    {
+      "id": "man_arden_sandalwood_beard_balm",
+      "name": "Man Arden Beard Balm - Sandalwood",
+      "brand": "Man Arden",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 749,
+      "rating": 4.4,
+      "nykaa_url": "https://www.nykaa.com/man-arden-sandalwood-beard-balm/p/654333?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "dryness",
+        "sensitivity"
+      ],
+      "why_good": "Sandalwood with coconut and shea \u2014 subtle masculine fragrance while conditioning coarse Indian beard."
+    },
+    {
+      "id": "the_man_company_beard_balm",
+      "name": "The Man Company Beard Balm",
+      "brand": "The Man Company",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "mid",
+      "price_inr": 695,
+      "rating": 4.2,
+      "nykaa_url": "https://www.nykaa.com/the-man-company-beard-balm/p/987669?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hydration",
+        "frizz"
+      ],
+      "why_good": "Almond and argan oil blend with light beeswax \u2014 conditions while giving shape to Indian beard styles."
+    },
+    {
+      "id": "kiehls_nourishing_beard_balm",
+      "name": "Kiehl's Nourishing Beard Grooming Oil",
+      "brand": "Kiehl's",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 2750,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/kiehls-beard-balm/p/123463?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hydration",
+        "dryness"
+      ],
+      "why_good": "Cedarwood and passion fruit seed oil premium grooming \u2014 softens and adds brilliant shine to beard."
+    },
+    {
+      "id": "captain_fawcett_beard_balm",
+      "name": "Captain Fawcett's Beard Balm",
+      "brand": "Captain Fawcett",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 2999,
+      "rating": 4.6,
+      "nykaa_url": "https://www.nykaa.com/captain-fawcett-beard-balm/p/234581?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "frizz",
+        "hydration"
+      ],
+      "why_good": "British barbershop beeswax formula \u2014 professional hold and conditioning for well-groomed Indian beard."
+    },
+    {
+      "id": "loccitane_cade_beard_balm",
+      "name": "L'Occitane Cade Beard Balm",
+      "brand": "L'Occitane",
+      "category": "beard_balm",
+      "gender": "men",
+      "tier": "premium",
+      "price_inr": 3200,
+      "rating": 4.5,
+      "nykaa_url": "https://www.nykaa.com/loccitane-cade-beard-balm/p/098775?ref=lume",
+      "skin_types": [
+        "all"
+      ],
+      "concerns": [
+        "beard_care",
+        "hydration",
+        "sensitivity"
+      ],
+      "why_good": "Cade wood extract with shea butter from Provence \u2014 luxuriously conditions and softens the toughest beard textures."
+    }
+  ]
+}

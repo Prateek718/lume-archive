@@ -8,10 +8,11 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { getTierLabel, getTierFromScore, getCategoryDiamonds } from '../../constants/tiers';
+import { getSavedRecommendations } from '../../services/scanService';
 import type { Scan } from '../../types';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -60,15 +61,13 @@ function Diamonds({ count, total = 3 }: { count: number; total?: number }) {
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
-  const router  = useRouter();
+  const router = useRouter();
   const [tab, setTab] = useState<'scans' | 'routine'>('scans');
 
   // Scans
   const [scans,        setScans]        = useState<Scan[]>([]);
   const [loadingScans, setLoadingScans] = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
-  const [gender,       setGender]       = useState<string>('man');
-  const [isGuest,      setIsGuest]      = useState(false);
 
   // Routine
   const [routineSteps, setRoutineSteps] = useState<RoutineStep[]>(DEFAULT_STEPS);
@@ -80,15 +79,6 @@ export default function HistoryScreen() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
-      setIsGuest(false);
-      // Get gender from Supabase profile
-      const { data: profile } = await supabase
-        .from('users')
-        .select('gender')
-        .eq('id', user.id)
-        .single();
-      if (profile?.gender) setGender(profile.gender as string);
-
       const { data: scansData, error } = await supabase
         .from('scans')
         .select('id, score_overall, tier_label, face_shape, hair_texture, hair_condition, created_at')
@@ -100,13 +90,6 @@ export default function HistoryScreen() {
       } else {
         setScans(scansData ?? []);
       }
-    } else {
-      setIsGuest(true);
-      // Fall back to gender from AsyncStorage for guest
-      const profileStr = await AsyncStorage.getItem('@lume/guest_profile');
-      const guestProfile = profileStr ? JSON.parse(profileStr) as { gender?: string } : { gender: 'man' };
-      if (guestProfile.gender) setGender(guestProfile.gender);
-      setScans([]);
     }
 
     setLoadingScans(false);
@@ -191,22 +174,10 @@ export default function HistoryScreen() {
       return <ActivityIndicator color={Colors.gold} style={{ marginTop: Spacing.xxl }} />;
     }
     if (scans.length === 0) {
-      return isGuest ? (
-        <View style={s.emptyBox}>
-          <Text style={s.emptyTitle}>No scan history</Text>
-          <Text style={s.emptyBody}>Sign in to save and view your scan history</Text>
-          <TouchableOpacity
-            style={s.emptyBtn}
-            onPress={() => router.push('/(auth)/signup')}
-            activeOpacity={0.85}
-          >
-            <Text style={s.emptyBtnText}>Sign in</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+      return (
         <View style={s.emptyBox}>
           <Text style={s.emptyTitle}>No scans yet</Text>
-          <Text style={s.emptyBody}>Head to the Scan tab to get your first grooming score.</Text>
+          <Text style={s.emptyBody}>No scans yet — take your first scan to see your history here</Text>
         </View>
       );
     }
@@ -244,13 +215,23 @@ export default function HistoryScreen() {
             scan.face_shape   && `${scan.face_shape} face`,
             scan.hair_texture && `${scan.hair_texture} hair`,
           ].filter(Boolean) as string[];
+          const handleScanTap = async () => {
+            // Try AsyncStorage cache first, fall back to Supabase ID lookup
+            const cached = await getSavedRecommendations(scan.id ?? '');
+            if (cached) {
+              router.push({ pathname: '/recommendations', params: { scanJson: JSON.stringify(cached) } });
+            } else {
+              router.push({ pathname: '/recommendations', params: { scanId: scan.id } });
+            }
+          };
+
           return (
             <View key={scan.id} style={s.scanRow}>
               <View style={s.scanDotCol}>
                 <View style={[s.scanDot, i === 0 && s.scanDotActive]} />
                 {i < scans.length - 1 && <View style={s.scanLine} />}
               </View>
-              <View style={s.scanCard}>
+              <TouchableOpacity style={s.scanCard} onPress={handleScanTap} activeOpacity={0.8}>
                 <View style={s.scanCardTop}>
                   <View style={s.scanBadge}>
                     <Text style={s.scanBadgeText}>{scan.tier_label ?? tier.name}</Text>
@@ -267,7 +248,7 @@ export default function HistoryScreen() {
                     ))}
                   </View>
                 )}
-              </View>
+              </TouchableOpacity>
             </View>
           );
         })}
@@ -277,22 +258,6 @@ export default function HistoryScreen() {
 
   // ── Routine section ───────────────────────────────────────────────────────
   const RoutineSection = () => {
-    if (isGuest) {
-      return (
-        <View style={s.emptyBox}>
-          <Text style={s.emptyTitle}>Sign in to track your routine</Text>
-          <Text style={s.emptyBody}>Build streaks and track your grooming consistency</Text>
-          <TouchableOpacity
-            style={s.emptyBtn}
-            onPress={() => router.push('/(auth)/signup')}
-            activeOpacity={0.85}
-          >
-            <Text style={s.emptyBtnText}>Sign in</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
     const todayKey   = new Date().toISOString().slice(0, 10);
     const todayDone  = new Set<string>(routineLog[todayKey] ?? []);
     const total      = routineSteps.length;
@@ -390,7 +355,7 @@ export default function HistoryScreen() {
 const s = StyleSheet.create({
   screen:  { flex: 1, backgroundColor: Colors.background },
   header:  { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
-  headerTitle: { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.cream },
+  headerTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream },
   content: { paddingHorizontal: Spacing.lg },
 
   pillsRow: {
@@ -399,26 +364,24 @@ const s = StyleSheet.create({
   },
   pill:          { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.pill, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
   pillActive:    { backgroundColor: Colors.gold, borderColor: Colors.gold },
-  pillText:      { fontSize: Typography.size.sm, color: Colors.textSecondary, fontWeight: '600' },
+  pillText:      { fontSize: 9, color: Colors.textSecondary, fontWeight: '600' },
   pillTextActive:{ color: Colors.background },
 
-  emptyBox:     { alignItems: 'center', paddingTop: Spacing.xxxl },
-  emptyTitle:   { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream, marginBottom: Spacing.sm },
-  emptyBody:    { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xl },
-  emptyBtn:     { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  emptyBtnText: { fontSize: Typography.size.md, fontWeight: '600', color: Colors.background },
+  emptyBox:   { alignItems: 'center', paddingTop: Spacing.xxxl },
+  emptyTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, marginBottom: Spacing.sm },
+  emptyBody:  { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 
   // Progress card
   progressCard: {
     backgroundColor: Colors.surface, borderRadius: Radius.card,
     borderWidth: 1, borderColor: Colors.border, padding: Spacing.lg, marginBottom: Spacing.lg,
   },
-  progressLabel:   { fontSize: Typography.size.xs, color: Colors.gold, letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.md },
+  progressLabel:   { fontSize: 10, color: Colors.gold, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.md },
   progressRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
   progressStat:    { alignItems: 'center' },
-  progressTier:    { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream },
-  progressNum:     { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.cream },
-  progressCaption: { fontSize: Typography.size.xs, color: Colors.textSecondary, marginTop: 6 },
+  progressTier:    { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream },
+  progressNum:     { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream },
+  progressCaption: { fontSize: 9, color: Colors.textSecondary, marginTop: 6 },
   statDivider:     { width: 1, height: 40, backgroundColor: Colors.border },
 
   // Timeline

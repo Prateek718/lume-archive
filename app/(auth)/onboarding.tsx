@@ -12,7 +12,8 @@ import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { FIRST_LAUNCH_KEY } from '../_layout';
 
-type GenderValue = 'man' | 'woman' | 'other';
+type GenderValue    = 'man' | 'woman' | 'other';
+type RoutineLevel   = 'simple' | 'balanced' | 'full';
 
 const GENDER_OPTIONS: { label: string; emoji: string; value: GenderValue }[] = [
   { label: 'Man',                emoji: '🧔', value: 'man'   },
@@ -20,19 +21,27 @@ const GENDER_OPTIONS: { label: string; emoji: string; value: GenderValue }[] = [
   { label: 'Non-binary / Other', emoji: '🌟', value: 'other' },
 ];
 
+const ROUTINE_OPTIONS: { label: string; sub: string; value: RoutineLevel }[] = [
+  { label: 'Keep it simple',   sub: '2–3 essential products only',  value: 'simple'   },
+  { label: 'Balanced routine', sub: '4–5 products, targeted care',  value: 'balanced' },
+  { label: 'Full routine',     sub: '6+ products, complete care',   value: 'full'     },
+];
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [step,        setStep]        = useState<1 | 2 | 3>(1);
-  const [displayName, setDisplayName] = useState('');
-  const [gender,      setGender]      = useState<GenderValue | null>(null);
-  const [city,        setCity]        = useState('');
-  const [loading,     setLoading]     = useState(false);
+  const [step,         setStep]         = useState<1 | 2 | 3 | 4>(1);
+  const [displayName,  setDisplayName]  = useState('');
+  const [gender,       setGender]       = useState<GenderValue | null>(null);
+  const [city,         setCity]         = useState('');
+  const [routineLevel, setRoutineLevel] = useState<RoutineLevel>('simple');
+  const [loading,      setLoading]      = useState(false);
 
   const goBack = () => {
     if (step === 2) setStep(1);
     else if (step === 3) setStep(2);
+    else if (step === 4) setStep(3);
   };
 
   const handleComplete = async () => {
@@ -49,6 +58,7 @@ export default function OnboardingScreen() {
       display_name:        displayName.trim(),
       gender:              gender,
       city:                city.trim(),
+      routine_level:       routineLevel,
       onboarding_complete: true,
     }).eq('id', session.user.id);
 
@@ -84,7 +94,7 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={s.dotsRow}>
-          {([1, 2, 3] as const).map(i => (
+          {([1, 2, 3, 4] as const).map(i => (
             <View key={i} style={[s.dot, i === step && s.dotActive]} />
           ))}
         </View>
@@ -169,18 +179,56 @@ export default function OnboardingScreen() {
               onChangeText={setCity}
               autoFocus
               autoCapitalize="words"
-              returnKeyType="go"
-              onSubmitEditing={() => city.trim() && !loading && handleComplete()}
+              returnKeyType="next"
+              onSubmitEditing={() => city.trim() && setStep(4)}
             />
             <TouchableOpacity
-              style={[s.cta, (!city.trim() || loading) && s.ctaDisabled]}
+              style={[s.cta, !city.trim() && s.ctaDisabled]}
+              onPress={() => setStep(4)}
+              disabled={!city.trim()}
+              activeOpacity={0.8}
+            >
+              <Text style={s.ctaText}>Continue</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* ── STEP 4: Routine level ── */}
+        {step === 4 && (
+          <>
+            <Text style={s.title}>What kind of routine{'\n'}are you looking for?</Text>
+            <Text style={s.subtitle}>We'll recommend the right number of products</Text>
+            <View style={s.routineCol}>
+              {ROUTINE_OPTIONS.map((opt, idx) => (
+                <View key={opt.value}>
+                  <TouchableOpacity
+                    style={s.routineRow}
+                    onPress={() => setRoutineLevel(opt.value)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={s.routineTexts}>
+                      <Text style={[s.routineLabel, routineLevel === opt.value && s.routineLabelActive]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={s.routineSub}>{opt.sub}</Text>
+                    </View>
+                    <View style={[s.radioOuter, routineLevel === opt.value && s.radioOuterActive]}>
+                      {routineLevel === opt.value && <View style={s.radioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                  {idx < ROUTINE_OPTIONS.length - 1 && <View style={s.routineDivider} />}
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[s.cta, loading && s.ctaDisabled]}
               onPress={handleComplete}
-              disabled={!city.trim() || loading}
+              disabled={loading}
               activeOpacity={0.8}
             >
               {loading
                 ? <ActivityIndicator color={Colors.background} />
-                : <Text style={s.ctaText}>Get started</Text>
+                : <Text style={s.ctaText}>Finish setup</Text>
               }
             </TouchableOpacity>
           </>
@@ -292,5 +340,41 @@ const s = StyleSheet.create({
     fontSize:   Typography.size.md,
     fontWeight: '600',
     color:      Colors.background,
+  },
+
+  // Routine level step
+  routineCol: {
+    backgroundColor: '#1A1412',
+    borderRadius:    12,
+    borderWidth:     1,
+    borderColor:     '#2A2420',
+    marginBottom:    Spacing.lg,
+    overflow:        'hidden',
+  },
+  routineRow: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    paddingVertical: 18,
+    paddingHorizontal: Spacing.md,
+  },
+  routineTexts: { flex: 1, marginRight: Spacing.md },
+  routineLabel: {
+    fontSize:  Typography.size.md,
+    color:     Colors.textSecondary,
+    marginBottom: 3,
+  },
+  routineLabelActive: { color: Colors.cream, fontWeight: '600' },
+  routineSub:  { fontSize: 12, color: Colors.textTertiary },
+  routineDivider: { height: 1, backgroundColor: '#2A2420', marginHorizontal: Spacing.md },
+  radioOuter: {
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 1.5, borderColor: '#4A4540',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  radioOuterActive: { borderColor: Colors.gold },
+  radioInner: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: Colors.gold,
   },
 });

@@ -42,16 +42,57 @@ Return ONLY a valid JSON object with no markdown, no code fences, no explanation
   "hair": {
     "summary": "one sentence summary of hair recommendation",
     "advice": "specific advice phrased as exact words to say to stylist in quotes",
-    "styles": ["Exact Style Name 1", "Exact Style Name 2", "Exact Style Name 3"]
+    "styles": ["Exact Style Name 1", "Exact Style Name 2", "Exact Style Name 3"],
+    "products": [
+      {
+        "category": "one of: shampoo | conditioner | hair_oil | hair_mask | hair_serum",
+        "reason": "Personalised one sentence explaining why this category suits THIS specific user — reference their hair texture, condition, or concerns. Make it personal not generic.",
+        "match_score": <integer 60-100>
+      }
+    ]
   },
   "skin": {
     "summary": "one sentence summary",
     "advice": "specific skincare advice with product types, not brand names",
-    "routine": ["morning step 1", "morning step 2", "evening step 1", "evening step 2"]
+    "routine": ["morning step 1", "morning step 2", "evening step 1", "evening step 2"],
+    "products": [
+      {
+        "category": "one of: face_cleanser | moisturiser | spf_sunscreen | serum_vitamin_c | serum_niacinamide | serum_retinol | eye_cream",
+        "reason": "Personalised one sentence explaining why this category suits THIS specific user — reference their skin type, concerns, or city climate. Make it personal not generic.",
+        "match_score": <integer 60-100>
+      }
+    ]
   },
-  "beard": {"summary": "...", "advice": "..."} or null if gender is woman,
-  "makeup": {"summary": "...", "advice": "..."} or null if gender is man
-}`;
+  "beard": {
+    "summary": "...",
+    "advice": "...",
+    "products": [
+      {
+        "category": "one of: beard_oil | beard_wash | beard_balm",
+        "reason": "Personalised one sentence for this user's beard density and condition.",
+        "match_score": <integer 60-100>
+      }
+    ]
+  } or null if gender is woman,
+  "makeup": {
+    "summary": "...",
+    "advice": "...",
+    "products": [
+      {
+        "category": "one of: foundation_fair | foundation_medium | foundation_deep | kajal_eyeliner | eyebrow_pencil | lipstick_nude | lipstick_red | lipstick_berry | lip_balm",
+        "reason": "Personalised one sentence for this user's brow shape and under-eye condition.",
+        "match_score": <integer 60-100>
+      }
+    ]
+  } or null if gender is man
+}
+
+Products array rules:
+- match_score 90-100: directly targets the user's primary concern
+- match_score 75-89: relevant but secondary concern
+- match_score 60-74: generally beneficial but not critical
+- Only include categories with match_score 60 or above — maximum 4 products per section
+- The reason must reference specific details from the face analysis (skin type, hair texture, concerns, city climate etc.) — never write a generic reason`;
 }
 
 export async function getAdviceFromClaude(
@@ -67,7 +108,7 @@ export async function getAdviceFromClaude(
     },
     body: JSON.stringify({
       model:      MODEL,
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [{
         role:    'user',
         content: buildPrompt(gender, analysis),
