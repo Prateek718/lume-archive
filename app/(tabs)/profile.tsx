@@ -411,7 +411,7 @@ const s = StyleSheet.create({
 
   pageTitle: {
     fontFamily:        Typography.serif,
-    fontSize:          28,
+    fontSize:          22,
     color:             Colors.cream,
     paddingHorizontal: Spacing.lg,
     paddingTop:        Spacing.md,
@@ -432,11 +432,11 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginBottom: Spacing.md,
   },
-  avatarText:    { fontFamily: Typography.serif, fontSize: 26, color: Colors.gold },
-  userName:      { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, marginBottom: 4 },
+  avatarText:    { fontFamily: Typography.serif, fontSize: 22, color: Colors.gold },
+  userName:      { fontFamily: Typography.serif, fontSize: 18, color: Colors.cream, marginBottom: 4 },
   userMeta:      { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.sm },
   tierBadge:     { backgroundColor: 'rgba(201,168,76,0.12)', borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 4 },
-  tierBadgeText: { fontSize: 12, color: Colors.gold },
+  tierBadgeText: { fontSize: 9, color: Colors.gold },
 
   // Stats
   statsRow: {
@@ -444,12 +444,12 @@ const s = StyleSheet.create({
     marginHorizontal: Spacing.lg, marginBottom: Spacing.lg,
   },
   statCard:  { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.sm, alignItems: 'center' },
-  statNum:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, marginBottom: 2 },
-  statLabel: { fontSize: 9, color: Colors.textSecondary, letterSpacing: 1 },
+  statNum:   { fontFamily: Typography.serif, fontSize: 18, color: Colors.cream, marginBottom: 2 },
+  statLabel: { fontSize: 9, color: Colors.textSecondary, letterSpacing: 1.5, textTransform: 'uppercase' },
 
   // Section / card
   sectionLabel: {
-    fontSize: 10, color: Colors.textSecondary, letterSpacing: 2,
+    fontSize: 10, color: Colors.textSecondary, letterSpacing: 1.5, textTransform: 'uppercase',
     marginHorizontal: Spacing.lg, marginBottom: Spacing.sm, marginTop: Spacing.xs,
   },
   card: {
@@ -462,8 +462,8 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
-  rowLabel: { fontSize: 14, color: Colors.cream },
-  rowSub:   { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  rowLabel: { fontSize: 15, color: Colors.cream },
+  rowSub:   { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
   rowValue: { fontSize: 13, color: Colors.textSecondary },
   rowArrow: { fontSize: 18, color: Colors.gold },
   divider:  { height: 1, backgroundColor: Colors.border },
@@ -473,8 +473,8 @@ const s = StyleSheet.create({
   // Account actions
   accountActions:  { marginHorizontal: Spacing.lg, borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.md },
   signOutBtn:      { paddingVertical: 12, alignItems: 'center' },
-  signOutText:     { fontSize: 14, color: Colors.textSecondary },
+  signOutText:     { fontSize: 13, color: Colors.textSecondary },
   actionsDivider:  { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
   deleteBtn:       { paddingVertical: 12, alignItems: 'center' },
-  deleteText:      { fontSize: 14, color: '#FF4444' },
+  deleteText:      { fontSize: 13, color: '#FF4444' },
 });

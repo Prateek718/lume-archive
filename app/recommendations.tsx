@@ -195,8 +195,8 @@ const s = StyleSheet.create({
   scroll:   { flex: 1 },
   content:  { paddingHorizontal: Spacing.lg },
 
-  title:    { fontFamily: Typography.serif, fontSize: 34, color: Colors.cream, lineHeight: 42, marginBottom: Spacing.xs },
-  subtitle: { fontSize: Typography.size.base, color: Colors.textSecondary, marginBottom: Spacing.xl },
+  title:    { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, lineHeight: 30, marginBottom: Spacing.xs },
+  subtitle: { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.xl },
 
   card: {
     backgroundColor: Colors.surface, borderRadius: Radius.card,
@@ -207,9 +207,9 @@ const s = StyleSheet.create({
   iconBox:   { width: 48, height: 48, borderRadius: Radius.icon, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
   iconChar:  { fontSize: 22 },
   cardMid:   { flex: 1 },
-  cardTitle: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: Colors.cream, marginBottom: 2 },
-  cardSub:   { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  cardArrow: { fontSize: 24, color: Colors.textTertiary, lineHeight: 28 },
+  cardTitle: { fontSize: 15, color: Colors.cream, marginBottom: 2 },
+  cardSub:   { fontSize: 13, color: Colors.textSecondary },
+  cardArrow: { fontSize: 22, color: Colors.textTertiary, lineHeight: 28 },
 
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.sm, paddingLeft: 60 },
   tag:    { backgroundColor: Colors.goldDim, borderRadius: Radius.pill, paddingHorizontal: Spacing.sm, paddingVertical: 3 },

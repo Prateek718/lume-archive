@@ -47,7 +47,7 @@ function StarsLarge({ value, onChange }: { value: number; onChange: (v: number) 
     <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
       {[1, 2, 3, 4, 5].map(n => (
         <TouchableOpacity key={n} onPress={() => onChange(n)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
-          <Text style={{ fontSize: 42, color: n <= value ? '#C9A84C' : '#2A2420', lineHeight: 50 }}>★</Text>
+          <Text style={{ fontSize: 32, color: n <= value ? '#C9A84C' : '#2A2420', lineHeight: 40 }}>★</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -382,7 +382,7 @@ const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
   arrow: { fontSize: 28, color: '#C9A84C', lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: '#F5F0E8' },
+  title: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8' },
 });
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -391,24 +391,24 @@ const s = StyleSheet.create({
 
   // Search
   searchBox:    { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
-  searchInput:  { backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: '#F5F0E8' },
+  searchInput:  { backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: 15, color: '#F5F0E8' },
   listContent:  { paddingHorizontal: Spacing.lg },
   listRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', padding: Spacing.md, marginBottom: Spacing.xs },
-  listName:     { fontSize: Typography.size.md, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
-  listAddr:     { fontSize: Typography.size.sm, color: Colors.textSecondary },
+  listName:     { fontSize: 15, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
+  listAddr:     { fontSize: 13, color: Colors.textSecondary },
   listArrow:    { fontSize: 22, color: Colors.textTertiary, lineHeight: 26 },
   addManualRow: { backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', padding: Spacing.md, alignItems: 'center', marginTop: Spacing.sm },
-  addManualText:{ fontSize: Typography.size.base, color: '#C9A84C' },
-  emptyHint:    { textAlign: 'center', color: Colors.textTertiary, fontSize: Typography.size.base, marginTop: Spacing.xl },
+  addManualText:{ fontSize: 13, color: '#C9A84C' },
+  emptyHint:    { textAlign: 'center', color: Colors.textTertiary, fontSize: 13, marginTop: Spacing.xl },
 
   // Form
   formContent:     { paddingHorizontal: Spacing.lg },
   salonHeader:     { paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: '#2A2420', marginBottom: Spacing.lg },
-  salonHeaderName: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: '#F5F0E8' },
-  salonHeaderAddr: { fontSize: Typography.size.base, color: Colors.textSecondary, marginTop: 4 },
+  salonHeaderName: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8' },
+  salonHeaderAddr: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
 
-  sectionLabel: { fontSize: Typography.size.xs, color: '#C9A84C', letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.xs, marginTop: Spacing.xl },
-  sectionSub:   { fontSize: Typography.size.sm, color: '#8A7A6A', marginBottom: Spacing.md },
+  sectionLabel: { fontSize: 10, color: '#C9A84C', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs, marginTop: Spacing.xl },
+  sectionSub:   { fontSize: 13, color: '#8A7A6A', marginBottom: Spacing.md },
 
   overallBox: {
     backgroundColor: '#1A1412',
@@ -421,7 +421,7 @@ const s = StyleSheet.create({
 
   // Service groups
   serviceGroup:      { marginBottom: Spacing.lg },
-  serviceGroupLabel: { fontSize: 10, color: '#8A7A6A', letterSpacing: 3, marginBottom: Spacing.sm },
+  serviceGroupLabel: { fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
   pillsWrap:         { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   pill: {
     backgroundColor: '#1A1412',
@@ -436,24 +436,25 @@ const s = StyleSheet.create({
     borderColor:     'rgba(201,168,76,0.4)',
   },
   pillText:       { fontSize: 13, color: '#4A4540' },
+
   pillTextActive: { color: '#C9A84C', fontWeight: '600' },
 
   // Detail ratings
   detailCard:      { backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', overflow: 'hidden' },
   detailRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
   detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#2A2420' },
-  detailLabel:     { fontSize: Typography.size.base, color: '#F5F0E8' },
+  detailLabel:     { fontSize: 15, color: '#F5F0E8' },
 
   // Submit
   submitBtn:         { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
   submitBtnDisabled: { opacity: 0.4 },
-  submitBtnText:     { fontSize: Typography.size.md, fontWeight: '600', color: '#0A0A0A' },
+  submitBtnText:     { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
 
   // Success
   successScreen: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  successCheck:  { fontSize: 64, color: '#C9A84C', marginBottom: Spacing.lg },
-  successTitle:  { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: '#F5F0E8', marginBottom: Spacing.sm },
-  successBody:   { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
+  successCheck:  { fontSize: 32, color: '#C9A84C', marginBottom: Spacing.lg },
+  successTitle:  { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', marginBottom: Spacing.sm },
+  successBody:   { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
   successBtn:    { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  successBtnText:{ fontSize: Typography.size.md, fontWeight: '600', color: '#0A0A0A' },
+  successBtnText:{ fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
 });

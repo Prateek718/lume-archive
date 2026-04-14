@@ -32,7 +32,7 @@ function MiniStars({ rating }: { rating: number | null }) {
   return (
     <View style={{ flexDirection: 'row', gap: 2 }}>
       {[1, 2, 3, 4, 5].map(n => (
-        <Text key={n} style={{ fontSize: 12, color: n <= filled ? '#C9A84C' : Colors.border }}>★</Text>
+        <Text key={n} style={{ fontSize: 13, color: n <= filled ? '#C9A84C' : Colors.border }}>★</Text>
       ))}
     </View>
   );
@@ -125,8 +125,8 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: Spacing.lg },
 
   header:   { paddingTop: Spacing.md, paddingBottom: Spacing.xl },
-  title:    { fontFamily: Typography.serif, fontSize: Typography.size.xxxl, color: '#F5F0E8' },
-  subtitle: { fontSize: Typography.size.base, color: Colors.textSecondary, marginTop: 4 },
+  title:    { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8' },
+  subtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
 
   actionCard: {
     flexDirection:   'row',
@@ -147,16 +147,16 @@ const s = StyleSheet.create({
     justifyContent:  'center',
     marginRight:     Spacing.md,
   },
-  actionIcon:    { fontSize: 20, color: '#C9A84C' },
+  actionIcon:    { fontSize: 18, color: '#C9A84C' },
   actionText:    { flex: 1 },
-  actionTitle:   { fontSize: Typography.size.md, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
-  actionSubtitle:{ fontSize: Typography.size.sm, color: Colors.textSecondary },
-  actionArrow:   { fontSize: 24, color: Colors.textTertiary, lineHeight: 28 },
+  actionTitle:   { fontSize: 15, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
+  actionSubtitle:{ fontSize: 13, color: Colors.textSecondary },
+  actionArrow:   { fontSize: 22, color: Colors.textTertiary, lineHeight: 28 },
 
   sectionLabel: {
-    fontSize:       Typography.size.xs,
+    fontSize:       10,
     color:          '#C9A84C',
-    letterSpacing:  6,
+    letterSpacing:  1.5,
     textTransform:  'uppercase',
     marginTop:      Spacing.xl,
     marginBottom:   Spacing.sm,
@@ -170,7 +170,7 @@ const s = StyleSheet.create({
     padding:         Spacing.lg,
     alignItems:      'center',
   },
-  emptyText: { fontSize: Typography.size.base, color: Colors.textTertiary },
+  emptyText: { fontSize: 13, color: Colors.textTertiary },
 
   ratingRow: {
     flexDirection:   'row',
@@ -182,6 +182,6 @@ const s = StyleSheet.create({
     padding:         Spacing.md,
     marginBottom:    Spacing.xs,
   },
-  ratingName: { fontSize: Typography.size.base, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
-  ratingDate: { fontSize: Typography.size.sm, color: Colors.textSecondary },
+  ratingName: { fontSize: 15, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
+  ratingDate: { fontSize: 13, color: Colors.textSecondary },
 });

@@ -365,7 +365,7 @@ const s = StyleSheet.create({
     marginBottom: 3,
   },
   routineLabelActive: { color: Colors.cream, fontWeight: '600' },
-  routineSub:  { fontSize: 12, color: Colors.textTertiary },
+  routineSub:  { fontSize: 13, color: Colors.textTertiary },
   routineDivider: { height: 1, backgroundColor: '#2A2420', marginHorizontal: Spacing.md },
   radioOuter: {
     width: 20, height: 20, borderRadius: 10,

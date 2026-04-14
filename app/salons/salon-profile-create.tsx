@@ -93,7 +93,7 @@ function ServicePillGroup({
 }
 const pg = StyleSheet.create({
   block:      { marginBottom: Spacing.lg },
-  groupLabel: { fontSize: 10, color: '#8A7A6A', letterSpacing: 3, textTransform: 'uppercase', marginBottom: Spacing.sm },
+  groupLabel: { fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
   pillsWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill:       { backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
   pillActive: { backgroundColor: 'rgba(201,168,76,0.12)', borderColor: 'rgba(201,168,76,0.4)' },
@@ -476,19 +476,19 @@ const s = StyleSheet.create({
   backBar:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   backBtn:    { width: 48, alignItems: 'center' },
   backArrow:  { fontSize: 28, color: '#C9A84C', lineHeight: 32 },
-  stepCaption:{ fontSize: 10, color: '#8A7A6A', letterSpacing: 3, textTransform: 'uppercase' },
+  stepCaption:{ fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase' },
 
-  stepTitle: { fontFamily: Typography.serif, fontSize: 26, color: '#F5F0E8', marginBottom: 6 },
+  stepTitle: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', marginBottom: 6 },
   stepSub:   { fontSize: 13, color: '#8A7A6A', marginBottom: Spacing.xl, lineHeight: 20 },
-  step4Body: { fontSize: 12, color: '#8A7A6A', lineHeight: 20, marginBottom: Spacing.xl },
+  step4Body: { fontSize: 13, color: '#8A7A6A', lineHeight: 20, marginBottom: Spacing.xl },
 
   // Underline text fields
-  fieldLabel:     { fontSize: 10, color: '#8A7A6A', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 6, marginTop: Spacing.lg },
+  fieldLabel:     { fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6, marginTop: Spacing.lg },
   underlineInput: {
     borderBottomWidth: 1,
     borderBottomColor: '#2A2420',
     paddingVertical:   10,
-    fontSize:          16,
+    fontSize:          15,
     color:             '#F5F0E8',
     marginBottom:      4,
   },
@@ -496,6 +496,7 @@ const s = StyleSheet.create({
   // Phone row
   phoneRow:   { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#2A2420', marginBottom: 4 },
   phonePrefix:{ fontSize: 15, color: '#8A7A6A', paddingVertical: 10, marginRight: 8 },
+
   phoneInput: { flex: 1, borderBottomWidth: 0, marginBottom: 0 },
   phoneError: { fontSize: 11, color: '#E24B4A', marginTop: 4 },
 
@@ -514,9 +515,9 @@ const s = StyleSheet.create({
   radio:            { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#2A2420', alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
   radioActive:      { borderColor: '#C9A84C' },
   radioDot:         { width: 10, height: 10, borderRadius: 5, backgroundColor: '#C9A84C' },
-  optionLabel:      { fontSize: 14, color: '#8A7A6A', marginBottom: 2 },
+  optionLabel:      { fontSize: 15, color: '#8A7A6A', marginBottom: 2 },
   optionLabelActive:{ color: '#F5F0E8', fontWeight: '600' },
-  optionSub:        { fontSize: 12, color: '#4A4540' },
+  optionSub:        { fontSize: 13, color: '#4A4540' },
 
   // Info card (step 4)
   infoCard: {
@@ -526,7 +527,7 @@ const s = StyleSheet.create({
     borderRadius:    12,
     padding:         Spacing.md,
   },
-  infoText: { fontSize: 12, color: '#4A4540', lineHeight: 20 },
+  infoText: { fontSize: 11, color: '#4A4540', lineHeight: 20 },
 
   // Bottom bar
   bottomBar: {
@@ -542,7 +543,7 @@ const s = StyleSheet.create({
   },
   nextBtn:         { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center' },
   nextBtnDisabled: { opacity: 0.4 },
-  nextBtnText:     { fontSize: 15, fontWeight: '600', color: '#0A0A0A' },
+  nextBtnText:     { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
 
   // Confirmation
   confirmBox: {
@@ -563,10 +564,10 @@ const s = StyleSheet.create({
     marginBottom:    Spacing.xl,
   },
   confirmCheckText:      { fontSize: 28, color: '#5DCAA5' },
-  confirmTitle:          { fontFamily: Typography.serif, fontSize: 24, color: '#F5F0E8', marginBottom: 8, textAlign: 'center' },
-  confirmSub:            { fontSize: 14, color: '#8A7A6A', textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xxl },
+  confirmTitle:          { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', marginBottom: 8, textAlign: 'center' },
+  confirmSub:            { fontSize: 13, color: '#8A7A6A', textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xxl },
   confirmPrimaryBtn:     { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 32, width: '100%', alignItems: 'center', marginBottom: Spacing.sm },
   confirmPrimaryBtnText: { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
   confirmSecondaryBtn:   { paddingVertical: 12, alignItems: 'center' },
-  confirmSecondaryBtnText:{ fontSize: 14, color: '#8A7A6A' },
+  confirmSecondaryBtnText:{ fontSize: 13, color: '#8A7A6A' },
 });

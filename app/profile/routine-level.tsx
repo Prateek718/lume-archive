@@ -124,7 +124,7 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
   backArrow:   { fontSize: 32, color: Colors.gold, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream },
 
   subtitle: {
     fontSize: 13, color: Colors.textSecondary,
@@ -145,9 +145,9 @@ const s = StyleSheet.create({
     paddingVertical: 18, paddingHorizontal: Spacing.md,
   },
   rowTexts:    { flex: 1, marginRight: Spacing.md },
-  rowLabel:    { fontSize: Typography.size.md, color: Colors.textSecondary, marginBottom: 3 },
+  rowLabel:    { fontSize: 15, color: Colors.textSecondary, marginBottom: 3 },
   rowLabelActive: { color: Colors.cream, fontWeight: '600' },
-  rowSub:      { fontSize: 12, color: Colors.textTertiary },
+  rowSub:      { fontSize: 13, color: Colors.textTertiary },
 
   divider: { height: 1, backgroundColor: '#2A2420', marginHorizontal: Spacing.md },
 

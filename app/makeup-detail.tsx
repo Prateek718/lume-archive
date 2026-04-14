@@ -252,7 +252,7 @@ export default function MakeupDetailScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 16 }}>🔍</Text>
+                <Text style={{ fontSize: 15 }}>🔍</Text>
                 <Text style={{
                   color: '#C9A84C',
                   fontSize: 14,
@@ -429,7 +429,7 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
   backArrow:   { fontSize: 32, color: Colors.gold, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.cream },
 
   tabBar: {
     flexDirection: 'row', gap: Spacing.sm,
@@ -437,7 +437,7 @@ const s = StyleSheet.create({
   },
   tabPill:           { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.pill, backgroundColor: '#1A1A1A' },
   tabPillActive:     { backgroundColor: Colors.gold },
-  tabPillText:       { fontSize: Typography.size.sm, color: Colors.textSecondary, fontWeight: '500' },
+  tabPillText:       { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
   tabPillTextActive: { color: Colors.background, fontWeight: '600' },
 
   scroll:  { flex: 1 },
@@ -449,32 +449,32 @@ const s = StyleSheet.create({
     padding: Spacing.lg, marginBottom: Spacing.sm,
   },
   infoCardLabel: {
-    fontSize: Typography.size.xs, color: Colors.gold,
-    letterSpacing: 5, textTransform: 'uppercase', marginBottom: Spacing.md,
+    fontSize: 10, color: Colors.gold,
+    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.md,
   },
 
   pillRow:           { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   pill:              { backgroundColor: Colors.goldDim, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  pillText:          { fontSize: Typography.size.sm, color: Colors.gold, textTransform: 'capitalize' },
+  pillText:          { fontSize: 9, color: Colors.gold, textTransform: 'capitalize' },
   pillSecondary:     { backgroundColor: '#1A1A1A' },
-  pillTextSecondary: { fontSize: Typography.size.sm, color: Colors.textSecondary, textTransform: 'capitalize' },
+  pillTextSecondary: { fontSize: 9, color: Colors.textSecondary, textTransform: 'capitalize' },
 
-  bodyText:   { fontSize: Typography.size.md, color: Colors.textSecondary, lineHeight: 22 },
-  adviceText: { fontSize: Typography.size.md, color: Colors.cream, fontStyle: 'italic', lineHeight: 22 },
+  bodyText:   { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
+  adviceText: { fontSize: 15, color: Colors.cream, fontStyle: 'italic', lineHeight: 22 },
 
   featureLabel:     { backgroundColor: '#1A1020', borderRadius: Radius.input, paddingHorizontal: 12, paddingVertical: 8, marginBottom: Spacing.md, alignSelf: 'flex-start' },
-  featureLabelText: { fontSize: Typography.size.sm, color: '#C47FD4', fontWeight: '500', textTransform: 'capitalize' },
+  featureLabelText: { fontSize: 11, color: '#C47FD4', fontWeight: '500', textTransform: 'capitalize' },
 
 
-  openingLine: { fontSize: Typography.size.md, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.md },
+  openingLine: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.md },
 
   // Collapsible category tiles
   noBrandsBanner: {
     backgroundColor: '#1A1412', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)',
     borderRadius: 12, padding: 14, marginBottom: 8,
   },
-  noBrandsTitle: { fontSize: 13, color: Colors.cream, fontWeight: '600', marginBottom: 3 },
-  noBrandsSub:   { fontSize: 11, color: Colors.textSecondary, lineHeight: 16 },
+  noBrandsTitle: { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 3 },
+  noBrandsSub:   { fontSize: 13, color: Colors.textSecondary, lineHeight: 16 },
   noBrandsArrow: { position: 'absolute', right: 14, top: 14, fontSize: 22, color: Colors.gold },
 
   catTile: {
@@ -486,10 +486,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 12,
   },
   catHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  catName:       { fontSize: 13, color: Colors.cream, fontWeight: '600' },
+  catName:       { fontSize: 15, color: Colors.cream, fontWeight: '600' },
   matchBadge:    { backgroundColor: 'rgba(201,168,76,0.1)', borderRadius: Radius.pill, paddingHorizontal: 7, paddingVertical: 2 },
   matchBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
-  chevron:       { fontSize: 12, color: Colors.textSecondary },
+  chevron:       { fontSize: 13, color: Colors.textSecondary },
 
   catBody:       { borderTopWidth: 1, borderTopColor: '#2A2420', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 },
   catReason:     { fontSize: 11, color: Colors.textSecondary, lineHeight: 16, marginBottom: 10 },
@@ -502,12 +502,12 @@ const s = StyleSheet.create({
   },
   productRowLeft:  { flex: 1 },
   preferredBadge:  { alignSelf: 'flex-start', backgroundColor: 'rgba(201,168,76,0.12)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 3 },
-  preferredBadgeText: { fontSize: 8, color: Colors.gold, fontWeight: '500' },
-  productRowName:  { fontSize: 12, color: Colors.cream, fontWeight: '500', marginBottom: 2 },
-  productRowMeta:  { fontSize: 10, color: '#8A7A6A' },
+  preferredBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
+  productRowName:  { fontSize: 15, color: Colors.cream, fontWeight: '500', marginBottom: 2 },
+  productRowMeta:  { fontSize: 13, color: '#8A7A6A' },
 
   buyBtn:          { backgroundColor: Colors.gold, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0 },
-  buyBtnText:      { fontSize: 10, color: Colors.background, fontWeight: '600' },
+  buyBtnText:      { fontSize: 14, color: Colors.background, fontWeight: '600' },
 
   productCard: {
     flexDirection: 'row', alignItems: 'flex-start',
@@ -516,10 +516,10 @@ const s = StyleSheet.create({
     padding: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.md,
   },
   productIcon:     { width: 44, height: 44, borderRadius: Radius.icon, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  productIconChar: { fontSize: 20 },
+  productIconChar: { fontSize: 18 },
   productBody:     { flex: 1 },
-  productName:     { fontSize: Typography.size.md, color: Colors.cream, fontWeight: '600', marginBottom: 4 },
-  productWhy:      { fontSize: Typography.size.base, color: Colors.textSecondary, lineHeight: 19, marginBottom: Spacing.sm },
+  productName:     { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 4 },
+  productWhy:      { fontSize: 15, color: Colors.textSecondary, lineHeight: 19, marginBottom: Spacing.sm },
   productTagPill:  { alignSelf: 'flex-start', backgroundColor: '#1A1A1A', borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
   productTagText:  { fontSize: Typography.size.xs, color: Colors.textSecondary },
 });

@@ -164,7 +164,7 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
   backArrow:   { fontSize: 32, color: Colors.gold, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.cream },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream },
 
   subtitle: {
     fontSize: 13, color: Colors.textSecondary,
@@ -176,7 +176,7 @@ const s = StyleSheet.create({
 
   section:      { marginBottom: Spacing.lg },
   sectionLabel: {
-    fontSize: 10, color: Colors.gold, letterSpacing: 2,
+    fontSize: 10, color: Colors.gold, letterSpacing: 1.5,
     textTransform: 'uppercase', marginBottom: Spacing.sm,
   },
   pillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -191,11 +191,11 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(201,168,76,0.12)',
     borderColor: 'rgba(201,168,76,0.35)',
   },
-  pillText:         { fontSize: 12, color: '#4A4540' },
+  pillText:         { fontSize: 13, color: '#4A4540' },
   pillTextSelected: { color: '#C9A84C' },
 
   note: {
-    fontSize: 10, color: '#4A4540', textAlign: 'center',
+    fontSize: 11, color: '#4A4540', textAlign: 'center',
     marginTop: Spacing.sm, marginBottom: Spacing.sm,
   },
 

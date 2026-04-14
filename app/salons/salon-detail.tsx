@@ -36,7 +36,7 @@ function MiniStars({ rating }: { rating: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: 2 }}>
       {[1, 2, 3, 4, 5].map(n => (
-        <Text key={n} style={{ fontSize: 12, color: n <= filled ? '#C9A84C' : '#2A2420' }}>★</Text>
+        <Text key={n} style={{ fontSize: 13, color: n <= filled ? '#C9A84C' : '#2A2420' }}>★</Text>
       ))}
     </View>
   );
@@ -262,14 +262,14 @@ const s = StyleSheet.create({
   backBtn:  { width: 40, alignItems: 'center' },
   backArrow:{ fontSize: 28, color: '#C9A84C', lineHeight: 32 },
 
-  salonName: { fontFamily: Typography.serif, fontSize: 20, color: '#F5F0E8', marginBottom: 4 },
-  salonMeta: { fontSize: 12, color: '#8A7A6A', lineHeight: 18, marginBottom: Spacing.sm },
+  salonName: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', marginBottom: 4 },
+  salonMeta: { fontSize: 13, color: '#8A7A6A', lineHeight: 18, marginBottom: Spacing.sm },
 
   ratingRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.lg },
-  ratingNum:    { fontSize: 12, color: '#C9A84C', fontWeight: '600' },
-  ratingSource: { fontSize: 11, color: '#4A4540' },
+  ratingNum:    { fontSize: 13, color: '#C9A84C', fontWeight: '600' },
+  ratingSource: { fontSize: 13, color: '#4A4540' },
 
-  sectionLabel: { fontSize: 10, color: '#C9A84C', letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
+  sectionLabel: { fontSize: 10, color: '#C9A84C', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
 
   card: {
     backgroundColor: '#1A1412',
@@ -281,15 +281,15 @@ const s = StyleSheet.create({
   },
   catRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
   catRowBorder: { borderBottomWidth: 1, borderBottomColor: '#2A2420' },
-  catLabel:     { fontSize: 14, color: '#F5F0E8' },
+  catLabel:     { fontSize: 15, color: '#F5F0E8' },
   catRight:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  catNum:       { fontSize: 13, color: '#C9A84C', fontWeight: '600', minWidth: 28, textAlign: 'right' },
+  catNum:       { fontSize: 15, color: '#C9A84C', fontWeight: '600', minWidth: 28, textAlign: 'right' },
   ratingCount:  { fontSize: 11, color: '#4A4540', textAlign: 'center', paddingVertical: Spacing.sm },
 
   // Services
   serviceBlock:        { padding: Spacing.md },
   serviceBlockBorder:  { borderBottomWidth: 1, borderBottomColor: '#2A2420' },
-  serviceGroupLabel:   { fontSize: 10, color: '#8A7A6A', letterSpacing: 2, marginBottom: Spacing.xs },
+  serviceGroupLabel:   { fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs },
   pillsWrap:           { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   servicePill: {
     backgroundColor: 'rgba(201,168,76,0.12)',
@@ -299,7 +299,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical:   4,
   },
-  servicePillText: { fontSize: 12, color: '#C9A84C' },
+  servicePillText: { fontSize: 13, color: '#C9A84C' },
 
   // Claim card
   claimCard: {
@@ -309,7 +309,7 @@ const s = StyleSheet.create({
     padding:      Spacing.lg,
     marginBottom: Spacing.sm,
   },
-  claimTitle: { fontFamily: Typography.serif, fontSize: 16, color: '#F5F0E8', marginBottom: 6 },
+  claimTitle: { fontSize: 15, color: '#F5F0E8', marginBottom: 6 },
   claimSub:   { fontSize: 13, color: '#8A7A6A', lineHeight: 20, marginBottom: Spacing.lg },
   claimBtn:   { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   claimBtnText:{ fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
@@ -331,5 +331,5 @@ const s = StyleSheet.create({
   rateBtn:     { flex: 1, backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center' },
   rateBtnText: { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
   dirBtn:      { flex: 1, borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', backgroundColor: '#1A1412' },
-  dirBtnText:  { fontSize: 14, fontWeight: '600', color: '#F5F0E8' },
+  dirBtnText:  { fontSize: 13, fontWeight: '600', color: '#F5F0E8' },
 });

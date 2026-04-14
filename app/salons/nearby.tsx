@@ -388,7 +388,7 @@ const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
   arrow: { fontSize: 28, color: '#C9A84C', lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: '#F5F0E8' },
+  title: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8' },
 });
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
@@ -399,29 +399,29 @@ const s = StyleSheet.create({
   // Permission / city
   iconCircle:     { width: 64, height: 64, borderRadius: 32, backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl },
   iconGlyph:      { fontSize: 28, color: '#C9A84C' },
-  permTitle:      { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: '#F5F0E8', textAlign: 'center', marginBottom: Spacing.sm },
-  permBody:       { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
+  permTitle:      { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', textAlign: 'center', marginBottom: Spacing.sm },
+  permBody:       { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
   primaryBtn:     { width: '100%', backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
-  primaryBtnText: { fontSize: Typography.size.md, fontWeight: '600', color: '#0A0A0A' },
+  primaryBtnText: { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
   ghostBtn:       { paddingVertical: Spacing.sm },
-  ghostBtnText:   { fontSize: Typography.size.base, color: Colors.textSecondary },
-  cityInput:      { width: '100%', backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: '#F5F0E8', marginBottom: Spacing.md },
+  ghostBtnText:   { fontSize: 13, color: Colors.textSecondary },
+  cityInput:      { width: '100%', backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: 15, color: '#F5F0E8', marginBottom: Spacing.md },
   disabled:       { opacity: 0.4 },
-  loadingText:    { fontSize: Typography.size.base, color: Colors.textSecondary, marginTop: Spacing.md },
+  loadingText:    { fontSize: 13, color: Colors.textSecondary, marginTop: Spacing.md },
 
   // Error states
   errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  errorIcon:      { fontSize: 40, marginBottom: 16 },
-  errorTitle:     { fontFamily: Typography.serif, fontSize: 20, color: '#F5F0E8', textAlign: 'center', marginBottom: 8 },
-  errorMessage:   { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  errorIcon:      { fontSize: 32, marginBottom: 16 },
+  errorTitle:     { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', textAlign: 'center', marginBottom: 8 },
+  errorMessage:   { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   goldButton:     { backgroundColor: '#C9A84C', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24, marginBottom: 12 },
   goldButtonText: { color: '#0A0A0A', fontWeight: '600', fontSize: 14 },
   retryLink:      { padding: 8 },
-  retryText:      { color: Colors.textSecondary, fontSize: 14 },
+  retryText:      { color: Colors.textSecondary, fontSize: 13 },
 
   // List
   listContent: { padding: Spacing.lg },
-  listHeader:  { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.md, letterSpacing: 1 },
+  listHeader:  { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.md, letterSpacing: 1 },
 
   listCard: {
     backgroundColor: '#1A1412',
@@ -436,15 +436,15 @@ const s = StyleSheet.create({
   listThumb:        { width: 80, height: 80, backgroundColor: '#2A2420', overflow: 'hidden' },
   listThumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
   listBody:         { flex: 1, padding: Spacing.sm },
-  listName:         { fontSize: Typography.size.md, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
-  listAddr:         { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: Spacing.xs },
-  listArrow:        { fontSize: 20, color: Colors.textTertiary, paddingRight: Spacing.sm },
+  listName:         { fontSize: 15, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
+  listAddr:         { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.xs },
+  listArrow:        { fontSize: 22, color: Colors.textTertiary, paddingRight: Spacing.sm },
 
   metaRow:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ratingText: { fontSize: Typography.size.sm, color: '#C9A84C' },
-  dot:        { fontSize: Typography.size.sm, color: Colors.textTertiary },
-  reviewText: { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  distText:   { fontSize: Typography.size.sm, color: Colors.textSecondary },
+  ratingText: { fontSize: 13, color: '#C9A84C' },
+  dot:        { fontSize: 13, color: Colors.textTertiary },
+  reviewText: { fontSize: 11, color: Colors.textSecondary },
+  distText:   { fontSize: 13, color: Colors.textSecondary },
 
   openBadge:     { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#1A3A1A', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
   closedBadge:   { backgroundColor: '#3A1A1A' },
@@ -460,8 +460,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical:   2,
   },
-  servicePillText: { fontSize: 10, color: '#C9A84C', fontWeight: '500' },
+  servicePillText: { fontSize: 9, color: '#C9A84C', fontWeight: '500' },
 
   // Lumé profile badge
-  lumeProfileBadge: { fontSize: 10, color: '#4A4540', marginTop: 4 },
+  lumeProfileBadge: { fontSize: 11, color: '#4A4540', marginTop: 4 },
 });
