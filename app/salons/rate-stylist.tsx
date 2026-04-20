@@ -300,7 +300,7 @@ export default function RateStylistScreen() {
           activeOpacity={0.85}
         >
           {submitting
-            ? <ActivityIndicator color={Colors.surface} />
+            ? <ActivityIndicator color={Colors.textOnAccent} />
             : <Text style={s.submitBtnText}>Submit rating</Text>
           }
         </TouchableOpacity>
@@ -326,8 +326,8 @@ function BackBar({ title, onBack }: { title: string; onBack?: () => void }) {
 const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
-  arrow: { fontSize: 28, color: Colors.surface, lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: Colors.surface },
+  arrow: { fontSize: 28, color: Colors.text, lineHeight: 32 },
+  title: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: Colors.text },
 });
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -351,7 +351,7 @@ const s = StyleSheet.create({
   stylistHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: Spacing.lg },
   stylistAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.surface2, borderWidth: 1, borderColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
   stylistAvatarText: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.accent },
-  stylistName:   { fontSize: Typography.size.lg, color: Colors.surface, fontWeight: '600' },
+  stylistName:   { fontSize: Typography.size.lg, color: Colors.text, fontWeight: '600' },
   stylistHandle: { fontSize: Typography.size.sm, color: Colors.text, marginTop: 2 },
   stylistMentions:{ fontSize: Typography.size.sm, color: Colors.text2, marginTop: 2 },
 
@@ -366,7 +366,7 @@ const s = StyleSheet.create({
   pillActive:    { backgroundColor: Colors.accent, borderColor: Colors.accent },
   pillActiveNo:  { backgroundColor: '#3A1A1A', borderColor: '#A32D2D' },
   pillText:      { fontSize: Typography.size.base, color: Colors.text, fontWeight: '600' },
-  pillTextActive:{ color: Colors.surface },
+  pillTextActive:{ color: Colors.textOnAccent },
   pillTextActiveNo:{ color: '#FF6B6B' },
 
   salonRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginTop: Spacing.lg },
@@ -378,12 +378,12 @@ const s = StyleSheet.create({
 
   submitBtn:         { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
   submitBtnDisabled: { opacity: 0.4 },
-  submitBtnText:     { fontSize: Typography.size.md, fontWeight: '600', color: Colors.surface },
+  submitBtnText:     { fontSize: Typography.size.md, fontWeight: '600', color: Colors.textOnAccent },
 
   successScreen: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   successCheck:  { fontSize: 64, color: Colors.text, marginBottom: Spacing.lg },
-  successTitle:  { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.surface, marginBottom: Spacing.sm },
+  successTitle:  { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.text, marginBottom: Spacing.sm },
   successBody:   { fontSize: Typography.size.base, color: Colors.text2, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
   successBtn:    { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  successBtnText:{ fontSize: Typography.size.md, fontWeight: '600', color: Colors.surface },
+  successBtnText:{ fontSize: Typography.size.md, fontWeight: '600', color: Colors.textOnAccent },
 });

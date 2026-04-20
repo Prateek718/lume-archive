@@ -201,7 +201,7 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: Spacing.lg },
 
   header:   { paddingTop: Spacing.md, paddingBottom: Spacing.xl },
-  title:    { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
+  title:    { fontFamily: Typography.serif, fontSize: 22, color: Colors.text },
   subtitle: { fontSize: 13, color: Colors.text2, marginTop: 4 },
 
   suggestionCard: {
@@ -265,7 +265,7 @@ const s = StyleSheet.create({
 
   sectionLabel: {
     fontSize:       10,
-    color:          Colors.surface,
+    color:          Colors.text,
     letterSpacing:  1.5,
     textTransform:  'uppercase',
     marginTop:      Spacing.xl,

@@ -387,8 +387,8 @@ function BackBar({ title }: { title: string }) {
 const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
-  arrow: { fontSize: 28, color: Colors.surface, lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
+  arrow: { fontSize: 28, color: Colors.text, lineHeight: 32 },
+  title: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text },
 });
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
@@ -399,10 +399,10 @@ const s = StyleSheet.create({
   // Permission / city
   iconCircle:     { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl },
   iconGlyph:      { fontSize: 28, color: Colors.accent },
-  permTitle:      { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, textAlign: 'center', marginBottom: Spacing.sm },
+  permTitle:      { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, textAlign: 'center', marginBottom: Spacing.sm },
   permBody:       { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
   primaryBtn:     { width: '100%', backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
-  primaryBtnText: { fontSize: 14, fontWeight: '600', color: Colors.surface },
+  primaryBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textOnAccent },
   ghostBtn:       { paddingVertical: Spacing.sm },
   ghostBtnText:   { fontSize: 13, color: Colors.text2 },
   cityInput:      { width: '100%', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: 15, color: Colors.text, marginBottom: Spacing.md },
@@ -412,10 +412,10 @@ const s = StyleSheet.create({
   // Error states
   errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   errorIcon:      { fontSize: 32, marginBottom: 16 },
-  errorTitle:     { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, textAlign: 'center', marginBottom: 8 },
+  errorTitle:     { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, textAlign: 'center', marginBottom: 8 },
   errorMessage:   { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   goldButton:     { backgroundColor: Colors.accent, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24, marginBottom: 12 },
-  goldButtonText: { color: Colors.surface, fontWeight: '600', fontSize: 14 },
+  goldButtonText: { color: Colors.textOnAccent, fontWeight: '600', fontSize: 14 },
   retryLink:      { padding: 8 },
   retryText:      { color: Colors.text, fontSize: 13 },
 

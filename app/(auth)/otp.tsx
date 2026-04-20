@@ -88,7 +88,7 @@ export default function OtpScreen() {
                 activeOpacity={0.8}
               >
                 {loading
-                  ? <ActivityIndicator color={Colors.surface} />
+                  ? <ActivityIndicator color={Colors.textOnAccent} />
                   : <Text style={styles.ctaText}>Send reset link</Text>
                 }
               </TouchableOpacity>
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily:   Typography.serif,
     fontSize:     Typography.size.xxl,
-    color:        Colors.surface,
+    color:        Colors.text,
     marginBottom: Spacing.sm,
   },
   subtitle: {
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize:   Typography.size.md,
     fontWeight: '600',
-    color:      Colors.surface,
+    color:      Colors.textOnAccent,
   },
   sentIcon:  { alignItems: 'center', marginVertical: Spacing.xl },
   sentEmoji: { fontSize: 48 },

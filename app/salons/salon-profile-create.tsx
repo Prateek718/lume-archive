@@ -93,7 +93,7 @@ function ServicePillGroup({
 }
 const pg = StyleSheet.create({
   block:      { marginBottom: Spacing.lg },
-  groupLabel: { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
+  groupLabel: { fontSize: 10, color: Colors.text, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
   pillsWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill:       { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
   pillActive: { backgroundColor: 'rgba(230,199,156,0.18)', borderColor: 'rgba(230,199,156,0.5)' },
@@ -451,7 +451,7 @@ export default function SalonProfileCreateScreen() {
             activeOpacity={0.85}
           >
             {submitting
-              ? <ActivityIndicator color={Colors.surface} />
+              ? <ActivityIndicator color={Colors.textOnAccent} />
               : <Text style={s.nextBtnText}>Create profile</Text>
             }
           </TouchableOpacity>
@@ -475,21 +475,21 @@ const s = StyleSheet.create({
 
   backBar:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   backBtn:    { width: 48, alignItems: 'center' },
-  backArrow:  { fontSize: 28, color: Colors.surface, lineHeight: 32 },
+  backArrow:  { fontSize: 28, color: Colors.text, lineHeight: 32 },
   stepCaption:{ fontSize: 10, color: Colors.text2, letterSpacing: 1.5, textTransform: 'uppercase' },
 
-  stepTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: 6 },
+  stepTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: 6 },
   stepSub:   { fontSize: 13, color: Colors.text2, marginBottom: Spacing.xl, lineHeight: 20 },
   step4Body: { fontSize: 13, color: Colors.text2, lineHeight: 20, marginBottom: Spacing.xl },
 
   // Underline text fields
-  fieldLabel:     { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6, marginTop: Spacing.lg },
+  fieldLabel:     { fontSize: 10, color: Colors.text, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6, marginTop: Spacing.lg },
   underlineInput: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     paddingVertical:   10,
     fontSize:          15,
-    color:             Colors.surface,
+    color:             Colors.text,
     marginBottom:      4,
   },
 
@@ -543,7 +543,7 @@ const s = StyleSheet.create({
   },
   nextBtn:         { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center' },
   nextBtnDisabled: { opacity: 0.4 },
-  nextBtnText:     { fontSize: 14, fontWeight: '600', color: Colors.surface },
+  nextBtnText:     { fontSize: 14, fontWeight: '600', color: Colors.textOnAccent },
 
   // Confirmation
   confirmBox: {
@@ -564,10 +564,10 @@ const s = StyleSheet.create({
     marginBottom:    Spacing.xl,
   },
   confirmCheckText:      { fontSize: 28, color: '#5DCAA5' },
-  confirmTitle:          { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: 8, textAlign: 'center' },
+  confirmTitle:          { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: 8, textAlign: 'center' },
   confirmSub:            { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xxl },
   confirmPrimaryBtn:     { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 32, width: '100%', alignItems: 'center', marginBottom: Spacing.sm },
-  confirmPrimaryBtnText: { fontSize: 14, fontWeight: '600', color: Colors.surface },
+  confirmPrimaryBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textOnAccent },
   confirmSecondaryBtn:   { paddingVertical: 12, alignItems: 'center' },
   confirmSecondaryBtnText:{ fontSize: 13, color: Colors.text2 },
 });

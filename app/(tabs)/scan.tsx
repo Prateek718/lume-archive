@@ -447,7 +447,7 @@ const s = StyleSheet.create({
 
   // Shared
   ctaButton:    { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', width: '100%', marginBottom: Spacing.md },
-  ctaText:      { fontSize: 14, fontWeight: '600', color: Colors.surface, letterSpacing: 0.3 },
+  ctaText:      { fontSize: 14, fontWeight: '600', color: Colors.textOnAccent, letterSpacing: 0.3 },
   cancelLink:   { alignItems: 'center', paddingVertical: Spacing.sm },
   cancelLinkText:{ fontSize: 13, color: Colors.text },
 
@@ -481,12 +481,12 @@ const s = StyleSheet.create({
   errorBanner:  { position: 'absolute', bottom: 160, left: Spacing.lg, right: Spacing.lg, backgroundColor: '#A32D2D', borderRadius: Radius.input, padding: Spacing.md },
   errorText:    { color: Colors.text, fontSize: 13, textAlign: 'center' },
   permissionBox:{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  permissionTitle:{ fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: Spacing.md, textAlign: 'center' },
+  permissionTitle:{ fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
   permissionBody: { fontSize: 13, color: Colors.text, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xl },
 
   // Processing
   processingBox:  { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  processingStep: { fontSize: 13, color: Colors.surface, textAlign: 'center', marginBottom: Spacing.sm },
+  processingStep: { fontSize: 13, color: Colors.text, textAlign: 'center', marginBottom: Spacing.sm },
   processingNote: { fontSize: 11, color: Colors.text2, textAlign: 'center', marginTop: 6 },
 
   // Privacy

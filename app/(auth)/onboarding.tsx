@@ -261,7 +261,7 @@ export default function OnboardingScreen() {
               activeOpacity={0.8}
             >
               {loading
-                ? <ActivityIndicator color={Colors.surface} />
+                ? <ActivityIndicator color={Colors.textOnAccent} />
                 : <Text style={s.ctaText}>Finish setup</Text>
               }
             </TouchableOpacity>
@@ -288,7 +288,7 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom:  Spacing.md,
   },
-  backArrow: { fontSize: 32, color: Colors.surface, lineHeight: 40 },
+  backArrow: { fontSize: 32, color: Colors.text, lineHeight: 40 },
 
   dotsRow: {
     flexDirection: 'row',
@@ -315,7 +315,7 @@ const s = StyleSheet.create({
   title: {
     fontFamily:   Typography.serif,
     fontSize:     Typography.size.xxxl,
-    color:        Colors.surface,
+    color:        Colors.text,
     lineHeight:   42,
     marginBottom: Spacing.sm,
   },
@@ -376,7 +376,7 @@ const s = StyleSheet.create({
   ctaText: {
     fontSize:   Typography.size.md,
     fontWeight: '600',
-    color:      Colors.surface,
+    color:      Colors.textOnAccent,
   },
 
   // Age range step

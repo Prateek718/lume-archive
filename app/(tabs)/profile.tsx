@@ -468,7 +468,7 @@ const s = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   avatarText: { fontFamily: Typography.serif, fontSize: 26, color: Colors.accent },
-  heroName:   { fontFamily: Typography.serif, fontSize: 20, color: Colors.surface, marginBottom: 4 },
+  heroName:   { fontFamily: Typography.serif, fontSize: 20, color: Colors.text, marginBottom: 4 },
   heroCity:   { fontSize: 13, color: Colors.text, marginBottom: Spacing.md },
 
   // Tier card
@@ -507,7 +507,7 @@ const s = StyleSheet.create({
 
   // ── Section label ──
   sectionLabel: {
-    fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase',
+    fontSize: 10, color: Colors.text, letterSpacing: 1.5, textTransform: 'uppercase',
     marginHorizontal: Spacing.lg, marginBottom: Spacing.xs, marginTop: Spacing.lg,
   },
 
@@ -542,7 +542,7 @@ const s = StyleSheet.create({
     marginTop:        Spacing.lg,
   },
   signOutBtn:     { paddingVertical: 12, alignItems: 'center' },
-  signOutText:    { fontSize: 13, color: Colors.surface },
+  signOutText:    { fontSize: 13, color: Colors.text },
   actionsDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
   deleteBtn:      { paddingVertical: 12, alignItems: 'center' },
   deleteText:     { fontSize: 13, color: '#A32D2D' },

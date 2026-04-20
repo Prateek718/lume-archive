@@ -354,7 +354,7 @@ export default function RateSalonScreen() {
           activeOpacity={0.85}
         >
           {submitting
-            ? <ActivityIndicator color={Colors.surface} />
+            ? <ActivityIndicator color={Colors.textOnAccent} />
             : <Text style={s.submitBtnText}>Submit rating</Text>
           }
         </TouchableOpacity>
@@ -381,8 +381,8 @@ function BackBar({ title, onBack }: { title: string; onBack?: () => void }) {
 const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
-  arrow: { fontSize: 28, color: Colors.surface, lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
+  arrow: { fontSize: 28, color: Colors.text, lineHeight: 32 },
+  title: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text },
 });
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -404,10 +404,10 @@ const s = StyleSheet.create({
   // Form
   formContent:     { paddingHorizontal: Spacing.lg },
   salonHeader:     { paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: Spacing.lg },
-  salonHeaderName: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
+  salonHeaderName: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text },
   salonHeaderAddr: { fontSize: 13, color: Colors.text2, marginTop: 4 },
 
-  sectionLabel: { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs, marginTop: Spacing.xl },
+  sectionLabel: { fontSize: 10, color: Colors.text, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs, marginTop: Spacing.xl },
   sectionSub:   { fontSize: 13, color: Colors.text2, marginBottom: Spacing.md },
 
   overallBox: {
@@ -421,7 +421,7 @@ const s = StyleSheet.create({
 
   // Service groups
   serviceGroup:      { marginBottom: Spacing.lg },
-  serviceGroupLabel: { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
+  serviceGroupLabel: { fontSize: 10, color: Colors.text, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
   pillsWrap:         { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   pill: {
     backgroundColor: Colors.surface,
@@ -448,13 +448,13 @@ const s = StyleSheet.create({
   // Submit
   submitBtn:         { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
   submitBtnDisabled: { opacity: 0.4 },
-  submitBtnText:     { fontSize: 14, fontWeight: '600', color: Colors.surface },
+  submitBtnText:     { fontSize: 14, fontWeight: '600', color: Colors.textOnAccent },
 
   // Success
   successScreen: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   successCheck:  { fontSize: 32, color: Colors.text, marginBottom: Spacing.lg },
-  successTitle:  { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: Spacing.sm },
+  successTitle:  { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: Spacing.sm },
   successBody:   { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
   successBtn:    { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  successBtnText:{ fontSize: 14, fontWeight: '600', color: Colors.surface },
+  successBtnText:{ fontSize: 14, fontWeight: '600', color: Colors.textOnAccent },
 });

@@ -207,7 +207,7 @@ export default function LoginScreen() {
           activeOpacity={0.8}
         >
           {loading
-            ? <ActivityIndicator color={Colors.surface} />
+            ? <ActivityIndicator color={Colors.textOnAccent} />
             : <Text style={styles.ctaText}>Sign in</Text>
           }
         </TouchableOpacity>
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily:   Typography.serif,
     fontSize:     Typography.size.xxl,
-    color:        Colors.surface,
+    color:        Colors.text,
     marginBottom: Spacing.sm,
   },
   subtitle: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize:   Typography.size.md,
     fontWeight: '600',
-    color:      Colors.surface,
+    color:      Colors.textOnAccent,
   },
 
   forgotLink: {
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
 
   googleBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderRadius:    12,
     paddingVertical: 14,
     flexDirection:   'row',
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     width:           '100%',
   },
   googleIcon: { fontSize: 18, color: '#4285F4', fontWeight: '700' },
-  googleText: { color: '#1C1816', fontWeight: '600', fontSize: 15 },
+  googleText: { color: Colors.text, fontWeight: '600', fontSize: 15 },
 
   dividerRow: {
     flexDirection: 'row',
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     color:    Colors.text2,
   },
   switchTextBold: {
-    color:      Colors.surface,
+    color:      Colors.text,
     fontWeight: '600',
   },
 

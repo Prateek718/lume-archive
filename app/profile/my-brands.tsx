@@ -207,7 +207,7 @@ export default function MyBrandsScreen() {
           activeOpacity={0.8}
         >
           {saving
-            ? <ActivityIndicator color={Colors.surface} />
+            ? <ActivityIndicator color={Colors.textOnAccent} />
             : <Text style={s.saveBtnText}>Save preferences</Text>
           }
         </TouchableOpacity>
@@ -223,8 +223,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
-  backArrow:   { fontSize: 32, color: Colors.surface, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
+  backArrow:   { fontSize: 32, color: Colors.text, lineHeight: 40 },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text },
 
   subtitle: {
     fontSize: 13, color: Colors.text2,
@@ -236,7 +236,7 @@ const s = StyleSheet.create({
 
   section:      { marginBottom: Spacing.lg },
   sectionLabel: {
-    fontSize: 10, color: Colors.surface, letterSpacing: 1.5,
+    fontSize: 10, color: Colors.text, letterSpacing: 1.5,
     textTransform: 'uppercase', marginBottom: Spacing.sm,
   },
   pillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -269,7 +269,7 @@ const s = StyleSheet.create({
     paddingVertical: Spacing.md, alignItems: 'center',
   },
   saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText:     { fontSize: Typography.size.md, fontWeight: '600', color: Colors.surface },
+  saveBtnText:     { fontSize: Typography.size.md, fontWeight: '600', color: Colors.textOnAccent },
 
   refreshOverlay: {
     ...StyleSheet.absoluteFillObject,

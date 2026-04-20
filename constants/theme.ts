@@ -17,6 +17,27 @@ export const Colors = {
   tabBar:     '#FFFFFF',
   tabActive:  '#C17B5C',
   tabInactive:'#B0A49A',
+
+  // Text/icons on accent backgrounds (CTAs, active pills, checkmarks)
+  textOnAccent:  '#FFFFFF',
+
+  // Semantic — danger / errors
+  danger:        '#A32D2D',           // primary danger (delete, errors)
+  dangerStrong:  '#E24B4A',           // stronger warning red
+  dangerBg:      '#FEF6F2',           // light danger background
+  dangerBorder:  '#E8C4B4',           // danger border
+  dangerText:    '#7A4A38',           // text on danger backgrounds
+
+  // Semantic — success
+  successText:   '#4A7A4E',           // text for success/healthy
+  successBg:     '#EAF2EB',           // success background
+  successBorder: '#C8DFC9',           // success border
+
+  // Accent variants (pills, light highlights)
+  accentBg:         '#F5EAE4',                  // light accent background (concern pill)
+  accentTint:       'rgba(230,199,156,0.12)',   // lightest gold tint
+  accentTintMedium: 'rgba(230,199,156,0.18)',   // active pill bg
+  accentTintBorder: 'rgba(230,199,156,0.45)',   // active pill border
 } as const;
 
 export const Typography = {

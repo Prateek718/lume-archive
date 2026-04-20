@@ -424,7 +424,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
   },
-  backArrow: { fontSize: 32, color: Colors.surface, lineHeight: 40 },
+  backArrow: { fontSize: 32, color: Colors.text, lineHeight: 40 },
 
   dotsRow: { flexDirection: 'row', gap: 6 },
   dot:       { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
@@ -434,11 +434,11 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl, paddingBottom: Spacing.xxxl },
 
   stepLabel: {
-    fontSize: 11, color: Colors.surface, letterSpacing: 1,
+    fontSize: 11, color: Colors.text, letterSpacing: 1,
     textTransform: 'uppercase', marginBottom: Spacing.sm,
   },
   question: {
-    fontFamily: Typography.serif, fontSize: 26, color: Colors.surface,
+    fontFamily: Typography.serif, fontSize: 26, color: Colors.text,
     lineHeight: 34, marginBottom: Spacing.sm,
   },
   questionSubtitle: {
@@ -481,7 +481,7 @@ const s = StyleSheet.create({
   continueBtnDisabled: { opacity: 0.4 },
   continueBtnText:     { fontSize: 15, fontWeight: '600', color: Colors.card },
 
-  savingText: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: Spacing.xs },
+  savingText: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: Spacing.xs },
   savingNote: { fontSize: 13, color: Colors.text2 },
 
   errorText: { fontSize: 13, color: '#A32D2D', marginTop: Spacing.lg, textAlign: 'center' },

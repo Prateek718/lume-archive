@@ -260,11 +260,11 @@ function CategoryCard({ title, meta, tags, preview, onPress }: {
 const s = StyleSheet.create({
   screen:    { flex: 1, backgroundColor: Colors.background },
   center:    { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' },
-  errorText: { color: Colors.surface, fontSize: Typography.size.base },
+  errorText: { color: Colors.text, fontSize: Typography.size.base },
   linkText:  { color: Colors.text, fontSize: Typography.size.base },
 
   topBar:    { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xs },
-  backArrow: { fontSize: 32, color: Colors.surface, lineHeight: 40 },
+  backArrow: { fontSize: 32, color: Colors.text, lineHeight: 40 },
 
   scroll:   { flex: 1 },
   content:  { paddingHorizontal: Spacing.lg },

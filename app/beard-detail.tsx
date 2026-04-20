@@ -527,8 +527,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
-  backArrow:   { fontSize: 32, color: Colors.surface, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.surface },
+  backArrow:   { fontSize: 32, color: Colors.text, lineHeight: 40 },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.text },
 
   tabBar: {
     flexDirection: 'row', gap: Spacing.sm,
@@ -537,7 +537,7 @@ const s = StyleSheet.create({
   tabPill:           { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.pill, backgroundColor: Colors.surface },
   tabPillActive:     { backgroundColor: Colors.accent },
   tabPillText:       { fontSize: 13, color: Colors.text2, fontWeight: '500' },
-  tabPillTextActive: { color: Colors.surface, fontWeight: '600' },
+  tabPillTextActive: { color: Colors.textOnAccent, fontWeight: '600' },
 
   scroll:  { flex: 1 },
   content: { paddingHorizontal: Spacing.lg },
@@ -639,7 +639,7 @@ const s = StyleSheet.create({
   productMeta:        { fontSize: 13, color: Colors.text2, marginBottom: 8 },
   productReason:      { fontSize: 11, color: Colors.text3, lineHeight: 17, marginBottom: 12 },
   buyBtn:     { backgroundColor: Colors.accent, borderRadius: 8, paddingVertical: 12, width: '100%', alignItems: 'center' },
-  buyBtnText: { fontSize: 14, color: Colors.surface, fontWeight: '600' },
+  buyBtnText: { fontSize: 14, color: Colors.textOnAccent, fontWeight: '600' },
 
   productCard: {
     flexDirection: 'row', alignItems: 'flex-start',

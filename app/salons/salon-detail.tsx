@@ -260,16 +260,16 @@ const s = StyleSheet.create({
 
   backBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   backBtn:  { width: 40, alignItems: 'center' },
-  backArrow:{ fontSize: 28, color: Colors.surface, lineHeight: 32 },
+  backArrow:{ fontSize: 28, color: Colors.text, lineHeight: 32 },
 
-  salonName: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: 4 },
+  salonName: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: 4 },
   salonMeta: { fontSize: 13, color: Colors.text2, lineHeight: 18, marginBottom: Spacing.sm },
 
   ratingRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.lg },
   ratingNum:    { fontSize: 13, color: Colors.text, fontWeight: '600' },
   ratingSource: { fontSize: 13, color: Colors.text2 },
 
-  sectionLabel: { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
+  sectionLabel: { fontSize: 10, color: Colors.text, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
 
   card: {
     backgroundColor: Colors.surface,
@@ -309,10 +309,10 @@ const s = StyleSheet.create({
     padding:      Spacing.lg,
     marginBottom: Spacing.sm,
   },
-  claimTitle: { fontSize: 15, color: Colors.surface, marginBottom: 6 },
+  claimTitle: { fontSize: 15, color: Colors.text, marginBottom: 6 },
   claimSub:   { fontSize: 13, color: Colors.text2, lineHeight: 20, marginBottom: Spacing.lg },
   claimBtn:   { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  claimBtnText:{ fontSize: 14, fontWeight: '600', color: Colors.surface },
+  claimBtnText:{ fontSize: 14, fontWeight: '600', color: Colors.textOnAccent },
 
   // Bottom actions
   bottomBar: {
@@ -329,7 +329,7 @@ const s = StyleSheet.create({
     borderTopColor:  Colors.border,
   },
   rateBtn:     { flex: 1, backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center' },
-  rateBtnText: { fontSize: 14, fontWeight: '600', color: Colors.surface },
+  rateBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textOnAccent },
   dirBtn:      { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', backgroundColor: Colors.surface },
   dirBtnText:  { fontSize: 13, fontWeight: '600', color: Colors.text },
 });

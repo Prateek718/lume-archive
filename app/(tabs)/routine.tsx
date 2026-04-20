@@ -586,7 +586,7 @@ export default function RoutineScreen() {
 const s = StyleSheet.create({
   screen:      { flex: 1, backgroundColor: Colors.background },
   header:      { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
-  headerTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
+  headerTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text },
   content:     { paddingHorizontal: Spacing.lg },
 
   // Category pills
@@ -594,14 +594,14 @@ const s = StyleSheet.create({
   pill:           { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.pill, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
   pillActive:     { backgroundColor: Colors.accent, borderColor: Colors.accent },
   pillText:       { fontSize: 9, color: Colors.text, fontWeight: '600' },
-  pillTextActive: { color: Colors.surface },
+  pillTextActive: { color: Colors.textOnAccent },
 
   // Empty state
   emptyBox:     { alignItems: 'center', paddingTop: Spacing.xxxl },
-  emptyTitle:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: Spacing.sm },
+  emptyTitle:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: Spacing.sm },
   emptyBody:    { fontSize: 13, color: Colors.text, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.lg },
   emptyBtn:     { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingHorizontal: 28, paddingVertical: 12 },
-  emptyBtnText: { fontSize: 13, color: Colors.surface, fontWeight: '600' },
+  emptyBtnText: { fontSize: 13, color: Colors.textOnAccent, fontWeight: '600' },
 
   // Streak
   streakCard:  { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.lg, marginBottom: Spacing.lg, alignItems: 'center' },
@@ -621,7 +621,7 @@ const s = StyleSheet.create({
   toggleBtnAM:     { backgroundColor: Colors.accent },
   toggleBtnPM:     { backgroundColor: Colors.surface2 },
   toggleBtnText:   { fontSize: 12, fontWeight: '500', color: Colors.text2 },
-  toggleBtnTextAM: { color: Colors.surface },
+  toggleBtnTextAM: { color: Colors.textOnAccent },
   toggleBtnTextPM: { color: Colors.text },
 
   // Wash day card
@@ -640,7 +640,7 @@ const s = StyleSheet.create({
   stepRowDone:   { borderColor: Colors.accent + '66' },
   checkbox:      { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
   checkboxDone:  { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  checkmark:     { fontSize: 11, color: Colors.surface, fontWeight: '700' },
+  checkmark:     { fontSize: 11, color: Colors.textOnAccent, fontWeight: '700' },
   stepLabel:     { fontSize: 15, color: Colors.text },
   stepLabelDone: { color: Colors.text2 },
   stepLabelPM:   { color: Colors.text },
