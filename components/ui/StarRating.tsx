@@ -21,7 +21,7 @@ export function StarRating({ value, onChange, size = 'sm' }: StarRatingProps) {
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         >
-          <Text style={{ fontSize, color: n <= value ? Colors.gold : Colors.border, lineHeight: fontSize + 6 }}>
+          <Text style={{ fontSize, color: n <= value ? Colors.accent : Colors.border, lineHeight: fontSize + 6 }}>
             ★
           </Text>
         </TouchableOpacity>

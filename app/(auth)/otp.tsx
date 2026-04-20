@@ -59,7 +59,7 @@ export default function OtpScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <View style={styles.container}>
           <Text style={styles.title}>Reset password</Text>
 
@@ -71,7 +71,7 @@ export default function OtpScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Email address"
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={Colors.text3}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -88,7 +88,7 @@ export default function OtpScreen() {
                 activeOpacity={0.8}
               >
                 {loading
-                  ? <ActivityIndicator color={Colors.background} />
+                  ? <ActivityIndicator color={Colors.surface} />
                   : <Text style={styles.ctaText}>Send reset link</Text>
                 }
               </TouchableOpacity>
@@ -137,12 +137,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily:   Typography.serif,
     fontSize:     Typography.size.xxl,
-    color:        Colors.cream,
+    color:        Colors.surface,
     marginBottom: Spacing.sm,
   },
   subtitle: {
     fontSize:     Typography.size.base,
-    color:        Colors.textSecondary,
+    color:        Colors.text2,
     marginBottom: Spacing.xxl,
     lineHeight:   22,
   },
@@ -154,11 +154,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical:   Spacing.md,
     fontSize:          Typography.size.md,
-    color:             Colors.cream,
+    color:             Colors.text,
     marginBottom:      Spacing.md,
   },
   ctaButton: {
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.accent,
     borderRadius:    Radius.input,
     paddingVertical: Spacing.md,
     alignItems:      'center',
@@ -168,18 +168,18 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize:   Typography.size.md,
     fontWeight: '600',
-    color:      Colors.background,
+    color:      Colors.surface,
   },
   sentIcon:  { alignItems: 'center', marginVertical: Spacing.xl },
   sentEmoji: { fontSize: 48 },
   sentNote:  {
     fontSize:     Typography.size.sm,
-    color:        Colors.textTertiary,
+    color:        Colors.text2,
     textAlign:    'center',
     marginBottom: Spacing.xl,
   },
   retryLink: { alignItems: 'center', marginBottom: Spacing.xl },
-  retryText: { color: Colors.gold, fontSize: Typography.size.base },
+  retryText: { color: Colors.text, fontSize: Typography.size.base },
   backLink:  { alignItems: 'center', paddingVertical: Spacing.sm },
-  backText:  { fontSize: Typography.size.base, color: Colors.textSecondary },
+  backText:  { fontSize: Typography.size.base, color: Colors.text2 },
 });

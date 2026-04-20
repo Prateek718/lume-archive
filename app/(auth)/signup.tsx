@@ -121,19 +121,19 @@ export default function SignupScreen() {
   const canSubmit = email.trim().length > 0 && password.length >= 6;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
 
           <Text style={styles.title}>Welcome to Lumé</Text>
-          <Text style={styles.subtitle}>Your AI grooming companion</Text>
+          <Text style={styles.subtitle}>Your AI care companion</Text>
 
           {/* Google Sign In */}
           <TouchableOpacity
@@ -157,7 +157,7 @@ export default function SignupScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email address"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={Colors.text3}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -171,7 +171,7 @@ export default function SignupScreen() {
             <TextInput
               style={styles.passwordInput}
               placeholder="Password (min. 6 characters)"
-              placeholderTextColor={Colors.textTertiary}
+              placeholderTextColor={Colors.text3}
               secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
@@ -194,7 +194,7 @@ export default function SignupScreen() {
             activeOpacity={0.8}
           >
             {loading
-              ? <ActivityIndicator color={Colors.background} />
+              ? <ActivityIndicator color={Colors.surface} />
               : <Text style={styles.ctaText}>Create account</Text>
             }
           </TouchableOpacity>
@@ -228,12 +228,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily:   Typography.serif,
     fontSize:     22,
-    color:        Colors.cream,
+    color:        Colors.surface,
     marginBottom: Spacing.sm,
   },
   subtitle: {
     fontSize:     13,
-    color:        Colors.textSecondary,
+    color:        Colors.text2,
     marginBottom: Spacing.xxl,
     lineHeight:   20,
   },
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     width:           '100%',
   },
   googleIcon: { fontSize: 18, color: '#4285F4', fontWeight: '700' },
-  googleText: { color: '#0A0A0A', fontWeight: '600', fontSize: 15 },
+  googleText: { color: '#1C1816', fontWeight: '600', fontSize: 15 },
 
   dividerRow: {
     flexDirection:  'row',
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     gap:            Spacing.sm,
   },
   dividerLine:  { flex: 1, height: 1, backgroundColor: Colors.border },
-  dividerLabel: { fontSize: Typography.size.sm, color: Colors.textTertiary },
+  dividerLabel: { fontSize: Typography.size.sm, color: Colors.text2 },
 
   input: {
     backgroundColor:   Colors.surface,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical:   Spacing.md,
     fontSize:          15,
-    color:             Colors.cream,
+    color:             Colors.text,
     marginBottom:      Spacing.md,
   },
 
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     paddingRight:      48,
     paddingVertical:   Spacing.md,
     fontSize:          15,
-    color:             Colors.cream,
+    color:             Colors.text,
   },
   eyeBtn: {
     position:       'absolute',
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   eyeIcon: { fontSize: 18 },
 
   ctaButton: {
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.accent,
     borderRadius:    Radius.input,
     paddingVertical: Spacing.md,
     alignItems:      'center',
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize:   Typography.size.md,
     fontWeight: '600',
-    color:      Colors.background,
+    color:      Colors.surface,
   },
 
   switchLink: {
@@ -317,6 +317,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     marginBottom:    Spacing.sm,
   },
-  switchText:     { fontSize: Typography.size.base, color: Colors.textSecondary },
-  switchTextBold: { color: Colors.cream, fontWeight: '600' },
+  switchText:     { fontSize: Typography.size.base, color: Colors.text2 },
+  switchTextBold: { color: Colors.surface, fontWeight: '600' },
 });

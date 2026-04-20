@@ -1,30 +1,19 @@
-// Scan tab — home → camera → processing → result
+// Scan tab — home → camera → processing → observation → recommendations
 import {
   View, Text, StyleSheet, TouchableOpacity,
   Dimensions, Animated, ActivityIndicator,
-  SafeAreaView, Alert, ScrollView, Share,
+  SafeAreaView, Alert, ScrollView,
 } from 'react-native';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Ellipse, Circle, Path } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
-import { useScan, ScanPhase } from '../../hooks/useScan';
+import { useScan } from '../../hooks/useScan';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import { getTierFromScore, getCategoryPotential, getCategoryDiamonds } from '../../constants/tiers';
-import { getMonthlyScansInfo, unlockBonusScan } from '../../services/scanService';
 import type { Scan } from '../../types';
-
-type ScanInfo = {
-  scansThisPeriod: number;
-  baseAllowed:     number;
-  bonusScans:      number;
-  scansAllowed:    number;
-  canScan:         boolean;
-  canUnlockMore:   boolean;
-  periodStart:     string | null;
-  daysUntilReset:  number;
-};
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -35,15 +24,11 @@ const OVAL_LEFT = (SW - OVAL_W) / 2;
 const OVAL_TOP  = (SH - OVAL_H) / 2;
 
 // ─── HOME ────────────────────────────────────────────────────────────────────
-function HomeScreen({ onStart, scanInfo, onShareToUnlock, sharingBonus }: {
-  onStart:         () => void;
-  scanInfo:        ScanInfo | null;
-  onShareToUnlock: () => void;
-  sharingBonus:    boolean;
-}) {
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+function HomeScreen({ onStart }: { onStart: () => void }) {
+  const fadeAnim    = useRef(new Animated.Value(0)).current;
+  const slideAnim   = useRef(new Animated.Value(30)).current;
+  const pulseAnim   = useRef(new Animated.Value(1)).current;
+  const scanningRef = useRef(false);
 
   useEffect(() => {
     Animated.parallel([
@@ -59,84 +44,30 @@ function HomeScreen({ onStart, scanInfo, onShareToUnlock, sharingBonus }: {
     ).start();
   }, []);
 
-  const isLocked = scanInfo !== null && !scanInfo.canScan;
-
   return (
     <SafeAreaView style={s.fill}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Animated.View style={[s.homeInner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         <Text style={s.brand}>Lumé</Text>
 
-        <Animated.View style={[s.scanRing, isLocked && s.scanRingLocked, { transform: [{ scale: pulseAnim }] }]}>
-          <View style={s.scanRingInner}>
-            <Text style={[s.scanRingLabel, isLocked && s.scanRingLabelLocked]}>
-              {isLocked ? 'LOCKED' : 'SCAN'}
-            </Text>
-          </View>
+        <Animated.View style={[s.scanRing, { transform: [{ scale: pulseAnim }] }]}>
+          <Text style={s.scanRingLabel}>SCAN</Text>
         </Animated.View>
 
-        {/* Scan counter */}
-        {scanInfo && (
-          <View style={s.counterRow}>
-            <Text style={s.counterText}>
-              {scanInfo.scansThisPeriod}/{scanInfo.scansAllowed} scans used this period
-            </Text>
-            <Text style={s.counterReset}>resets in {scanInfo.daysUntilReset}d</Text>
-          </View>
-        )}
-
-        {/* Bonus dots — shows up once user has unlocked at least 1 bonus */}
-        {scanInfo && scanInfo.bonusScans > 0 && (
-          <View style={s.bonusDotsRow}>
-            <Text style={s.bonusDotsLabel}>BONUS SCANS</Text>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <View
-                  key={i}
-                  style={i < scanInfo.bonusScans ? s.bonusDotFilled : s.bonusDotEmpty}
-                />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {!isLocked ? (
-          <>
-            <Text style={s.homeHint}>
-              Point your front camera at your face.{'\n'}
-              We'll analyse it in under 30 seconds.
-            </Text>
-            <TouchableOpacity style={s.ctaButton} onPress={onStart} activeOpacity={0.8}>
-              <Text style={s.ctaText}>Scan your face</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={s.homeHint}>
-              You've used all your scans for this period.{'\n'}
-              Share Lumé to unlock a bonus scan.
-            </Text>
-            {scanInfo.canUnlockMore ? (
-              <TouchableOpacity
-                style={s.ctaButton}
-                onPress={onShareToUnlock}
-                activeOpacity={0.8}
-                disabled={sharingBonus}
-              >
-                {sharingBonus
-                  ? <ActivityIndicator color={Colors.background} />
-                  : <Text style={s.ctaText}>Share to unlock a scan</Text>
-                }
-              </TouchableOpacity>
-            ) : (
-              <View style={s.lockedNote}>
-                <Text style={s.lockedNoteText}>
-                  All 5 bonus scans unlocked — resets in {scanInfo.daysUntilReset} days.
-                </Text>
-              </View>
-            )}
-          </>
-        )}
+        <Text style={s.scanInstruction}>No makeup · Natural light</Text>
+        <TouchableOpacity
+          style={s.ctaButton}
+          onPress={() => {
+            if (scanningRef.current) return;
+            scanningRef.current = true;
+            onStart();
+            setTimeout(() => { scanningRef.current = false; }, 3000);
+          }}
+          activeOpacity={0.8}
+        >
+          <Text style={s.ctaText}>Scan your face</Text>
+        </TouchableOpacity>
+        <Text style={s.privacyNote}>Photo deleted after analysis · Never stored</Text>
       </Animated.View>
     </SafeAreaView>
   );
@@ -171,7 +102,7 @@ function CameraScreen({ onCapture, onCancel, error }: {
   if (!permission.granted) {
     return (
       <SafeAreaView style={s.fill}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <View style={s.permissionBox}>
           <Text style={s.permissionTitle}>Camera access needed</Text>
           <Text style={s.permissionBody}>
@@ -191,16 +122,16 @@ function CameraScreen({ onCapture, onCancel, error }: {
 
   return (
     <View style={s.fill}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
       <View style={[s.overlay, { top: 0, left: 0, right: 0, height: OVAL_TOP }]} />
       <View style={[s.overlay, { top: OVAL_TOP + OVAL_H, left: 0, right: 0, bottom: 0 }]} />
       <View style={[s.overlay, { top: OVAL_TOP, left: 0, width: OVAL_LEFT, height: OVAL_H }]} />
       <View style={[s.overlay, { top: OVAL_TOP, left: OVAL_LEFT + OVAL_W, right: 0, height: OVAL_H }]} />
       <View style={[s.ovalGuide, { top: OVAL_TOP, left: OVAL_LEFT, width: OVAL_W, height: OVAL_H }]} />
-      <SafeAreaView style={s.cameraTopBar} pointerEvents="none">
-        <Text style={s.cameraHint}>Position your face in the oval</Text>
-      </SafeAreaView>
+      <View style={s.cameraHintWrap}>
+        <Text style={s.cameraHint}>Centre your face · Stay still</Text>
+      </View>
       {error && (
         <View style={s.errorBanner}>
           <Text style={s.errorText}>{error}</Text>
@@ -235,181 +166,243 @@ function CameraScreen({ onCapture, onCancel, error }: {
 function ProcessingScreen({ step }: { step: string }) {
   return (
     <SafeAreaView style={s.fill}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <View style={s.processingBox}>
         <Text style={s.brand}>Lumé</Text>
-        <ActivityIndicator color={Colors.gold} size="large" style={{ marginVertical: Spacing.xl }} />
+        <ActivityIndicator color={Colors.accent} size="large" style={{ marginVertical: Spacing.xl }} />
         <Text style={s.processingStep}>{step}</Text>
-        <Text style={s.processingNote}>This takes about 20 seconds</Text>
+        <Text style={s.processingNote}>Your photo is deleted after analysis</Text>
       </View>
     </SafeAreaView>
   );
 }
 
-// ─── DIAMONDS ────────────────────────────────────────────────────────────────
-function Diamonds({ count, total = 3 }: { count: number; total?: number }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 4 }}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={{
-            width: 9,
-            height: 9,
-            backgroundColor: i < count ? '#C9A84C' : '#2A2420',
-            borderRadius: 2,
-            transform: [{ rotate: '45deg' }],
-          }}
-        />
-      ))}
-    </View>
-  );
-}
-
-// ─── RESULT ───────────────────────────────────────────────────────────────────
-function ResultScreen({ scan, gender, onScanAgain }: {
-  scan:        NonNullable<ReturnType<typeof useScan>['result']>;
+// ─── OBSERVATION ──────────────────────────────────────────────────────────────
+function ObservationScreen({
+  scan,
+  gender,
+  onContinue,
+  recsLoading,
+  recsError,
+}: {
+  scan:        Scan;
   gender:      string;
-  onScanAgain: () => void;
+  onContinue:  () => void;
+  recsLoading: boolean;
+  recsError:   boolean;
 }) {
-  const router   = useRouter();
-  const tier     = getTierFromScore(scan.score_overall ?? 0);
-  const isWoman  = gender === 'woman';
+  const insets   = useSafeAreaInsets();
+  const concerns = (scan.skin_concerns ?? []) as string[];
 
-  const catFade  = useRef(new Animated.Value(0)).current;
-  const catSlide = useRef(new Animated.Value(24)).current;
+  const hasOiliness          = concerns.includes('oiliness') || scan.skin_type === 'oily';
+  const hasAcne              = concerns.includes('acne');
+  const hasDarkCircles       = concerns.includes('dark_circles') || scan.undereye === 'dark_circles';
+  const hasHyperpigmentation = concerns.includes('hyperpigmentation') || concerns.includes('uneven_texture');
+  const hasDryness           = concerns.includes('dryness') || concerns.includes('dehydration');
+
+  const [hasPreviousDelta, setHasPreviousDelta] = useState(false);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(catFade,  { toValue: 1, duration: 600, delay: 300, useNativeDriver: true }),
-      Animated.timing(catSlide, { toValue: 0, duration: 600, delay: 300, useNativeDriver: true }),
-    ]).start();
-  }, []);
+    if (!scan.id || scan.id.startsWith('local_')) return;
+    (async () => {
+      const { count } = await supabase
+        .from('scan_deltas')
+        .select('id', { count: 'exact', head: true })
+        .eq('scan_id', scan.id!);
+      setHasPreviousDelta((count ?? 0) > 0);
+    })();
+  }, [scan.id]);
 
-  const categories = isWoman
-    ? [
-        { label: 'Hair',   score: scan.score_hair   },
-        { label: 'Skin',   score: scan.score_skin   },
-        { label: 'Makeup', score: scan.score_makeup },
-      ]
-    : [
-        { label: 'Hair',  score: scan.score_hair  },
-        { label: 'Skin',  score: scan.score_skin  },
-        { label: 'Beard', score: scan.score_beard },
-      ];
+  const concernPills = concerns.map(c => ({ label: c.replace(/_/g, ' ') }));
 
-  const pills = [
-    scan.face_shape   && `${scan.face_shape} face`,
-    scan.hair_texture && `${scan.hair_texture} hair`,
-    scan.skin_type    && `${scan.skin_type} skin`,
-  ].filter(Boolean) as string[];
+  const healthyPills = [
+    scan.face_shape ? { label: `${scan.face_shape} face` } : null,
+    scan.skin_type && !['oily', 'dry', 'sensitive'].includes(scan.skin_type)
+      ? { label: `${scan.skin_type} skin` }
+      : null,
+  ].filter((p): p is { label: string } => p !== null);
 
   return (
-    <SafeAreaView style={s.fill}>
-      <StatusBar style="light" />
+    <View style={rs.screen}>
+      <StatusBar style="dark" />
       <ScrollView
-        contentContainerStyle={s.resultBox}
+        contentContainerStyle={[rs.content, { paddingTop: insets.top + 16 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Diamond icon */}
-        <View style={s.iconWrap}>
-          <View style={s.iconDiamond} />
+        {/* Header */}
+        <View style={rs.header}>
+          <Text style={rs.title}>Your skin</Text>
+          <Text style={rs.date}>
+            {new Date().toLocaleDateString('en-GB', {
+              day: 'numeric', month: 'short', year: 'numeric',
+            })}
+          </Text>
         </View>
 
-        {/* Tier */}
-        <Text style={s.profileLabel}>YOUR GROOMING PROFILE</Text>
-        <Text style={s.tierName}>{tier.name}</Text>
-        <Diamonds count={tier.diamonds} />
-        <Text style={s.tierDesc}>{tier.description}</Text>
+        {/* Face zone map */}
+        <View style={rs.mapCard}>
+          <Svg width="180" height="210" viewBox="0 0 100 120">
+            {/* Face outline */}
+            <Ellipse cx="50" cy="62" rx="35" ry="46"
+              fill="none" stroke={Colors.surface2} strokeWidth="1.5" />
+            {/* Hairline */}
+            <Path d="M20 38 Q50 18 80 38"
+              fill="none" stroke={Colors.surface2} strokeWidth="1" />
 
-        {/* Divider */}
-        <View style={s.divider} />
+            {/* T-zone overlay — oiliness / acne */}
+            {(hasOiliness || hasAcne) && (
+              <>
+                <Ellipse cx="50" cy="36" rx="16" ry="10"
+                  fill={Colors.accent} fillOpacity="0.12"
+                  stroke={Colors.accent} strokeWidth="0.5" strokeOpacity="0.4" />
+                <Ellipse cx="50" cy="60" rx="6" ry="10"
+                  fill={Colors.accent} fillOpacity="0.08" />
+                <Circle cx="50" cy="28" r="4"
+                  fill={Colors.accent} fillOpacity="0.7" />
+              </>
+            )}
 
-        {/* Pills */}
-        <Animated.View style={[s.pillsRow, { opacity: catFade, transform: [{ translateY: catSlide }] }]}>
-          {pills.map(p => (
-            <View key={p} style={s.pill}>
-              <Text style={s.pillText}>{p}</Text>
+            {/* Under-eye — dark circles */}
+            {hasDarkCircles && (
+              <>
+                <Ellipse cx="33" cy="56" rx="9" ry="4"
+                  fill="#6B8CAE" fillOpacity="0.2"
+                  stroke="#6B8CAE" strokeWidth="0.5" strokeOpacity="0.6" />
+                <Ellipse cx="67" cy="56" rx="9" ry="4"
+                  fill="#6B8CAE" fillOpacity="0.2"
+                  stroke="#6B8CAE" strokeWidth="0.5" strokeOpacity="0.6" />
+                <Circle cx="33" cy="56" r="3" fill="#6B8CAE" fillOpacity="0.7" />
+                <Circle cx="67" cy="56" r="3" fill="#6B8CAE" fillOpacity="0.7" />
+              </>
+            )}
+
+            {/* Cheeks — hyperpigmentation */}
+            {hasHyperpigmentation && (
+              <>
+                <Ellipse cx="22" cy="68" rx="10" ry="8"
+                  fill={Colors.accent} fillOpacity="0.15"
+                  stroke={Colors.accent} strokeWidth="0.5" strokeOpacity="0.4" />
+                <Ellipse cx="78" cy="68" rx="10" ry="8"
+                  fill={Colors.accent} fillOpacity="0.15"
+                  stroke={Colors.accent} strokeWidth="0.5" strokeOpacity="0.4" />
+              </>
+            )}
+
+            {/* Cheeks — healthy (when no concern) */}
+            {!hasHyperpigmentation && (
+              <>
+                <Ellipse cx="22" cy="68" rx="10" ry="8"
+                  fill="#3A6B3A" fillOpacity="0.12"
+                  stroke="#3A6B3A" strokeWidth="0.5" strokeOpacity="0.35" />
+                <Ellipse cx="78" cy="68" rx="10" ry="8"
+                  fill="#3A6B3A" fillOpacity="0.12"
+                  stroke="#3A6B3A" strokeWidth="0.5" strokeOpacity="0.35" />
+              </>
+            )}
+
+            {/* Eyes */}
+            <Ellipse cx="33" cy="52" rx="9" ry="4"
+              fill="none" stroke="#444" strokeWidth="0.8" />
+            <Ellipse cx="67" cy="52" rx="9" ry="4"
+              fill="none" stroke="#444" strokeWidth="0.8" />
+            <Circle cx="33" cy="52" r="2" fill="#333" />
+            <Circle cx="67" cy="52" r="2" fill="#333" />
+
+            {/* Nose */}
+            <Path d="M46 62 L44 76 Q50 79 56 76 L54 62"
+              fill="none" stroke="#333" strokeWidth="0.8" />
+
+            {/* Mouth */}
+            <Path d="M37 90 Q50 98 63 90"
+              fill="none" stroke="#444" strokeWidth="0.8" />
+          </Svg>
+
+          {/* Legend */}
+          <View style={rs.legend}>
+            <View style={rs.legendItem}>
+              <View style={[rs.legendDot, { backgroundColor: Colors.accent }]} />
+              <Text style={rs.legendText}>Concern area</Text>
+            </View>
+            {hasDarkCircles && (
+              <View style={rs.legendItem}>
+                <View style={[rs.legendDot, { backgroundColor: '#6B8CAE' }]} />
+                <Text style={rs.legendText}>Dark circles</Text>
+              </View>
+            )}
+            <View style={rs.legendItem}>
+              <View style={[rs.legendDot, { backgroundColor: '#3A6B3A' }]} />
+              <Text style={rs.legendText}>Healthy</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Gemini narrative summary */}
+        <View style={rs.summaryCard}>
+          <Text style={rs.summaryLabel}>WHAT WE SEE</Text>
+          <Text style={rs.summaryText}>
+            {scan.recommendations?.skin?.summary ?? 'Analysis complete.'}
+          </Text>
+        </View>
+
+        {/* Concern + healthy pills */}
+        <View style={rs.pillsRow}>
+          {concernPills.map((p, i) => (
+            <View key={i} style={rs.pillConcern}>
+              <Text style={rs.pillConcernText}>{p.label}</Text>
             </View>
           ))}
-        </Animated.View>
+          {healthyPills.map((p, i) => (
+            <View key={i} style={rs.pillHealthy}>
+              <Text style={rs.pillHealthyText}>{p.label}</Text>
+            </View>
+          ))}
+        </View>
 
-        {/* Categories */}
-        <Animated.View style={[s.categoriesWrap, { opacity: catFade, transform: [{ translateY: catSlide }] }]}>
-          <Text style={s.focusLabel}>AREAS TO FOCUS ON</Text>
-          <View style={s.categoriesCard}>
-            {categories.map((cat, idx) => (
-              <View key={cat.label} style={[
-                s.catRow,
-                idx < categories.length - 1 && s.catRowBorder,
-              ]}>
-                <View>
-                  <Text style={s.catLabel}>{cat.label}</Text>
-                  <Text style={s.catPotential}>{getCategoryPotential(cat.score)}</Text>
-                </View>
-                <Diamonds count={getCategoryDiamonds(cat.score)} />
-              </View>
-            ))}
+        {/* Delta card — only if previous scan delta exists */}
+        {hasPreviousDelta && (
+          <View style={rs.deltaCard}>
+            <Text style={rs.summaryLabel}>SINCE LAST SCAN</Text>
           </View>
-        </Animated.View>
+        )}
 
-        {/* Actions */}
-        <Animated.View style={[s.actionsWrap, { opacity: catFade }]}>
-          <TouchableOpacity
-            style={s.ctaButton}
-            activeOpacity={0.8}
-            onPress={() => {
-              if (scan.id?.startsWith('local_')) {
-                // Failed Supabase save — pass full scan data
-                router.push({
-                  pathname: '/recommendations',
-                  params: { scanJson: JSON.stringify(scan) },
-                });
-              } else {
-                // Successfully saved to Supabase — fetch by ID
-                router.push({
-                  pathname: '/recommendations',
-                  params: { scanId: scan.id },
-                });
-              }
-            }}
-          >
-            <Text style={s.ctaText}>See recommendations</Text>
+        {/* CTA */}
+        {recsLoading ? (
+          <View style={rs.ctaLoading}>
+            <ActivityIndicator size="small" color={Colors.card} />
+            <Text style={rs.ctaLoadingText}>Building your plan…</Text>
+          </View>
+        ) : recsError ? (
+          <TouchableOpacity style={rs.ctaError} onPress={onContinue} activeOpacity={0.85}>
+            <Text style={rs.ctaText}>Continue anyway →</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.cancelLink} onPress={onScanAgain}>
-            <Text style={s.cancelLinkText}>Scan again</Text>
+        ) : (
+          <TouchableOpacity style={rs.cta} onPress={onContinue} activeOpacity={0.85}>
+            <Text style={rs.ctaText}>See your plan →</Text>
           </TouchableOpacity>
-        </Animated.View>
+        )}
+
+        {/* Privacy note */}
+        <Text style={rs.privacyNote}>Your photo was deleted after analysis</Text>
 
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function ScanScreen() {
-  const { phase, processingStep, result, error, openCamera, reset, processPhoto } = useScan();
-  const [gender, setGender]           = useState<string>('man');
-  const [scanInfo, setScanInfo]       = useState<ScanInfo | null>(null);
-  const [sharingBonus, setSharingBonus] = useState(false);
+  const { phase, processingStep, result, error, recsLoading, recsError, openCamera, reset, processPhoto } = useScan();
+  const router = useRouter();
+  const [gender, setGender] = useState<string>('man');
+  const [userId, setUserId] = useState<string>('');
 
-  const loadScanInfo = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    try {
-      const info = await getMonthlyScansInfo(user.id);
-      setScanInfo(info);
-    } catch {
-      // Non-critical — quota check failing should not block scanning
-    }
-  }, []);
-
-  // Load gender + quota whenever the tab comes into focus (independent of scan flow).
+  // Load gender whenever the tab comes into focus.
   useFocusEffect(
     useCallback(() => {
       const loadGender = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+        setUserId(user.id);
         const { data: profile } = await supabase
           .from('users')
           .select('gender')
@@ -418,65 +411,27 @@ export default function ScanScreen() {
         if (profile?.gender) setGender(profile.gender as string);
       };
       loadGender();
-      loadScanInfo();
-    }, [loadScanInfo]),
+    }, []),
   );
 
-  // After a scan completes and the user returns to home, refresh the count with
-  // a 1-second delay so the Supabase write has finished before we re-query.
-  const prevPhaseRef = useRef<ScanPhase>('home');
-  useEffect(() => {
-    const prev = prevPhaseRef.current;
-    prevPhaseRef.current = phase;
-    if (phase === 'home' && prev === 'result') {
-      const timer = setTimeout(async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const updated = await getMonthlyScansInfo(user.id);
-          setScanInfo(updated);
-        }
-      }, 1000);
-      return () => clearTimeout(timer);
+  const navigateToRecs = () => {
+    if (!result) return;
+    if (result.id?.startsWith('local_')) {
+      router.push({ pathname: '/recommendations', params: { scanJson: JSON.stringify(result) } });
+    } else {
+      router.push({ pathname: '/recommendations', params: { scanId: result.id } });
     }
-  }, [phase]);
-
-  const handleShareToUnlock = useCallback(async () => {
-    setSharingBonus(true);
-    try {
-      await Share.share({
-        message: 'Check out Lumé — AI grooming analysis for your face. It tells you exactly what to ask your stylist. https://getlume.app',
-      });
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !scanInfo?.periodStart) return;
-      const result = await unlockBonusScan(user.id, scanInfo.periodStart);
-      if (result.success) {
-        await loadScanInfo();
-      } else {
-        Alert.alert('Could not unlock', 'You have already unlocked the maximum 5 bonus scans this period.');
-      }
-    } catch {
-      // User cancelled share sheet — no-op
-    } finally {
-      setSharingBonus(false);
-    }
-  }, [scanInfo, loadScanInfo]);
+  };
 
   const handleCapture = useCallback(
-    (uri: string) => processPhoto(uri, gender),
+    (uri: string) => processPhoto(uri, gender, 'full_face'),
     [processPhoto, gender],
   );
 
   if (phase === 'camera')     return <CameraScreen onCapture={handleCapture} onCancel={reset} error={error} />;
   if (phase === 'processing') return <ProcessingScreen step={processingStep} />;
-  if (phase === 'result' && result) return <ResultScreen scan={result} gender={gender} onScanAgain={reset} />;
-  return (
-    <HomeScreen
-      onStart={openCamera}
-      scanInfo={scanInfo}
-      onShareToUnlock={handleShareToUnlock}
-      sharingBonus={sharingBonus}
-    />
-  );
+  if (phase === 'result' && result) return <ObservationScreen scan={result} gender={gender} onContinue={navigateToRecs} recsLoading={recsLoading} recsError={recsError} />;
+  return <HomeScreen onStart={openCamera} />;
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -485,34 +440,22 @@ const s = StyleSheet.create({
 
   // Home
   homeInner:        { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  brand:            { fontFamily: Typography.serif, fontSize: 28, color: Colors.cream, letterSpacing: 2 },
-  scanRing:         { width: 180, height: 180, borderRadius: 90, borderWidth: 2, borderColor: Colors.gold, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg, marginTop: Spacing.xl },
-  scanRingLocked:   { borderColor: Colors.textTertiary },
-  scanRingInner:    { width: 140, height: 140, borderRadius: 70, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
-  scanRingLabel:    { fontSize: 10, color: Colors.gold, letterSpacing: 1.5, textTransform: 'uppercase' },
-  scanRingLabelLocked: { color: Colors.textTertiary },
-  homeHint:         { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xl },
-  counterRow:       { alignItems: 'center', marginBottom: Spacing.sm },
-  counterText:      { fontSize: 13, color: Colors.textSecondary },
-  counterReset:     { fontSize: 11, color: Colors.textTertiary, marginTop: 2 },
-  bonusDotsRow:     { alignItems: 'center', marginBottom: Spacing.lg, gap: Spacing.xs },
-  bonusDotsLabel:   { fontSize: 9, color: Colors.gold, letterSpacing: 1.5, textTransform: 'uppercase' },
-  bonusDotFilled:   { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.gold },
-  bonusDotEmpty:    { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.border, borderWidth: 1, borderColor: Colors.textTertiary },
-  lockedNote:       { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, width: '100%' },
-  lockedNoteText:   { fontSize: 11, color: Colors.textSecondary, textAlign: 'center', lineHeight: 18 },
+  brand:         { fontFamily: Typography.serif, fontSize: 28, color: Colors.text, letterSpacing: 2 },
+  scanRing:      { width: 220, height: 220, borderRadius: 110, borderWidth: 2, borderColor: Colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg, marginTop: Spacing.xl },
+  scanRingLabel:    { fontSize: 10, color: Colors.accent, letterSpacing: 1.5, textTransform: 'uppercase' },
+  scanInstruction:  { fontSize: 12, color: Colors.text2, textAlign: 'center', letterSpacing: 0.3, marginTop: 8, marginBottom: 24 },
 
   // Shared
-  ctaButton:    { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', width: '100%', marginBottom: Spacing.md },
-  ctaText:      { fontSize: 14, fontWeight: '600', color: Colors.background, letterSpacing: 0.3 },
+  ctaButton:    { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', width: '100%', marginBottom: Spacing.md },
+  ctaText:      { fontSize: 14, fontWeight: '600', color: Colors.surface, letterSpacing: 0.3 },
   cancelLink:   { alignItems: 'center', paddingVertical: Spacing.sm },
-  cancelLinkText:{ fontSize: 13, color: Colors.textSecondary },
+  cancelLinkText:{ fontSize: 13, color: Colors.text },
 
   // Camera
-  overlay:      { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.55)' },
-  ovalGuide:    { position: 'absolute', borderRadius: 999, borderWidth: 2, borderColor: Colors.gold },
-  cameraTopBar: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', paddingTop: Spacing.lg },
-  cameraHint:   { fontSize: 13, color: Colors.cream, letterSpacing: 0.3, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radius.pill, overflow: 'hidden' },
+  overlay:        { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.55)' },
+  ovalGuide:      { position: 'absolute', borderRadius: 999, borderWidth: 2, borderColor: Colors.accent },
+  cameraHintWrap: { position: 'absolute', bottom: 120, left: 0, right: 0, alignItems: 'center' },
+  cameraHint:     { fontSize: 13, color: 'rgba(255,255,255,0.75)', letterSpacing: 0.3, textAlign: 'center' },
   cameraBottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -520,7 +463,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,10,10,0.6)',
   },
   cameraTextBtn:      { width: 72, alignItems: 'flex-start' },
-  cameraTextBtnLabel: { color: '#C9A84C', fontSize: 15, fontWeight: '500' },
+  cameraTextBtnLabel: { color: Colors.accent, fontSize: 15, fontWeight: '500' },
   captureOuter: {
     width: 80, height: 80, borderRadius: 40,
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.8)',
@@ -535,37 +478,173 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   flipIconText: { color: '#FFFFFF', fontSize: 22, fontWeight: '300' },
-  errorBanner:  { position: 'absolute', bottom: 160, left: Spacing.lg, right: Spacing.lg, backgroundColor: Colors.danger, borderRadius: Radius.input, padding: Spacing.md },
-  errorText:    { color: Colors.cream, fontSize: 13, textAlign: 'center' },
+  errorBanner:  { position: 'absolute', bottom: 160, left: Spacing.lg, right: Spacing.lg, backgroundColor: '#A32D2D', borderRadius: Radius.input, padding: Spacing.md },
+  errorText:    { color: Colors.text, fontSize: 13, textAlign: 'center' },
   permissionBox:{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  permissionTitle:{ fontFamily: Typography.serif, fontSize: 22, color: Colors.cream, marginBottom: Spacing.md, textAlign: 'center' },
-  permissionBody: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xl },
+  permissionTitle:{ fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: Spacing.md, textAlign: 'center' },
+  permissionBody: { fontSize: 13, color: Colors.text, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xl },
 
   // Processing
   processingBox:  { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  processingStep: { fontSize: 13, color: Colors.cream, textAlign: 'center', marginBottom: Spacing.sm },
-  processingNote: { fontSize: 13, color: Colors.textTertiary },
+  processingStep: { fontSize: 13, color: Colors.surface, textAlign: 'center', marginBottom: Spacing.sm },
+  processingNote: { fontSize: 11, color: Colors.text2, textAlign: 'center', marginTop: 6 },
 
-  // Result
-  resultBox: {
-    flexGrow: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xl,
+  // Privacy
+  privacyNote: { fontSize: 10, color: Colors.text3, textAlign: 'center', marginTop: 8 },
+
+});
+
+// ─── OBSERVATION STYLES ───────────────────────────────────────────────────────
+const rs = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
-  iconWrap:       { width: 52, height: 52, backgroundColor: 'rgba(201,168,76,0.1)', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)', borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  iconDiamond:    { width: 22, height: 22, backgroundColor: Colors.gold, borderRadius: 3, transform: [{ rotate: '45deg' }] },
-  profileLabel:   { fontSize: 10, color: Colors.textSecondary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 },
-  tierName:       { fontFamily: Typography.serif, fontSize: 32, color: Colors.cream, lineHeight: 40, marginBottom: 10 },
-  tierDesc:       { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', marginTop: 10, marginBottom: 4, paddingHorizontal: Spacing.lg, lineHeight: 18 },
-  divider:        { height: 1, backgroundColor: Colors.border, width: '100%', marginVertical: Spacing.lg },
-  pillsRow:       { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.xs, marginBottom: Spacing.xl },
-  focusLabel:     { fontSize: 10, color: Colors.gold, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm, alignSelf: 'flex-start' },
-  categoriesWrap: { width: '100%', marginBottom: Spacing.xl },
-  categoriesCard: { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md },
-  catRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
-  catRowBorder:   { borderBottomWidth: 1, borderBottomColor: Colors.border },
-  catLabel:       { fontSize: 15, color: Colors.cream, marginBottom: 3 },
-  catPotential:   { fontSize: 11, color: Colors.textSecondary },
-  actionsWrap:    { width: '100%' },
-  pill:           { backgroundColor: Colors.surface, borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
-  pillText:       { fontSize: 9, color: Colors.textSecondary, textTransform: 'capitalize' },
+  content: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom:     Spacing.xxxl,
+  },
+  header: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    paddingTop:     Spacing.lg,
+    marginBottom:   Spacing.lg,
+  },
+  title: {
+    fontFamily: Typography.serif,
+    fontSize:   22,
+    color:      Colors.text,
+  },
+  date: {
+    fontSize: 12,
+    color:    Colors.text2,
+  },
+  mapCard: {
+    backgroundColor: Colors.surface,
+    borderRadius:    Radius.card,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    padding:         Spacing.lg,
+    alignItems:      'center',
+    marginBottom:    Spacing.md,
+    minHeight:       260,
+  },
+  legend: {
+    flexDirection:  'row',
+    gap:            12,
+    marginTop:      Spacing.md,
+    flexWrap:       'wrap',
+    justifyContent: 'center',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           5,
+  },
+  legendDot: {
+    width:        7,
+    height:       7,
+    borderRadius: 3.5,
+    opacity:      0.85,
+  },
+  legendText: {
+    fontSize: 11,
+    color:    Colors.text2,
+  },
+  summaryCard: {
+    backgroundColor: Colors.surface,
+    borderRadius:    Radius.card,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    padding:         Spacing.md,
+    marginBottom:    Spacing.md,
+  },
+  summaryLabel: {
+    fontSize:      9,
+    color:         Colors.text2,
+    letterSpacing: 1.5,
+    marginBottom:  Spacing.xs,
+  },
+  summaryText: {
+    fontSize:   14,
+    color:      Colors.text,
+    lineHeight: 22,
+  },
+  pillsRow: {
+    flexDirection: 'row',
+    flexWrap:      'wrap',
+    gap:           6,
+    marginBottom:  Spacing.lg,
+  },
+  pillConcern: {
+    backgroundColor:  Colors.surface2,
+    borderRadius:     Radius.pill,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical:  4,
+  },
+  pillConcernText: {
+    fontSize:      11,
+    color:         Colors.accent,
+    textTransform: 'capitalize',
+  },
+  pillHealthy: {
+    backgroundColor:  '#1A2A1A',
+    borderRadius:     Radius.pill,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical:  4,
+  },
+  pillHealthyText: {
+    fontSize:      11,
+    color:         '#5A9A5A',
+    textTransform: 'capitalize',
+  },
+  deltaCard: {
+    backgroundColor: Colors.surface,
+    borderRadius:    Radius.card,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    padding:         Spacing.md,
+    marginBottom:    Spacing.md,
+  },
+  cta: {
+    backgroundColor: Colors.accent,
+    borderRadius:    Radius.input,
+    paddingVertical: Spacing.md,
+    alignItems:      'center',
+    marginBottom:    Spacing.sm,
+  },
+  ctaLoading: {
+    backgroundColor: Colors.text2,
+    borderRadius:    Radius.input,
+    paddingVertical: Spacing.md,
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'center',
+    gap:             10,
+    marginBottom:    Spacing.sm,
+  },
+  ctaLoadingText: {
+    fontSize:   15,
+    color:      Colors.card,
+    fontWeight: '500',
+  },
+  ctaError: {
+    backgroundColor: Colors.accent,
+    borderRadius:    Radius.input,
+    paddingVertical: Spacing.md,
+    alignItems:      'center',
+    marginBottom:    Spacing.sm,
+  },
+  ctaText: {
+    fontSize:   15,
+    fontWeight: '600',
+    color:      Colors.background,
+  },
+  privacyNote: {
+    fontSize:   11,
+    color:      Colors.text3,
+    textAlign:  'center',
+    marginTop:  Spacing.xs,
+  },
 });

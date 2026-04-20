@@ -1,5 +1,5 @@
 // Scan service — orchestrates the full scan flow end to end.
-// Steps: compress → analyse with Gemini → get advice from Claude
+// Steps: compress → analyse with Gemini vision → get recommendations from Gemini text
 //        → save to database → delete image → return finished scan.
 
 /*
@@ -7,7 +7,79 @@ Run in Supabase SQL editor:
 
 alter table users
   add column if not exists routine_level text default 'simple',
-  add column if not exists preferred_brands jsonb default '[]'::jsonb;
+  add column if not exists preferred_brands jsonb default '[]'::jsonb,
+  add column if not exists hair_profile jsonb,
+  add column if not exists hair_recommendations jsonb;
+*/
+
+/*
+Run in Supabase SQL editor:
+
+-- Routine compliance logs
+create table if not exists routine_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  scan_id uuid references scans(id) on delete set null,
+  step_label text not null,
+  step_product text,
+  category text not null, -- 'skin_am' | 'skin_pm' | 'hair' | 'beard' | 'makeup'
+  completed_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+-- Product usage confirmations
+create table if not exists product_usage (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  scan_id uuid references scans(id) on delete set null,
+  product_id text not null,
+  product_name text not null,
+  brand text not null,
+  category text not null,
+  using_it boolean,
+  nudge_sent_at timestamptz,
+  responded_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- Scan deltas (computed on each rescan)
+create table if not exists scan_deltas (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  scan_id uuid references scans(id) on delete cascade,
+  previous_scan_id uuid references scans(id) on delete set null,
+  days_between int,
+  score_delta int,
+  concerns_improved text[],
+  concerns_worsened text[],
+  concerns_resolved text[],
+  compliance_rate numeric,
+  created_at timestamptz not null default now()
+);
+
+-- Add columns to scans table
+alter table scans
+  add column if not exists scan_hour int,
+  add column if not exists season text,
+  add column if not exists scan_type text;
+
+-- Add columns to product_events
+alter table product_events
+  add column if not exists nudge_sent boolean default false,
+  add column if not exists nudge_sent_at timestamptz;
+
+-- RLS policies
+alter table routine_logs enable row level security;
+create policy "Users can manage own routine_logs"
+  on routine_logs for all using (auth.uid() = user_id);
+
+alter table product_usage enable row level security;
+create policy "Users can manage own product_usage"
+  on product_usage for all using (auth.uid() = user_id);
+
+alter table scan_deltas enable row level security;
+create policy "Users can read own scan_deltas"
+  on scan_deltas for all using (auth.uid() = user_id);
 */
 
 /*
@@ -32,16 +104,149 @@ create policy "Users can insert their own product events"
   with check (auth.uid() = user_id);
 */
 
+/*
+Run in Supabase SQL editor:
+
+create table if not exists product_confirmations (
+  id           uuid default gen_random_uuid() primary key,
+  user_id      uuid references users(id) on delete cascade,
+  prev_scan_id uuid references scans(id) on delete set null,
+  new_scan_id  uuid references scans(id) on delete set null,
+  product_name text not null,
+  brand        text not null,
+  category     text not null,
+  confirmed    boolean not null,
+  created_at   timestamptz not null default now()
+);
+
+alter table product_confirmations enable row level security;
+create policy "Users can manage own product_confirmations"
+  on product_confirmations for all using (auth.uid() = user_id);
+
+-- Add Fitzpatrick columns to scans
+alter table scans
+  add column if not exists fitzpatrick_scale int,
+  add column if not exists skin_tone text,
+  add column if not exists skin_undertone text
+    check (skin_undertone in ('warm', 'cool', 'neutral'));
+
+-- Add age_range to users
+alter table users
+  add column if not exists age_range text;
+*/
+
 import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { scheduleRescanNudge, cancelRescanNudge } from './notificationService';
 import { analyseWithGemini } from '../lib/gemini';
-import { getAdviceFromClaude } from '../lib/claude';
-import { getTierLabel } from '../constants/tiers';
-import type { Scan } from '../types';
+import {
+  getRecommendationsFromGemini,
+  getHairRecommendationsFromGemini,
+} from '../lib/gemini';
+import type { GeminiAnalysis } from '../lib/gemini';
+import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
+import type { Scan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands } from '../types';
+import { isBaldProfile } from '../types';
 
 const RECOMMENDATIONS_KEY = (scanId: string) => `@lume/recommendations_${scanId}`;
-const LATEST_SCAN_KEY = '@lume/latest_scan';
+const LATEST_SCAN_KEY    = '@lume/latest_scan';
+const PRODUCT_MAP_KEY    = (scanId: string) => `@lume/product_map/${scanId}`;
+
+// ── Season helper ─────────────────────────────────────────────────────────────
+// Indian seasonal calendar — consistent across cities.
+function getSeason(_date: Date, _city: string): string {
+  const month = _date.getMonth() + 1; // 1-12
+  if (month >= 3  && month <= 5)  return 'summer';
+  if (month >= 6  && month <= 9)  return 'monsoon';
+  if (month >= 10 && month <= 11) return 'post_monsoon';
+  return 'winter';
+}
+
+// ── Log a routine step completion to Supabase ─────────────────────────────────
+export async function logRoutineStep(params: {
+  userId:      string;
+  scanId:      string | null;
+  stepLabel:   string;
+  stepProduct?: string;
+  category:    'skin_am' | 'skin_pm' | 'hair' | 'beard' | 'makeup';
+}): Promise<void> {
+  try {
+    await supabase.from('routine_logs').insert({
+      user_id:      params.userId,
+      scan_id:      params.scanId,
+      step_label:   params.stepLabel,
+      step_product: params.stepProduct ?? null,
+      category:     params.category,
+      completed_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('[scanService] logRoutineStep failed:', err);
+  }
+}
+
+// ── Compute and persist scan delta after a new scan is saved ──────────────────
+export async function computeAndStoreScanDelta(params: {
+  userId:      string;
+  newScanId:   string;
+  newScore:    number;
+  newConcerns: string[];
+}): Promise<void> {
+  try {
+    const { data: prevScans } = await supabase
+      .from('scans')
+      .select('id, score_overall, created_at')
+      .eq('user_id', params.userId)
+      .neq('id', params.newScanId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (!prevScans || prevScans.length === 0) return;
+    const prev = prevScans[0];
+
+    const { data: prevScanData } = await supabase
+      .from('scans')
+      .select('recommendations')
+      .eq('id', prev.id)
+      .single();
+
+    const prevConcerns: string[] =
+      (prevScanData?.recommendations as Record<string, any> | null)?.skin?.concerns ?? [];
+
+    const daysBetween = Math.floor(
+      (Date.now() - new Date(prev.created_at as string).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const scoreDelta       = params.newScore - ((prev.score_overall as number) ?? 0);
+    const concernsImproved = prevConcerns.filter(c => !params.newConcerns.includes(c));
+    const concernsWorsened = params.newConcerns.filter(c => !prevConcerns.includes(c));
+    const concernsResolved = prevConcerns.filter(c => !params.newConcerns.includes(c));
+
+    const { count: totalSteps } = await supabase
+      .from('routine_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', params.userId)
+      .gte('completed_at', prev.created_at as string);
+
+    const expectedSteps  = daysBetween * 3;
+    const complianceRate = expectedSteps > 0
+      ? Math.min((totalSteps ?? 0) / expectedSteps, 1.0)
+      : 0;
+
+    await supabase.from('scan_deltas').insert({
+      user_id:           params.userId,
+      scan_id:           params.newScanId,
+      previous_scan_id:  prev.id,
+      days_between:      daysBetween,
+      score_delta:       scoreDelta,
+      concerns_improved: concernsImproved,
+      concerns_worsened: concernsWorsened,
+      concerns_resolved: concernsResolved,
+      compliance_rate:   complianceRate,
+    });
+  } catch (err) {
+    console.warn('[scanService] computeAndStoreScanDelta failed:', err);
+  }
+}
 
 // Callback so the UI can show which step is running.
 export type ProgressCallback = (step: string) => void;
@@ -63,18 +268,16 @@ async function compressImage(uri: string): Promise<string> {
 }
 
 // Calculate the overall score from individual category scores.
-// Women: average of hair + skin + makeup
-// Men / other: average of hair + skin + beard
+// Women: average of skin + makeup
+// Men / other: average of skin + beard
 function calcOverallScore(
-  gender: string,
-  scoreHair:   number | null,
+  gender:      string,
   scoreSkin:   number | null,
   scoreBeard:  number | null,
   scoreMakeup: number | null,
 ): number {
   const scores: number[] = [];
-  if (scoreHair  != null) scores.push(scoreHair);
-  if (scoreSkin  != null) scores.push(scoreSkin);
+  if (scoreSkin != null) scores.push(scoreSkin);
   if (gender === 'woman') {
     if (scoreMakeup != null) scores.push(scoreMakeup);
   } else {
@@ -84,35 +287,171 @@ function calcOverallScore(
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 }
 
-// Run the full scan. Pass the raw photo URI from the camera,
-// the user's gender, their user ID, and a progress callback for the UI.
-export async function runScan(
-  photoUri:  string,
-  gender:    string,
-  userId:    string,
-  onProgress: ProgressCallback,
-): Promise<Scan> {
+// ── Category builders — shared by runScan and refreshRecommendations ─────────
 
-  // Step 1 — compress image on device
-  onProgress('Preparing image…');
+export function buildSkinCategories(
+  analysis: GeminiAnalysis,
+): { category: string; attributes: string[]; categoryType: 'skin' }[] {
+  return [
+    { category: 'face_cleanser', categoryType: 'skin', attributes:
+        analysis.skin_type === 'oily' || analysis.skin_concerns?.includes('acne')
+          ? ['non_comedogenic']
+          : analysis.skin_type === 'dry'
+          ? ['moisturising']
+          : [] },
+    { category: 'moisturiser', categoryType: 'skin', attributes:
+        analysis.skin_type === 'oily'
+          ? ['lightweight', 'oil_free']
+          : analysis.skin_type === 'dry'
+          ? ['rich', 'hyaluronic_acid']
+          : ['lightweight'] },
+    { category: 'spf_sunscreen', categoryType: 'skin', attributes:
+        analysis.skin_type === 'oily'
+          ? ['oil_free', 'non_comedogenic']
+          : [] },
+    ...(analysis.skin_concerns?.includes('dark_spots')
+      ? [{ category: 'serum_vitamin_c', attributes: ['vitamin_c', 'brightening'], categoryType: 'skin' as const }]
+      : []),
+    ...(analysis.skin_concerns?.includes('hyperpigmentation')
+      ? [{ category: 'serum_vitamin_c', attributes: ['vitamin_c', 'brightening', 'niacinamide'], categoryType: 'skin' as const }]
+      : []),
+    ...(analysis.skin_concerns?.includes('oiliness') || analysis.skin_concerns?.includes('acne')
+      ? [{ category: 'serum_niacinamide', attributes: ['niacinamide', 'non_comedogenic'], categoryType: 'skin' as const }]
+      : []),
+    ...(analysis.skin_concerns?.includes('dark_circles')
+      ? [{ category: 'eye_cream', attributes: [], categoryType: 'skin' as const }]
+      : []),
+  ];
+}
+
+export function buildBeardCategories(
+  gender: string,
+): { category: string; attributes: string[]; categoryType: 'beard' }[] {
+  return gender === 'man' ? [
+    { category: 'beard_oil',  attributes: ['conditioning'], categoryType: 'beard' },
+    { category: 'beard_wash', attributes: [],               categoryType: 'beard' },
+    { category: 'beard_balm', attributes: [],               categoryType: 'beard' },
+  ] : [];
+}
+
+export function buildMakeupCategories(
+  gender:    string,
+  analysis?: GeminiAnalysis,
+): { category: string; attributes: string[]; categoryType: 'makeup' }[] {
+  if (gender !== 'woman') return [];
+
+  const undertone      = analysis?.skin_undertone ?? 'neutral';
+  const fitzpatrick    = analysis?.fitzpatrick_scale ?? 4;
+  const browCondition  = analysis?.brow_condition ?? 'well_defined';
+  const undereye       = analysis?.undereye ?? 'normal';
+
+  const categories: { category: string; attributes: string[]; categoryType: 'makeup' }[] = [];
+
+  // Always include kajal
+  categories.push({
+    category:     'kajal_eyeliner',
+    attributes:   ['long_wearing'],
+    categoryType: 'makeup',
+  });
+
+  // Eyebrow pencil — only if brows need work
+  if (
+    browCondition === 'sparse' ||
+    browCondition === 'ungroomed' ||
+    browCondition === 'over_plucked'
+  ) {
+    categories.push({
+      category:     'eyebrow_pencil',
+      attributes:   ['buildable_coverage'],
+      categoryType: 'makeup',
+    });
+  }
+
+  // Foundation — matched by Fitzpatrick scale
+  const foundationCategory =
+    fitzpatrick <= 2 ? 'foundation_fair'   :
+    fitzpatrick === 3 ? 'foundation_medium' :
+    fitzpatrick <= 5 ? 'foundation_medium'  :
+    'foundation_deep';
+
+  const foundationAttrs =
+    undertone === 'warm' ? ['warm_undertone', 'buildable_coverage'] :
+    undertone === 'cool' ? ['cool_undertone', 'buildable_coverage'] :
+    ['buildable_coverage'];
+
+  categories.push({
+    category:     foundationCategory,
+    attributes:   foundationAttrs,
+    categoryType: 'makeup',
+  });
+
+  // Lipstick — undertone matched
+  const lipstickCategory = undertone === 'cool' ? 'lipstick_berry' : 'lipstick_nude';
+
+  const lipstickAttrs =
+    undertone === 'warm' ? ['warm_undertone'] :
+    undertone === 'cool' ? ['cool_undertone'] :
+    [];
+
+  categories.push({
+    category:     lipstickCategory,
+    attributes:   lipstickAttrs,
+    categoryType: 'makeup',
+  });
+
+  // Concealer — only if dark circles detected
+  if (undereye === 'dark_circles') {
+    categories.push({
+      category:     'concealer',
+      attributes:   ['full_coverage', 'long_wearing'],
+      categoryType: 'makeup',
+    });
+  }
+
+  return categories;
+}
+
+// ── Phase 1 — vision analysis only (~18s) ─────────────────────────────────────
+// Compresses image, fetches user context, calls Gemini vision.
+// Returns analysis + all context needed for phase 2.
+export async function runScanPhase1(
+  photoUri:    string,
+  gender:      string,
+  userId:      string,
+  onProgress?: ProgressCallback,
+  scanType:    string = 'full_face',
+): Promise<{
+  analysis:    GeminiAnalysis;
+  userProfile: {
+    city:            string | null;
+    preferredBrands: PreferredBrands;
+    budget:          string;
+    ageRange:        string | null;
+  };
+  previousContext: string;
+  scanType:        string;
+  compressedUri:   string;
+}> {
+  onProgress?.('Preparing image…');
   const base64 = await compressImage(photoUri);
 
-  try {
-  // Step 2 — fetch user context + previous scan before calling Gemini
   const { data: userProfile } = await supabase
     .from('users')
-    .select('city, gender, budget')
+    .select('city, gender, preferred_brands_v2, age_range')
     .eq('id', userId)
     .single();
 
-  const city   = userProfile?.city   ?? null;
-  const budget = (userProfile as { budget?: string } | null)?.budget ?? 'affordable';
+  const city               = userProfile?.city ?? null;
+  const preferredBrandsRaw = (userProfile as { preferred_brands_v2?: PreferredBrands } | null)
+    ?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] };
+  const inferredBudget     = inferBudgetFromBrands(preferredBrandsRaw);
+  const ageRange           = (userProfile as { age_range?: string } | null)?.age_range ?? null;
   // Gender may have been passed in, but prefer the Supabase value if available
-  const resolvedGender = (userProfile?.gender as string | null) ?? gender;
+  const resolvedGender     = (userProfile?.gender as string | null) ?? gender;
 
   const { data: previousScans } = await supabase
     .from('scans')
-    .select('score_overall, tier_label, skin_concerns, score_skin, score_hair, score_beard, created_at')
+    .select('score_overall, skin_concerns, score_skin, score_beard, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(2);
@@ -122,69 +461,109 @@ export async function runScan(
   const previousScanSummary = previousScan
     ? `Previous scan on ${new Date(previousScan.created_at as string).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}: ` +
       `overall score ${previousScan.score_overall as number}, ` +
-      `tier ${previousScan.tier_label as string}, ` +
-      `skin score ${previousScan.score_skin ?? 'n/a'}, ` +
-      `hair score ${previousScan.score_hair ?? 'n/a'}` +
+      `skin score ${previousScan.score_skin ?? 'n/a'}` +
       ((previousScan.skin_concerns as string[] | null)?.length
         ? `, concerns: ${(previousScan.skin_concerns as string[]).slice(0, 3).join(', ')}`
         : '')
     : null;
 
-  // Step 3 was previously step 2 — send to Gemini for face analysis
-  onProgress('Analysing your face…');
+  onProgress?.('Analysing your face…');
   console.log('[scanService] Calling analyseWithGemini, gender:', resolvedGender);
-  const analysis = await analyseWithGemini(base64, city, resolvedGender, budget, previousScanSummary);
+  const analysis = await analyseWithGemini(base64, city, resolvedGender, inferredBudget, previousScanSummary, ageRange);
   console.log('[scanService] Gemini analysis:', JSON.stringify(analysis).slice(0, 500));
 
-  // Send analysis to Claude Haiku for recommendations
-  onProgress('Generating recommendations…');
-  console.log('[scanService] Calling getAdviceFromClaude');
-  const recommendations = await getAdviceFromClaude(resolvedGender, analysis);
-  console.log('[scanService] Claude advice received');
+  return {
+    analysis,
+    userProfile: {
+      city,
+      preferredBrands: preferredBrandsRaw,
+      budget:          inferredBudget,
+      ageRange,
+    },
+    previousContext: previousScanSummary ?? '',
+    scanType,
+    compressedUri:   base64,
+  };
+}
 
-  // Calculate scores
-  onProgress('Calculating your score…');
+// ── Phase 2 — recommendations + save (~32s) ───────────────────────────────────
+// Takes phase 1 output, generates recommendations, saves to Supabase.
+// Can run in background while ObservationScreen is visible.
+export async function runScanPhase2(
+  analysis:        GeminiAnalysis,
+  userProfile:     {
+    city:            string | null;
+    preferredBrands: PreferredBrands;
+    budget:          string;
+    ageRange:        string | null;
+  },
+  previousContext: string,
+  scanType:        string,
+  _compressedUri:  string,
+  gender:          string,
+  userId:          string,
+  onProgress?:     ProgressCallback,
+): Promise<Scan> {
+  const productGender: 'all' | 'men' | 'women' =
+    gender === 'woman' ? 'women' :
+    gender === 'man'   ? 'men'   : 'all';
+
+  const skinCategories   = buildSkinCategories(analysis);
+  const beardCategories  = buildBeardCategories(gender);
+  const makeupCategories = buildMakeupCategories(gender, analysis);
+
+  const productMap = getProductsForProfile({
+    categories:      [...skinCategories, ...beardCategories, ...makeupCategories],
+    preferredBrands: userProfile.preferredBrands,
+    gender:          productGender,
+    budget:          userProfile.budget,
+  });
+  const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
+
+  onProgress?.('Generating recommendations…');
+  console.log('[scanService] Calling getRecommendationsFromGemini');
+  const recommendations = await getRecommendationsFromGemini(gender, analysis, matchedProducts, userProfile.ageRange);
+  console.log('[scanService] Gemini recommendations received');
+
+  onProgress?.('Calculating your score…');
   console.log('[scanService] Calculating score');
   const scoreOverall = calcOverallScore(
-    resolvedGender,
-    analysis.score_hair,
+    gender,
     analysis.score_skin,
     analysis.score_beard,
     analysis.score_makeup,
   );
-  const tierLabel = getTierLabel(scoreOverall);
   console.log('[scanService] Score:', scoreOverall);
 
-  // Step 5 — save to Supabase
-  // NOTE: Run this SQL in Supabase to add new columns:
-  // alter table public.scans add column if not exists beard_condition text;
-  // alter table public.scans add column if not exists brow_condition text;
-  //
-  // alter table users drop column if exists scan_bonus_unlocked;
-  // alter table users drop column if exists scan_bonus_month;
-  // alter table users add column if not exists scan_bonus_count int default 0;
-  // alter table users add column if not exists scan_bonus_period text;
-  onProgress('Saving your results…');
+  onProgress?.('Saving your results…');
   console.log('[scanService] Saving to Supabase, userId:', userId);
+  const now      = new Date();
+  const scanHour = now.getHours();
+  const season   = getSeason(now, userProfile.city ?? '');
+
   const scanRow = {
-    user_id:         userId,
-    image_url:       null,
-    face_shape:      analysis.face_shape,
-    skin_type:       analysis.skin_type,
-    skin_concerns:   analysis.skin_concerns,
-    hair_texture:    analysis.hair_texture,
-    hair_condition:  analysis.hair_condition,
-    beard_density:   analysis.beard_density,
-    beard_condition: analysis.beard_condition,
-    brow_condition:  analysis.brow_condition,
-    undereye:        analysis.undereye,
-    score_hair:      analysis.score_hair,
-    score_skin:      analysis.score_skin,
-    score_beard:     analysis.score_beard,
-    score_makeup:    analysis.score_makeup,
-    score_overall:   scoreOverall,
-    tier_label:      tierLabel,
-    recommendations: recommendations ?? null,
+    user_id:           userId,
+    image_url:         null,
+    face_shape:        analysis.face_shape,
+    skin_type:         analysis.skin_type,
+    skin_concerns:     analysis.skin_concerns,
+    beard_density:     analysis.beard_density,
+    beard_condition:   analysis.beard_condition,
+    brow_condition:    analysis.brow_condition,
+    undereye:          analysis.undereye,
+    score_skin:        analysis.score_skin,
+    score_beard:       analysis.score_beard,
+    score_makeup:      analysis.score_makeup,
+    score_overall:     scoreOverall,
+    fitzpatrick_scale: analysis.fitzpatrick_scale ?? null,
+    skin_tone:         analysis.skin_tone ?? null,
+    skin_undertone:    analysis.skin_undertone ?? null,
+    recommendations:   recommendations ?? null,
+    scan_hour:         scanHour,
+    season,
+    scan_type:         scanType,
+    stylist_mentioned: null,
+    share_count:       0,
   };
 
   console.log('[scanService] scanRow keys:', Object.keys(scanRow));
@@ -192,12 +571,7 @@ export async function runScan(
     user_id:       scanRow.user_id,
     face_shape:    scanRow.face_shape,
     score_overall: scanRow.score_overall,
-    tier_label:    scanRow.tier_label,
   }));
-
-  console.log('[scanService] recommendations type:', typeof recommendations);
-  console.log('[scanService] recommendations sample:',
-    JSON.stringify(recommendations)?.slice(0, 200));
 
   let data, error;
   try {
@@ -221,7 +595,6 @@ export async function runScan(
   if (error) {
     console.error('[scanService] Supabase insert error:', error.message);
     console.error('[scanService] Supabase error details:', JSON.stringify(error));
-    // Instead of throwing, return a local result so user still sees recommendations
     return {
       ...scanRow,
       id:         `local_${Date.now()}`,
@@ -230,111 +603,192 @@ export async function runScan(
   }
   console.log('[scanService] Saved successfully');
 
-  // Update last_scan_at on the user's profile
   if (data) {
     await supabase
       .from('users')
       .update({ last_scan_at: new Date().toISOString() })
       .eq('id', userId);
 
-    // Persist the full scan to AsyncStorage for offline access
     try {
       await AsyncStorage.setItem(RECOMMENDATIONS_KEY(data.id as string), JSON.stringify(data));
       await AsyncStorage.setItem(LATEST_SCAN_KEY, JSON.stringify(data));
     } catch {
       // Non-critical — offline caching failure should not surface to user
     }
+
+    try {
+      await AsyncStorage.setItem(
+        PRODUCT_MAP_KEY(data.id as string),
+        JSON.stringify(productMap),
+      );
+    } catch {
+      // Non-critical
+    }
+
+    await computeAndStoreScanDelta({
+      userId,
+      newScanId:   data.id as string,
+      newScore:    scoreOverall,
+      newConcerns: analysis.skin_concerns ?? [],
+    });
+
+    try {
+      await cancelRescanNudge();
+      await scheduleRescanNudge(new Date());
+    } catch { }
   }
 
   return data as Scan;
+}
+
+// Run the full scan — calls phase 1 then phase 2 in sequence.
+// Kept for backwards compatibility with any existing callers.
+export async function runScan(
+  photoUri:    string,
+  gender:      string,
+  userId:      string,
+  onProgress?: ProgressCallback,
+  scanType?:   string,
+): Promise<Scan> {
+  try {
+    const phase1Result = await runScanPhase1(photoUri, gender, userId, onProgress, scanType);
+    return runScanPhase2(
+      phase1Result.analysis,
+      phase1Result.userProfile,
+      phase1Result.previousContext,
+      phase1Result.scanType,
+      phase1Result.compressedUri,
+      gender,
+      userId,
+      onProgress,
+    );
   } catch (error: unknown) {
     console.error('[scanService] CRASH:', error instanceof Error ? error.stack : String(error));
     throw error;
   }
 }
 
-const BASE_SCANS = 3;
-const MAX_BONUS  = 5;
-const PERIOD_MS  = 30 * 24 * 60 * 60 * 1000; // 30 days
+// Regenerate recommendations for the user's latest scan using updated preferences.
+// No camera or vision call — reconstructs GeminiAnalysis from the stored scan fields.
+export async function refreshRecommendations(
+  userId:      string,
+  onProgress?: (step: string) => void,
+): Promise<string> {
+  console.log('[refreshRecommendations] called with userId:', userId);
+  try {
+    console.log('[refreshRecommendations] step: loading profile');
+    onProgress?.('Loading your profile…');
 
-// Return the user's scan quota info for the current rolling 30-day period.
-export async function getMonthlyScansInfo(userId: string): Promise<{
-  scansThisPeriod: number;
-  baseAllowed:     number;
-  bonusScans:      number;
-  scansAllowed:    number;
-  canScan:         boolean;
-  canUnlockMore:   boolean;
-  periodStart:     string | null;
-  daysUntilReset:  number;
-}> {
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('scan_bonus_count, scan_bonus_period')
-    .eq('id', userId)
-    .single();
-
-  const now = new Date();
-  let periodStart: string | null = userRow?.scan_bonus_period ?? null;
-  let bonusScans  = userRow?.scan_bonus_count ?? 0;
-
-  // If no period set or it has expired, open a fresh 30-day window.
-  if (!periodStart || (now.getTime() - new Date(periodStart).getTime()) > PERIOD_MS) {
-    periodStart = now.toISOString();
-    bonusScans  = 0;
-    await supabase
+    const { data: userRow } = await supabase
       .from('users')
-      .update({ scan_bonus_count: 0, scan_bonus_period: periodStart })
-      .eq('id', userId);
+      .select('gender, city, preferred_brands_v2, hair_profile, age_range')
+      .eq('id', userId)
+      .single();
+
+    console.log('[refreshRecommendations] userRow:', JSON.stringify(userRow));
+
+    const gender             = (userRow?.gender as string | null) ?? 'man';
+    const preferredBrandsRaw = (userRow as { preferred_brands_v2?: PreferredBrands } | null)
+      ?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] };
+    const inferredBudget     = inferBudgetFromBrands(preferredBrandsRaw);
+    const ageRange           = (userRow as { age_range?: string } | null)?.age_range ?? null;
+
+    const { data: scans } = await supabase
+      .from('scans')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    console.log('[refreshRecommendations] scans found:', scans?.length ?? 0);
+    if (!scans || scans.length === 0) throw new Error('No scan found to refresh');
+    const latestScan = scans[0] as Scan;
+
+    const analysis: GeminiAnalysis = {
+      face_shape:        latestScan.face_shape,
+      skin_type:         latestScan.skin_type,
+      skin_concerns:     latestScan.skin_concerns,
+      beard_density:     latestScan.beard_density,
+      beard_condition:   latestScan.beard_condition,
+      brow_condition:    latestScan.brow_condition,
+      undereye:          latestScan.undereye,
+      score_skin:        latestScan.score_skin,
+      score_beard:       latestScan.score_beard,
+      score_makeup:      latestScan.score_makeup,
+      fitzpatrick_scale: latestScan.fitzpatrick_scale ?? null,
+      skin_tone:         latestScan.skin_tone ?? null,
+      skin_undertone:    latestScan.skin_undertone ?? null,
+    };
+
+    console.log('[refreshRecommendations] step: matching products');
+    onProgress?.('Matching products…');
+    const productGender: 'all' | 'men' | 'women' =
+      gender === 'woman' ? 'women' : gender === 'man' ? 'men' : 'all';
+
+    const productMap = getProductsForProfile({
+      categories:      [
+        ...buildSkinCategories(analysis),
+        ...buildBeardCategories(gender),
+        ...buildMakeupCategories(
+          productGender === 'women' ? 'woman' : 'man',
+          analysis,
+        ),
+      ],
+      preferredBrands: preferredBrandsRaw,
+      gender:          productGender,
+      budget:          inferredBudget,
+    });
+    // Flatten to one product per category for Gemini description writing
+    const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
+
+    console.log('[refreshRecommendations] step: generating recs');
+    onProgress?.('Generating recommendations…');
+    const recommendations = await getRecommendationsFromGemini(gender, analysis, matchedProducts, ageRange);
+
+    console.log('[refreshRecommendations] step: saving');
+    onProgress?.('Saving…');
+    await supabase
+      .from('scans')
+      .update({ recommendations })
+      .eq('id', latestScan.id as string);
+
+    const updatedScan = { ...latestScan, recommendations };
+    try {
+      await AsyncStorage.setItem(RECOMMENDATIONS_KEY(latestScan.id as string), JSON.stringify(updatedScan));
+      await AsyncStorage.setItem(LATEST_SCAN_KEY, JSON.stringify(updatedScan));
+    } catch {
+      // Non-critical — offline cache failure should not surface to user
+    }
+
+    try {
+      await AsyncStorage.setItem(
+        PRODUCT_MAP_KEY(latestScan.id as string),
+        JSON.stringify(productMap),
+      );
+    } catch {
+      // Non-critical
+    }
+
+    const hairProfile = (userRow as {
+      hair_profile?: HairProfile;
+    } | null)?.hair_profile;
+
+    const hairProfileSet = hairProfile &&
+      Object.keys(hairProfile).length > 0;
+
+    console.log('[refreshRecommendations] step: hair profile check', {
+      hairProfileSet,
+      isBald: hairProfileSet && isBaldProfile(hairProfile!),
+    });
+
+    return latestScan.id as string;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[refreshRecommendations] CRASH:', msg);
+    throw error;
   }
-
-  const { count } = await supabase
-    .from('scans')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', periodStart);
-
-  const scansThisPeriod = count ?? 0;
-  const scansAllowed    = BASE_SCANS + bonusScans;
-  const canScan         = scansThisPeriod < scansAllowed;
-  const canUnlockMore   = bonusScans < MAX_BONUS;
-
-  const periodEnd     = new Date(new Date(periodStart).getTime() + PERIOD_MS);
-  const daysUntilReset = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / 86_400_000));
-
-  return { scansThisPeriod, baseAllowed: BASE_SCANS, bonusScans, scansAllowed, canScan, canUnlockMore, periodStart, daysUntilReset };
 }
 
-// Increment the user's bonus scan count for the given period.
-export async function unlockBonusScan(
-  userId:          string,
-  periodStartDate: string,
-): Promise<{ success: boolean; newBonusCount: number }> {
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('scan_bonus_count, scan_bonus_period')
-    .eq('id', userId)
-    .single();
-
-  const currentBonus  = userRow?.scan_bonus_count ?? 0;
-  const currentPeriod = userRow?.scan_bonus_period ?? null;
-
-  if (currentBonus >= MAX_BONUS) return { success: false, newBonusCount: currentBonus };
-
-  const now         = new Date();
-  const periodMatch = currentPeriod === periodStartDate;
-  const periodFresh = periodMatch && (now.getTime() - new Date(periodStartDate).getTime()) <= PERIOD_MS;
-  const newBonus    = periodFresh ? currentBonus + 1 : 1;
-  const newPeriod   = periodFresh ? currentPeriod : periodStartDate;
-
-  const { error } = await supabase
-    .from('users')
-    .update({ scan_bonus_count: newBonus, scan_bonus_period: newPeriod })
-    .eq('id', userId);
-
-  if (error) return { success: false, newBonusCount: currentBonus };
-  return { success: true, newBonusCount: newBonus };
-}
 
 // Load a previously cached scan from AsyncStorage by scan ID.
 export async function getSavedRecommendations(scanId: string): Promise<Scan | null> {
@@ -354,6 +808,116 @@ export async function getLatestSavedScan(): Promise<Scan | null> {
   } catch {
     return null;
   }
+}
+
+// Load a previously stored productMap from AsyncStorage by scan ID.
+export async function getProductMap(
+  scanId: string,
+): Promise<Record<string, MatchedProduct[]>> {
+  try {
+    const raw = await AsyncStorage.getItem(PRODUCT_MAP_KEY(scanId));
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, MatchedProduct[]>;
+  } catch {
+    return {};
+  }
+}
+
+// Build hair product categories from a hair profile.
+// Exported so hair-detail.tsx can reuse it for the product picker.
+export function buildHairCategories(
+  profile: HairProfile,
+): { category: string; attributes: string[]; categoryType: 'hair' }[] {
+  return isBaldProfile(profile)
+    ? [
+        { category: 'shampoo', categoryType: 'hair', attributes: [
+          profile.scalp_type === 'oily' ? 'sulphate_free' : 'gentle',
+          ...(profile.scalp_concern === 'dry_flaky' ? ['anti_dandruff'] : []),
+          ...(profile.scalp_concern === 'oily_shiny' ? ['deep_cleansing'] : []),
+        ]},
+        { category: 'scalp_serum', categoryType: 'hair', attributes: [
+          profile.scalp_concern === 'dry_flaky' ? 'moisturising' : 'scalp_stimulating',
+          ...(profile.scalp_concern === 'sensitive' ? ['soothing'] : []),
+        ]},
+        { category: 'sunscreen',   categoryType: 'hair', attributes: ['spf_50', 'lightweight'] },
+        { category: 'moisturiser', categoryType: 'hair', attributes: [
+          profile.scalp_type === 'oily' ? 'lightweight' : 'hydrating',
+        ]},
+      ]
+    : [
+        { category: 'shampoo', categoryType: 'hair', attributes: [
+          profile.scalp_type === 'oily' || profile.primary_concern?.includes('dandruff')
+            ? 'sulphate_free' : 'sulphate_present',
+          ...(profile.primary_concern?.includes('dandruff') ? ['anti_dandruff'] : []),
+          ...(profile.primary_concern?.includes('hairfall')  ? ['strengthening']  : []),
+        ]},
+        { category: 'conditioner', categoryType: 'hair', attributes: [
+          profile.texture === 'curly' || profile.texture === 'coily'
+            ? 'deep_conditioning' : 'moisturising',
+          ...(profile.chemically_treated != null && profile.chemically_treated !== 'none' ? ['colour_safe'] : []),
+        ]},
+        { category: 'hair_oil', categoryType: 'hair', attributes: [
+          profile.primary_concern?.includes('hairfall') ? 'scalp_stimulating' : 'moisturising',
+        ]},
+        ...(profile.primary_concern?.includes('damage') || (profile.chemically_treated != null && profile.chemically_treated !== 'none')
+          ? [{ category: 'hair_mask', attributes: ['protein', 'deep_conditioning'], categoryType: 'hair' as const }]
+          : []),
+        ...(profile.primary_concern?.includes('frizz') || profile.texture === 'curly' || profile.texture === 'coily'
+          ? [{ category: 'hair_serum', attributes: ['curl_defining'],  categoryType: 'hair' as const }]
+          : [{ category: 'hair_serum', attributes: ['lightweight'],    categoryType: 'hair' as const }]),
+        ...(profile.primary_concern?.includes('dandruff') || profile.primary_concern?.includes('hairfall')
+          ? [{ category: 'scalp_serum', attributes: ['scalp_stimulating'], categoryType: 'hair' as const }]
+          : []),
+        ...(profile.texture === 'curly' || profile.texture === 'coily'
+          ? [{ category: 'leave_in_conditioner', attributes: ['curl_defining', 'moisturising'], categoryType: 'hair' as const }]
+          : []),
+      ];
+}
+
+// Generate hair recommendations from the user's hair profile and save both to users table.
+// faceShape is optional — pass it when available from the user's latest scan.
+export async function generateAndSaveHairProfile(
+  userId:    string,
+  profile:   HairProfile,
+  faceShape: string | null = null,
+  gender?:   string,
+): Promise<HairRecommendations> {
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('gender, city, preferred_brands_v2')
+    .eq('id', userId)
+    .single();
+
+  const resolvedGender      = gender ?? (userRow?.gender as string | null) ?? 'man';
+  const city                = (userRow?.city as string | null) ?? null;
+  const preferredBrandsRaw  = (userRow as { preferred_brands_v2?: PreferredBrands } | null)
+    ?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] };
+  const inferredBudget      = inferBudgetFromBrands(preferredBrandsRaw);
+
+  const hairGender: 'all' | 'men' | 'women' =
+    resolvedGender === 'woman' ? 'women' : resolvedGender === 'man' ? 'men' : 'all';
+
+  const hairCategories = buildHairCategories(profile);
+
+  const hairProductMap = getProductsForProfile({
+    categories:      hairCategories,
+    preferredBrands: preferredBrandsRaw,
+    gender:          hairGender,
+    budget:          inferredBudget,
+  });
+  // Flatten to one product per category for Gemini description writing
+  const matchedHairProducts: MatchedProduct[] = Object.values(hairProductMap).map(arr => arr[0]);
+
+  const hairRecs = await getHairRecommendationsFromGemini(
+    profile, faceShape, resolvedGender, city, inferredBudget, matchedHairProducts,
+  );
+
+  await supabase.from('users').update({
+    hair_profile:         profile,
+    hair_recommendations: hairRecs,
+  }).eq('id', userId);
+
+  return hairRecs;
 }
 
 // Log a product buy-tap event to the product_events table.
@@ -376,6 +940,16 @@ export async function logProductEvent(params: {
       brand:        params.brand,
       category:     params.category,
       event_type:   params.eventType,
+    });
+
+    await supabase.from('product_usage').insert({
+      user_id:      params.userId,
+      scan_id:      params.scanId,
+      product_id:   params.productId,
+      product_name: params.productName,
+      brand:        params.brand,
+      category:     params.category,
+      using_it:     null,
     });
   } catch (e) {
     // Non-critical — never block the user for logging failure

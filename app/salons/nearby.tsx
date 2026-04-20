@@ -154,13 +154,13 @@ export default function NearbyScreen() {
   if (phase === 'permission' && !locationError) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <BackBar title="Nearby Salons" />
         <View style={s.centreBox}>
           <View style={s.iconCircle}><Text style={s.iconGlyph}>◎</Text></View>
           <Text style={s.permTitle}>Find salons near you</Text>
           <Text style={s.permBody}>
-            Lumé shows grooming studios within a few kilometres.{'\n'}
+            Lumé shows care studios within a few kilometres.{'\n'}
             We never track your location in the background.
           </Text>
           <TouchableOpacity style={s.primaryBtn} onPress={doLocationSearch} activeOpacity={0.85}>
@@ -178,8 +178,8 @@ export default function NearbyScreen() {
   if (phase === 'loading') {
     return (
       <View style={[s.screen, s.centreBox, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
-        <ActivityIndicator color="#C9A84C" size="large" />
+        <StatusBar style="dark" />
+        <ActivityIndicator color={Colors.accent} size="large" />
         <Text style={s.loadingText}>Finding nearby salons…</Text>
       </View>
     );
@@ -189,7 +189,7 @@ export default function NearbyScreen() {
   if (locationError === 'location_denied') {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <BackBar title="Nearby Salons" />
         <View style={s.errorContainer}>
           <Text style={s.errorIcon}>📍</Text>
@@ -212,7 +212,7 @@ export default function NearbyScreen() {
   if (locationError === 'no_salons') {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <BackBar title="Nearby Salons" />
         <View style={s.errorContainer}>
           <Text style={s.errorIcon}>🏙️</Text>
@@ -232,7 +232,7 @@ export default function NearbyScreen() {
   if (networkError) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <BackBar title="Nearby Salons" />
         <View style={s.errorContainer}>
           <Text style={s.errorIcon}>📡</Text>
@@ -252,15 +252,15 @@ export default function NearbyScreen() {
   if (phase === 'city') {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <BackBar title="Nearby Salons" />
         <View style={s.centreBox}>
           <Text style={s.permTitle}>Which city are you in?</Text>
-          <Text style={s.permBody}>We'll show you the best grooming studios nearby.</Text>
+          <Text style={s.permBody}>We'll show you the best care studios nearby.</Text>
           <TextInput
             style={s.cityInput}
             placeholder="e.g. Bangalore, Mumbai…"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={Colors.text3}
             value={cityInput}
             onChangeText={setCityInput}
             autoCapitalize="words"
@@ -284,7 +284,7 @@ export default function NearbyScreen() {
   // ── List ───────────────────────────────────────────────────────────────────
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <BackBar title="Nearby Salons" />
       <ScrollView
         style={{ flex: 1 }}
@@ -387,64 +387,64 @@ function BackBar({ title }: { title: string }) {
 const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
-  arrow: { fontSize: 28, color: '#C9A84C', lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8' },
+  arrow: { fontSize: 28, color: Colors.surface, lineHeight: 32 },
+  title: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
 });
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen:    { flex: 1, backgroundColor: '#0A0A0A' },
+  screen:    { flex: 1, backgroundColor: Colors.background },
   centreBox: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl },
 
   // Permission / city
-  iconCircle:     { width: 64, height: 64, borderRadius: 32, backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl },
-  iconGlyph:      { fontSize: 28, color: '#C9A84C' },
-  permTitle:      { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', textAlign: 'center', marginBottom: Spacing.sm },
-  permBody:       { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
-  primaryBtn:     { width: '100%', backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
-  primaryBtnText: { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
+  iconCircle:     { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xl },
+  iconGlyph:      { fontSize: 28, color: Colors.accent },
+  permTitle:      { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, textAlign: 'center', marginBottom: Spacing.sm },
+  permBody:       { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
+  primaryBtn:     { width: '100%', backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
+  primaryBtnText: { fontSize: 14, fontWeight: '600', color: Colors.surface },
   ghostBtn:       { paddingVertical: Spacing.sm },
-  ghostBtnText:   { fontSize: 13, color: Colors.textSecondary },
-  cityInput:      { width: '100%', backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: 15, color: '#F5F0E8', marginBottom: Spacing.md },
+  ghostBtnText:   { fontSize: 13, color: Colors.text2 },
+  cityInput:      { width: '100%', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: 15, color: Colors.text, marginBottom: Spacing.md },
   disabled:       { opacity: 0.4 },
-  loadingText:    { fontSize: 13, color: Colors.textSecondary, marginTop: Spacing.md },
+  loadingText:    { fontSize: 13, color: Colors.text2, marginTop: Spacing.md },
 
   // Error states
   errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   errorIcon:      { fontSize: 32, marginBottom: 16 },
-  errorTitle:     { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', textAlign: 'center', marginBottom: 8 },
-  errorMessage:   { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  goldButton:     { backgroundColor: '#C9A84C', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24, marginBottom: 12 },
-  goldButtonText: { color: '#0A0A0A', fontWeight: '600', fontSize: 14 },
+  errorTitle:     { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, textAlign: 'center', marginBottom: 8 },
+  errorMessage:   { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  goldButton:     { backgroundColor: Colors.accent, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24, marginBottom: 12 },
+  goldButtonText: { color: Colors.surface, fontWeight: '600', fontSize: 14 },
   retryLink:      { padding: 8 },
-  retryText:      { color: Colors.textSecondary, fontSize: 13 },
+  retryText:      { color: Colors.text, fontSize: 13 },
 
   // List
   listContent: { padding: Spacing.lg },
-  listHeader:  { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.md, letterSpacing: 1 },
+  listHeader:  { fontSize: 13, color: Colors.text, marginBottom: Spacing.md, letterSpacing: 1 },
 
   listCard: {
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderRadius:    12,
     borderWidth:     1,
-    borderColor:     '#2A2420',
+    borderColor:     Colors.border,
     marginBottom:    Spacing.sm,
     overflow:        'hidden',
     flexDirection:   'row',
     alignItems:      'center',
   },
-  listThumb:        { width: 80, height: 80, backgroundColor: '#2A2420', overflow: 'hidden' },
+  listThumb:        { width: 80, height: 80, backgroundColor: Colors.surface2, overflow: 'hidden' },
   listThumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
   listBody:         { flex: 1, padding: Spacing.sm },
-  listName:         { fontSize: 15, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
-  listAddr:         { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.xs },
-  listArrow:        { fontSize: 22, color: Colors.textTertiary, paddingRight: Spacing.sm },
+  listName:         { fontSize: 15, color: Colors.text, fontWeight: '600', marginBottom: 2 },
+  listAddr:         { fontSize: 13, color: Colors.text2, marginBottom: Spacing.xs },
+  listArrow:        { fontSize: 22, color: Colors.text3, paddingRight: Spacing.sm },
 
   metaRow:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ratingText: { fontSize: 13, color: '#C9A84C' },
-  dot:        { fontSize: 13, color: Colors.textTertiary },
-  reviewText: { fontSize: 11, color: Colors.textSecondary },
-  distText:   { fontSize: 13, color: Colors.textSecondary },
+  ratingText: { fontSize: 13, color: Colors.accent },
+  dot:        { fontSize: 13, color: Colors.text3 },
+  reviewText: { fontSize: 11, color: Colors.text2 },
+  distText:   { fontSize: 13, color: Colors.text2 },
 
   openBadge:     { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#1A3A1A', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
   closedBadge:   { backgroundColor: '#3A1A1A' },
@@ -453,15 +453,15 @@ const s = StyleSheet.create({
   // Service pills
   pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: Spacing.xs },
   servicePill: {
-    backgroundColor: 'rgba(201,168,76,0.12)',
+    backgroundColor: 'rgba(230,199,156,0.18)',
     borderWidth:     1,
-    borderColor:     'rgba(201,168,76,0.25)',
+    borderColor:     'rgba(230,199,156,0.45)',
     borderRadius:    999,
     paddingHorizontal: 8,
     paddingVertical:   2,
   },
-  servicePillText: { fontSize: 9, color: '#C9A84C', fontWeight: '500' },
+  servicePillText: { fontSize: 9, color: Colors.accent, fontWeight: '500' },
 
   // Lumé profile badge
-  lumeProfileBadge: { fontSize: 11, color: '#4A4540', marginTop: 4 },
+  lumeProfileBadge: { fontSize: 11, color: Colors.text2, marginTop: 4 },
 });

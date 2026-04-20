@@ -9,16 +9,28 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
-import { getProductsForBrands } from '../constants/productConstants';
+import { PRODUCTS, getProductsForBrands } from '../constants/productConstants';
 import type { Product } from '../constants/productConstants';
-import { logProductEvent } from '../services/scanService';
+import { logProductEvent, getProductMap } from '../services/scanService';
 import { supabase } from '../lib/supabase';
-import type { Scan } from '../types';
+import type { Scan, MatchedProduct } from '../types';
+import ProductPickerSheet from '../components/ProductPickerSheet';
 
 type Tab = 'shape' | 'routine' | 'products';
 
 function formatCategoryName(cat: string): string {
   return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function getBeardCategoryForStep(label: string): string {
+  const map: Record<string, string> = {
+    'Cleanse':   'beard_wash',
+    'Nourish':   'beard_oil',
+    'Shape':     'beard_balm',
+    'Condition': 'beard_oil',
+    'Treat':     'beard_wash',
+  };
+  return map[label] ?? 'beard_oil';
 }
 
 interface ProductItem { icon: string; name: string; why: string; tag: string; }
@@ -70,7 +82,7 @@ function getBeardProducts(density: string | null): ProductItem[] {
     return [
       { icon: '◇', name: 'Minoxidil beard serum', why: 'Extends the anagen (growth) phase of follicles — apply twice daily to clean, dry skin. Consistent use over 4–6 months is required to see results.', tag: 'Growth' },
       { icon: '◆', name: 'Biotin supplement (5,000 mcg)', why: 'Vitamin B7 supports keratin production. Supplementation can improve hair thickness and growth rate with consistent daily use.', tag: 'Supplement' },
-      { icon: '≡', name: 'Beard balm (light hold)', why: 'Even for lighter growth, balm conditions the skin underneath and trains sparse hairs to lie flat and look more intentional.', tag: 'Grooming' },
+      { icon: '≡', name: 'Beard balm (light hold)', why: 'Even for lighter growth, balm conditions the skin underneath and trains sparse hairs to lie flat and look more intentional.', tag: 'Care' },
     ];
   }
   return [
@@ -89,10 +101,16 @@ export default function BeardDetailScreen() {
   const scan = scanJson ? (JSON.parse(scanJson) as Scan) : null;
   const rec  = scan?.recommendations;
 
-  const [tab,          setTab]          = useState<Tab>('shape');
-  const [preferredBrands, setPreferredBrands] = useState<string[]>([]);
-  const [brandsLoaded, setBrandsLoaded]  = useState(false);
+  const [tab,              setTab]             = useState<Tab>('shape');
+  const [preferredBrands,  setPreferredBrands]  = useState<string[]>([]);
+  const [brandsLoaded,     setBrandsLoaded]     = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  // Product picker state
+  const [pickerVisible,  setPickerVisible]  = useState(false);
+  const [pickerCategory, setPickerCategory] = useState('');
+  const [pickerStep,     setPickerStep]     = useState('');
+  const [pickerReason,   setPickerReason]   = useState('');
 
   useEffect(() => {
     const loadUserPrefs = async () => {
@@ -100,19 +118,29 @@ export default function BeardDetailScreen() {
       if (!user) { setBrandsLoaded(true); return; }
       const { data } = await supabase
         .from('users')
-        .select('preferred_brands')
+        .select('preferred_brands_v2')
         .eq('id', user.id)
         .single();
-      const row = data as { preferred_brands?: string[] } | null;
-      setPreferredBrands(row?.preferred_brands ?? []);
+      const row = data as { preferred_brands_v2?: { skin?: string[] } } | null;
+      const pb = row?.preferred_brands_v2 as { skin?: string[] } | null;
+      setPreferredBrands(pb?.skin ?? []);
+      if (scan?.id) {
+        getProductMap(scan.id).then(setProductMap);
+      }
       setBrandsLoaded(true);
     };
     loadUserPrefs();
   }, []);
 
-  const faceShapeBeard = FACE_SHAPE_BEARD[scan?.face_shape ?? ''] ?? null;
+  const faceShapeBeard   = FACE_SHAPE_BEARD[scan?.face_shape ?? ''] ?? null;
+  const beardRecs        = rec?.beard ?? null;
+  const beardCondition   = scan?.beard_condition ?? null;
 
-  const productRecs = rec?.beard?.products ?? [];
+  // Product map for picker — loaded from AsyncStorage (stored during scan)
+  const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
+
+  const BEARD_CATEGORIES = ['beard_oil', 'beard_wash', 'beard_balm'];
+  const productRecs = (rec?.products ?? []).filter(p => BEARD_CATEGORIES.includes(p.category));
   const visibleCategories = [...new Set(productRecs.map(p => p.category))];
 
   const handleBuyPress = async (product: Product, category: string) => {
@@ -134,7 +162,7 @@ export default function BeardDetailScreen() {
 
   return (
     <View style={s.screen}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       <View style={[s.topBar, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity
@@ -217,14 +245,14 @@ export default function BeardDetailScreen() {
                   paddingHorizontal: 20,
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: '#C9A84C',
-                  backgroundColor: 'rgba(201,168,76,0.08)',
+                  borderColor: Colors.accent,
+                  backgroundColor: 'rgba(230,199,156,0.12)',
                 }}
                 activeOpacity={0.7}
               >
                 <Text style={{ fontSize: 15 }}>🔍</Text>
                 <Text style={{
-                  color: '#C9A84C',
+                  color: Colors.text,
                   fontSize: 14,
                   fontWeight: '600',
                 }}>
@@ -232,22 +260,107 @@ export default function BeardDetailScreen() {
                 </Text>
               </TouchableOpacity>
             )}
+
+            {/* AI-generated beard style recommendations */}
+            {beardRecs?.beard_styles && beardRecs.beard_styles.length > 0 && (
+              <View style={s.stylesSection}>
+                <Text style={s.stylesSectionTitle}>Styles for your face + beard</Text>
+                {beardRecs.beard_styles
+                  .filter(bs => !bs.not_recommended)
+                  .map((style, i) => (
+                  <View key={i} style={s.styleCard}>
+                    <View style={s.styleHeader}>
+                      <Text style={s.styleName}>{style.name}</Text>
+                      <View style={[s.maintDot,
+                        style.maintenance === 'low'    ? s.maintLow :
+                        style.maintenance === 'medium' ? s.maintMed : s.maintHigh
+                      ]} />
+                    </View>
+                    <Text style={s.styleWhy}>{style.why}</Text>
+                  </View>
+                ))}
+                {beardRecs.beard_styles
+                  .filter(bs => bs.not_recommended)
+                  .map((style, i) => (
+                  <View key={i} style={s.avoidCard}>
+                    <Text style={s.avoidLabel}>NOT RECOMMENDED</Text>
+                    <Text style={s.avoidName}>{style.name}</Text>
+                    <Text style={s.avoidReason}>{style.why}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         )}
 
         {/* ── ROUTINE ── */}
         {tab === 'routine' && (
           <>
+            {beardCondition === 'patchy' && (
+              <View style={s.honestCard}>
+                <Text style={s.honestLabel}>THE HONEST TRUTH</Text>
+                <Text style={s.honestBody}>
+                  Patchiness is determined by genetics and testosterone — no oil or serum will fill gaps. We've recommended styles that work with your beard instead.
+                </Text>
+              </View>
+            )}
+            {beardCondition === 'well_groomed' && (
+              <View style={s.goodCard}>
+                <Text style={s.goodLabel}>LOOKING GOOD</Text>
+                <Text style={s.goodBody}>
+                  Your beard is well maintained. These two products keep it that way.
+                </Text>
+              </View>
+            )}
+            {beardCondition === 'untrimmed' && (
+              <View style={s.honestCard}>
+                <Text style={s.honestLabel}>NEEDS ATTENTION</Text>
+                <Text style={s.honestBody}>
+                  Your beard needs shaping. A barber visit to establish a clean line makes home maintenance much easier.
+                </Text>
+              </View>
+            )}
+
             <InfoCard title="DAILY">
-              {DAILY_STEPS.map((step, i) => (
-                <StepRow key={i} n={i + 1} text={step} />
-              ))}
+              {DAILY_STEPS.map((step, i) => {
+                const DAILY_CATS = ['beard_oil', 'beard_oil', 'beard_balm'] as const;
+                const cat = DAILY_CATS[i] ?? 'beard_oil';
+                const hasProducts = (productMap[cat]?.length ?? 0) > 0;
+                return (
+                  <StepRow
+                    key={i}
+                    n={i + 1}
+                    text={step}
+                    onPress={hasProducts ? () => {
+                      setPickerCategory(cat);
+                      setPickerStep(`Step ${i + 1}`);
+                      setPickerReason(step);
+                      setPickerVisible(true);
+                    } : undefined}
+                  />
+                );
+              })}
             </InfoCard>
 
             <InfoCard title="WEEKLY">
-              {WEEKLY_STEPS.map((step, i) => (
-                <StepRow key={i} n={i + 1} text={step} />
-              ))}
+              {WEEKLY_STEPS.map((step, i) => {
+                const WEEKLY_CATS = ['beard_wash', 'beard_oil', 'beard_balm', 'beard_wash'] as const;
+                const cat = WEEKLY_CATS[i] ?? 'beard_wash';
+                const hasProducts = (productMap[cat]?.length ?? 0) > 0;
+                return (
+                  <StepRow
+                    key={i}
+                    n={i + 1}
+                    text={step}
+                    onPress={hasProducts ? () => {
+                      setPickerCategory(cat);
+                      setPickerStep(`Step ${i + 1}`);
+                      setPickerReason(step);
+                      setPickerVisible(true);
+                    } : undefined}
+                  />
+                );
+              })}
             </InfoCard>
 
             <InfoCard title="NECKLINE GUIDE">
@@ -274,7 +387,7 @@ export default function BeardDetailScreen() {
               >
                 <Text style={s.noBrandsTitle}>Set your preferred brands</Text>
                 <Text style={s.noBrandsSub}>We'll show products from brands you already trust</Text>
-                <Text style={s.noBrandsArrow}>›</Text>
+                <Text style={s.noBrandsBtnText}>Set brands →</Text>
               </TouchableOpacity>
             )}
 
@@ -285,13 +398,9 @@ export default function BeardDetailScreen() {
             ) : (
               visibleCategories.map(cat => {
                 const catRec = productRecs.find(p => p.category === cat);
-                const products = getProductsForBrands({
-                  category:     cat,
-                  preferredBrands,
-                  fallbackTier: 'budget',
-                  gender:       'men',
-                  limit:        3,
-                });
+                const product: Product | undefined =
+                  PRODUCTS.find(p => p.category === cat && p.name === catRec?.name && p.brand === catRec?.brand)
+                  ?? getProductsForBrands({ category: cat, preferredBrands, fallbackTier: 'budget', gender: 'men', limit: 1 })[0];
                 const isExpanded = expandedCategory === cat;
                 return (
                   <View key={cat} style={s.catTile}>
@@ -300,49 +409,45 @@ export default function BeardDetailScreen() {
                       onPress={() => setExpandedCategory(isExpanded ? null : cat)}
                       activeOpacity={0.8}
                     >
-                      <View style={s.catHeaderLeft}>
-                        <Text style={s.catName}>{formatCategoryName(cat)}</Text>
-                        {catRec && (
-                          <View style={s.matchBadge}>
-                            <Text style={s.matchBadgeText}>{catRec.match_score}% match</Text>
-                          </View>
-                        )}
-                      </View>
+                      <Text style={s.catName}>{formatCategoryName(cat)}</Text>
                       <Text style={s.chevron}>{isExpanded ? '∧' : '∨'}</Text>
                     </TouchableOpacity>
 
                     {isExpanded && (
-                      <View style={s.catBody}>
-                        {catRec?.reason ? (
-                          <Text style={s.catReason}>{catRec.reason}</Text>
-                        ) : null}
-                        {products.length === 0 ? (
-                          <Text style={s.noProductsText}>No matching products found.</Text>
-                        ) : (
-                          products.map(product => (
-                            <View key={product.id} style={s.productRow}>
-                              <View style={s.productRowLeft}>
-                                {product.isPreferredBrand && (
-                                  <View style={s.preferredBadge}>
-                                    <Text style={s.preferredBadgeText}>Your brand</Text>
-                                  </View>
-                                )}
-                                <Text style={s.productRowName}>{product.name}</Text>
-                                <Text style={s.productRowMeta}>
-                                  {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
-                                </Text>
-                              </View>
-                              <TouchableOpacity
-                                style={s.buyBtn}
-                                onPress={() => handleBuyPress(product, cat)}
-                                activeOpacity={0.8}
-                              >
-                                <Text style={s.buyBtnText}>Buy</Text>
-                              </TouchableOpacity>
+                      product == null ? (
+                        <Text style={s.noProductsText}>No matching products found.</Text>
+                      ) : (
+                        <View style={s.expandedProduct}>
+                          <View style={s.matchMeterWrap}>
+                            <View style={s.matchMeterHeader}>
+                              <Text style={s.matchLabel}>Match</Text>
+                              <Text style={s.matchScore}>{catRec?.match_score ?? 0}%</Text>
                             </View>
-                          ))
-                        )}
-                      </View>
+                            <View style={s.matchTrack}>
+                              <View style={[s.matchFill, { width: `${catRec?.match_score ?? 0}%` }]} />
+                            </View>
+                          </View>
+                          {product.isPreferredBrand && (
+                            <View style={s.preferredBadge}>
+                              <Text style={s.preferredBadgeText}>Your brand</Text>
+                            </View>
+                          )}
+                          <Text style={s.productName}>{product.name}</Text>
+                          <Text style={s.productMeta}>
+                            {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
+                          </Text>
+                          {catRec?.reason ? (
+                            <Text style={s.productReason}>{catRec.reason}</Text>
+                          ) : null}
+                          <TouchableOpacity
+                            style={s.buyBtn}
+                            onPress={() => handleBuyPress(product!, cat)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={s.buyBtnText}>Buy on Nykaa</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )
                     )}
                   </View>
                 );
@@ -353,6 +458,15 @@ export default function BeardDetailScreen() {
 
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
+
+      <ProductPickerSheet
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        stepName={pickerStep}
+        categoryName={formatCategoryName(pickerCategory)}
+        reason={pickerReason}
+        products={productMap[pickerCategory] ?? []}
+      />
     </View>
   );
 }
@@ -368,15 +482,24 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-function StepRow({ n, text }: { n: number; text: string }) {
-  return (
-    <View style={s.stepRow}>
+function StepRow({ n, text, onPress }: { n: number; text: string; onPress?: () => void }) {
+  const inner = (
+    <>
       <View style={s.stepCircle}>
         <Text style={s.stepNum}>{n}</Text>
       </View>
       <Text style={s.stepText}>{text}</Text>
-    </View>
+      {onPress && <Text style={s.stepChevron}>›</Text>}
+    </>
   );
+  if (onPress) {
+    return (
+      <TouchableOpacity style={s.stepRow} onPress={onPress} activeOpacity={0.7}>
+        {inner}
+      </TouchableOpacity>
+    );
+  }
+  return <View style={s.stepRow}>{inner}</View>;
 }
 
 function ProductCard({ icon, name, why, tag, iconBg, iconColor }: ProductItem & { iconBg: string; iconColor: string }) {
@@ -404,17 +527,17 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
-  backArrow:   { fontSize: 32, color: Colors.gold, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.cream },
+  backArrow:   { fontSize: 32, color: Colors.surface, lineHeight: 40 },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.surface },
 
   tabBar: {
     flexDirection: 'row', gap: Spacing.sm,
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
   },
-  tabPill:           { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.pill, backgroundColor: '#1A1A1A' },
-  tabPillActive:     { backgroundColor: Colors.gold },
-  tabPillText:       { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
-  tabPillTextActive: { color: Colors.background, fontWeight: '600' },
+  tabPill:           { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.pill, backgroundColor: Colors.surface },
+  tabPillActive:     { backgroundColor: Colors.accent },
+  tabPillText:       { fontSize: 13, color: Colors.text2, fontWeight: '500' },
+  tabPillTextActive: { color: Colors.surface, fontWeight: '600' },
 
   scroll:  { flex: 1 },
   content: { paddingHorizontal: Spacing.lg },
@@ -425,71 +548,98 @@ const s = StyleSheet.create({
     padding: Spacing.lg, marginBottom: Spacing.sm,
   },
   infoCardLabel: {
-    fontSize: 10, color: Colors.gold,
+    fontSize: 10, color: Colors.accent,
     letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.md,
   },
 
   pillRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
-  pill:            { backgroundColor: Colors.goldDim, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  pillText:        { fontSize: 9, color: Colors.gold, textTransform: 'capitalize' },
-  pillSecondary:   { backgroundColor: '#1A1A1A' },
-  pillTextSecondary: { fontSize: 9, color: Colors.textSecondary, textTransform: 'capitalize' },
+  pill:            { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  pillText:        { fontSize: 9, color: Colors.accent, textTransform: 'capitalize' },
+  pillSecondary:   { backgroundColor: Colors.surface2 },
+  pillTextSecondary: { fontSize: 9, color: Colors.text2, textTransform: 'capitalize' },
 
-  adviceText: { fontSize: 15, color: Colors.cream, fontStyle: 'italic', lineHeight: 22 },
-  bodyText:   { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
-  highlight:  { color: Colors.cream, fontWeight: '600' },
+  adviceText: { fontSize: 15, color: Colors.text, fontStyle: 'italic', lineHeight: 22 },
+  bodyText:   { fontSize: 15, color: Colors.text2, lineHeight: 22 },
+  highlight:  { color: Colors.text, fontWeight: '600' },
 
-  shapeName:     { backgroundColor: '#1A2010', borderRadius: Radius.input, paddingHorizontal: 12, paddingVertical: 8, marginBottom: Spacing.md, alignSelf: 'flex-start' },
-  shapeNameText: { fontSize: 15, color: '#6BCB77', fontWeight: '500' },
+  shapeName:     { backgroundColor: Colors.surface2, borderRadius: Radius.input, paddingHorizontal: 12, paddingVertical: 8, marginBottom: Spacing.md, alignSelf: 'flex-start' },
+  shapeNameText: { fontSize: 15, color: Colors.text2, fontWeight: '500' },
 
 
-  stepRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, marginBottom: Spacing.md },
-  stepCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 },
-  stepNum:    { fontSize: 10, color: Colors.gold, fontWeight: '700' },
-  stepText:   { flex: 1, fontSize: 15, color: Colors.textSecondary, lineHeight: 20 },
+  stepRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, marginBottom: Spacing.md },
+  stepCircle:  { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.surface2, alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 },
+  stepNum:     { fontSize: 10, color: Colors.accent, fontWeight: '700' },
+  stepText:    { flex: 1, fontSize: 15, color: Colors.text2, lineHeight: 20 },
+  stepChevron: { fontSize: 18, color: Colors.accent, lineHeight: 22 },
 
-  openingLine: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.md },
+  // Condition cards
+  honestCard:  { backgroundColor: '#FEF6F2', borderRadius: 11, borderWidth: 1, borderColor: '#E8C4B4', padding: 12, marginBottom: 12 },
+  honestLabel: { fontSize: 9, color: Colors.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
+  honestBody:  { fontSize: 12, color: '#7A4A38', lineHeight: 18 },
+  goodCard:    { backgroundColor: '#EAF2EB', borderRadius: 11, borderWidth: 1, borderColor: '#C8DFC9', padding: 12, marginBottom: 12 },
+  goodLabel:   { fontSize: 9, color: Colors.green, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
+  goodBody:    { fontSize: 12, color: '#4A7A4E', lineHeight: 18 },
+
+  // Beard styles section
+  stylesSection:      { marginTop: 8 },
+  stylesSectionTitle: { fontSize: 13, fontWeight: '500', color: Colors.text, marginBottom: 8, marginTop: 4 },
+  styleCard:   { backgroundColor: Colors.card, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, padding: 12, marginBottom: 8 },
+  styleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  styleName:   { fontSize: 13, fontWeight: '500', color: Colors.text },
+  maintDot:    { width: 8, height: 8, borderRadius: 4 },
+  maintLow:    { backgroundColor: Colors.green },
+  maintMed:    { backgroundColor: Colors.accent },
+  maintHigh:   { backgroundColor: '#E24B4A' },
+  styleWhy:    { fontSize: 11, color: Colors.text2, lineHeight: 17 },
+  avoidCard:   { backgroundColor: '#FEF6F2', borderRadius: 10, borderWidth: 1, borderColor: '#E8C4B4', padding: 12, marginBottom: 8 },
+  avoidLabel:  { fontSize: 9, color: Colors.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
+  avoidName:   { fontSize: 12, fontWeight: '500', color: '#7A4A38', marginBottom: 3 },
+  avoidReason: { fontSize: 11, color: '#7A4A38', lineHeight: 17 },
+
+  openingLine: { fontSize: 15, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },
 
   // Collapsible category tiles
   noBrandsBanner: {
-    backgroundColor: '#1A1412', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: 'rgba(230,199,156,0.4)',
     borderRadius: 12, padding: 14, marginBottom: 8,
   },
-  noBrandsTitle: { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 3 },
-  noBrandsSub:   { fontSize: 13, color: Colors.textSecondary, lineHeight: 16 },
-  noBrandsArrow: { position: 'absolute', right: 14, top: 14, fontSize: 22, color: Colors.gold },
+  noBrandsTitle:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: 6 },
+  noBrandsSub:     { fontSize: 13, color: Colors.text2, lineHeight: 20 },
+  noBrandsBtnText: { fontSize: 13, color: Colors.accent, marginTop: 8 },
 
   catTile: {
-    backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
     borderRadius: 12, marginBottom: 6, overflow: 'hidden',
   },
   catHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 12,
   },
-  catHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  catName:       { fontSize: 15, color: Colors.cream, fontWeight: '600' },
-  matchBadge:    { backgroundColor: 'rgba(201,168,76,0.1)', borderRadius: Radius.pill, paddingHorizontal: 7, paddingVertical: 2 },
-  matchBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
-  chevron:       { fontSize: 13, color: Colors.textSecondary },
+  catName:   { fontSize: 15, color: Colors.text, fontWeight: '600' },
+  catReason: { fontSize: 13, color: Colors.text3, lineHeight: 18 },
+  chevron:   { fontSize: 13, color: Colors.text2 },
 
-  catBody:       { borderTopWidth: 1, borderTopColor: '#2A2420', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 },
-  catReason:     { fontSize: 11, color: Colors.textSecondary, lineHeight: 16, marginBottom: 10 },
-  noProductsText:{ fontSize: 11, color: Colors.textTertiary, marginBottom: 10 },
+  noProductsText: { fontSize: 11, color: Colors.text3, padding: 14 },
 
-  productRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    gap: 10, paddingVertical: 8,
-    borderTopWidth: 1, borderTopColor: '#222222',
+  expandedProduct: {
+    backgroundColor: 'rgba(230,199,156,0.08)', borderWidth: 1, borderTopWidth: 0,
+    borderColor: 'rgba(230,199,156,0.4)', borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10, padding: 14, marginBottom: 5,
   },
-  productRowLeft:  { flex: 1 },
-  preferredBadge:  { alignSelf: 'flex-start', backgroundColor: 'rgba(201,168,76,0.12)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 3 },
-  preferredBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
-  productRowName:  { fontSize: 15, color: Colors.cream, fontWeight: '500', marginBottom: 2 },
-  productRowMeta:  { fontSize: 13, color: '#8A7A6A' },
+  matchMeterWrap:   { marginBottom: 0 },
+  matchMeterHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  matchLabel:       { fontSize: 11, color: Colors.text2 },
+  matchScore:       { fontSize: 11, color: Colors.accent, fontWeight: '500' },
+  matchTrack:       { height: 3, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
+  matchFill:        { height: '100%', backgroundColor: Colors.accent, borderRadius: 2 },
 
-  buyBtn:          { backgroundColor: Colors.gold, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0 },
-  buyBtnText:      { fontSize: 14, color: Colors.background, fontWeight: '600' },
+  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: 'rgba(230,199,156,0.2)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
+  preferredBadgeText: { fontSize: 9, color: Colors.accent, fontWeight: '500' },
+  productName:        { fontSize: 15, color: Colors.text, fontWeight: '500', marginTop: 12, marginBottom: 3 },
+  productMeta:        { fontSize: 13, color: Colors.text2, marginBottom: 8 },
+  productReason:      { fontSize: 11, color: Colors.text3, lineHeight: 17, marginBottom: 12 },
+  buyBtn:     { backgroundColor: Colors.accent, borderRadius: 8, paddingVertical: 12, width: '100%', alignItems: 'center' },
+  buyBtnText: { fontSize: 14, color: Colors.surface, fontWeight: '600' },
 
   productCard: {
     flexDirection: 'row', alignItems: 'flex-start',
@@ -500,8 +650,7 @@ const s = StyleSheet.create({
   productIcon:     { width: 44, height: 44, borderRadius: Radius.icon, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   productIconChar: { fontSize: 18 },
   productBody:     { flex: 1 },
-  productName:     { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 4 },
-  productWhy:      { fontSize: 15, color: Colors.textSecondary, lineHeight: 19, marginBottom: Spacing.sm },
-  productTagPill:  { alignSelf: 'flex-start', backgroundColor: '#1A1A1A', borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  productTagText:  { fontSize: Typography.size.xs, color: Colors.textSecondary },
+  productWhy:      { fontSize: 15, color: Colors.text2, lineHeight: 19, marginBottom: Spacing.sm },
+  productTagPill:  { alignSelf: 'flex-start', backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  productTagText:  { fontSize: Typography.size.xs, color: Colors.text2 },
 });

@@ -1,206 +1,155 @@
 // Hair detail screen — Style | Care | Products tabs.
-// Receives scanJson and gender as navigation params.
+// Receives hairRecsJson (optional) and scanJson/gender as navigation params.
+// Falls back to loading hair_recommendations from users table if param absent.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
-import { getProductsForBrands } from '../constants/productConstants';
+import { PRODUCTS, getProductsForBrands } from '../constants/productConstants';
 import type { Product } from '../constants/productConstants';
-import { logProductEvent } from '../services/scanService';
+import { logProductEvent, getProductMap } from '../services/scanService';
 import { supabase } from '../lib/supabase';
-import type { Scan } from '../types';
+import type { Scan, HairRecommendations, HairProfile, MatchedProduct } from '../types';
+import ProductPickerSheet from '../components/ProductPickerSheet';
 
 type Tab = 'style' | 'care' | 'products';
 type RoutineLevel = 'simple' | 'balanced' | 'full';
 
 const CATEGORY_LIMIT: Record<RoutineLevel, number> = { simple: 2, balanced: 4, full: 99 };
 
+// Map routine step labels to product catalogue categories
+const HAIR_STEP_TO_CATEGORY: Record<string, string> = {
+  'Shampoo':              'shampoo',
+  'Condition':            'conditioner',
+  'Conditioner':          'conditioner',
+  'Oil':                  'hair_oil',
+  'Hair oil':             'hair_oil',
+  'Mask':                 'hair_mask',
+  'Hair mask':            'hair_mask',
+  'Serum':                'hair_serum',
+  'Hair serum':           'hair_serum',
+  'Leave-in':             'leave_in_conditioner',
+  'Leave-in conditioner': 'leave_in_conditioner',
+  'Scalp serum':          'scalp_serum',
+  'Scalp Serum':          'scalp_serum',
+  'Sunscreen':            'sunscreen',
+  'Moisturise':           'moisturiser',
+};
+
+function getHairCategoryForStep(label: string): string {
+  return HAIR_STEP_TO_CATEGORY[label] ?? label.toLowerCase().replace(/\s+/g, '_');
+}
+
 function formatCategoryName(cat: string): string {
   return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-interface ProductItem { icon: string; name: string; why: string; tag: string; }
-
-// ── Data helpers ───────────────────────────────────────────────────────────────
-
-function getConditionExplanation(texture: string | null, condition: string | null): string {
-  if (condition === 'dry')
-    return `Dry hair has a rough, lifted cuticle layer that lets moisture escape. This is why it can feel coarse, look dull, and frizz easily — the surface cannot hold water in or reflect light smoothly.`;
-  if (condition === 'oily')
-    return `Your scalp produces excess sebum, which travels down the hair shaft — faster on ${texture === 'straight' ? 'straight' : 'your'} hair type. This causes roots to look flat and greasy within a day or two of washing.`;
-  if (condition === 'damaged')
-    return `Damaged hair has broken protein bonds inside the cortex, caused by heat, chemical treatment, or mechanical stress. Strands are structurally weakened, prone to breakage, and struggle to retain moisture.`;
-  if (condition === 'thinning')
-    return `Your follicles are producing finer or fewer strands — visible thinning at the parting or crown. This can be caused by hormonal changes, nutrition, stress, or genetics.`;
-  if (condition === 'healthy')
-    return `Your hair is in great condition — the cuticle is smooth and closed, reflecting light well and retaining moisture effectively. The goal now is maintaining what you have.`;
-  return `Your hair is showing signs of imbalance. A targeted care routine will restore it to its best condition over the coming weeks.`;
-}
-
-function getWashRoutine(texture: string | null, condition: string | null): { frequency: string; steps: string[] } {
-  if (texture === 'curly' || texture === 'coily') {
-    return {
-      frequency: '2–3 times a week',
-      steps: [
-        'Soak hair completely with lukewarm water for at least 60 seconds',
-        'Apply sulphate-free shampoo to the scalp only — avoid mid-lengths',
-        'Apply a rich conditioner from mid-shaft to ends',
-        'Detangle gently with a wide-tooth comb while conditioner is in',
-        'Rinse with cool water and scrunch — never rub dry',
-        'Diffuse on the lowest heat setting or air-dry with a microfibre towel',
-      ],
-    };
-  }
-  if (condition === 'oily' || texture === 'straight') {
-    return {
-      frequency: 'Every other day',
-      steps: [
-        'Pre-wet hair for 30 seconds before any product',
-        'Apply clarifying shampoo to the scalp and massage for 60 seconds',
-        'Rinse completely — residue makes oiliness return faster',
-        'Apply lightweight conditioner to ends only',
-        'Rinse with cool water to tighten the cuticle',
-      ],
-    };
-  }
-  if (condition === 'dry' || condition === 'damaged') {
-    return {
-      frequency: 'Twice a week maximum',
-      steps: [
-        'Apply a light oil to dry ends 10 minutes before washing',
-        'Use a gentle, sulphate-free shampoo — one pass only',
-        'Apply deep conditioner from mid-length to ends',
-        'Leave in for 5 minutes under a shower cap if possible',
-        'Rinse with cool water — never hot',
-        'Pat dry gently — rubbing causes mechanical damage',
-      ],
-    };
-  }
-  return {
-    frequency: '2–3 times a week',
-    steps: [
-      'Pre-wet hair thoroughly before applying any product',
-      'Shampoo the scalp with a gentle formula',
-      'Apply conditioner from mid-lengths to ends',
-      'Rinse completely with cool water',
-      'Pat dry and style as usual',
-    ],
-  };
-}
-
-function getWeeklyTreatment(texture: string | null, condition: string | null): string {
-  if (condition === 'dry' || condition === 'damaged')
-    return 'Apply a deep conditioning mask from mid-length to ends. Cover with a shower cap and leave for 20 minutes — the heat amplifies absorption. Rinse thoroughly without shampooing after.';
-  if (condition === 'oily')
-    return 'Use a clarifying shampoo this day only. It resets scalp buildup and excess sebum without disrupting the daily routine. Follow with a light conditioner on ends only.';
-  if (condition === 'thinning')
-    return 'Massage a growth-stimulating oil (rosemary, peppermint, or a caffeine scalp serum) into the scalp for 5–10 minutes. Consistent weekly scalp massage measurably improves follicle circulation.';
-  if (texture === 'curly' || texture === 'coily')
-    return 'Do a protein treatment every 4–6 weeks to rebuild strength. Use a treatment containing hydrolysed keratin — leave for 15 minutes then rinse. Balance with a moisture mask the following week.';
-  return 'Apply a nourishing hair mask to mid-lengths and ends. Focus on the most porous sections. A 10–15 minute weekly treatment maintains condition between washes.';
-}
-
-function getHairProducts(texture: string | null, condition: string | null): ProductItem[] {
-  if (texture === 'curly' || texture === 'coily') {
-    return [
-      { icon: '◎', name: 'Curl-defining cream', why: 'Defines your curl pattern and reduces frizz by adding moisture and hold without stiffness.', tag: 'Definition' },
-      { icon: '◆', name: 'Deep moisture mask', why: `${texture === 'coily' ? 'Coily' : 'Curly'} hair is naturally dry — a weekly mask restores hydration and softens the curl for easier detangling.`, tag: 'Hydration' },
-      { icon: '◎', name: 'Anti-frizz oil', why: 'Seals the cuticle and tames flyaways. Apply to damp hair before styling to lock in moisture.', tag: 'Frizz control' },
-    ];
-  }
-  if (texture === 'wavy') {
-    return [
-      { icon: '◎', name: 'Wave-enhancing cream', why: 'Defines your natural wave pattern and adds lightweight hold without weighing hair down.', tag: 'Definition' },
-      { icon: '◇', name: 'Anti-humidity serum', why: 'Prevents humidity from frizzing out your waves — apply to mid-lengths and ends before stepping out.', tag: 'Frizz control' },
-      { icon: '◎', name: 'Sulphate-free shampoo', why: 'Gentle formula that cleanses without stripping the natural oils that help wavy hair stay defined.', tag: 'Cleanse' },
-    ];
-  }
-  if (condition === 'dry') {
-    return [
-      { icon: '◎', name: 'Argan oil conditioner', why: 'Rich in fatty acids that penetrate the hair shaft and restore the moisture that dry, lifted cuticles lose between washes.', tag: 'Hydration' },
-      { icon: '◎', name: 'Sulphate-free shampoo', why: 'Mild formula that cleans without stripping — sulphates are too harsh for already dry hair.', tag: 'Cleanse' },
-      { icon: '◇', name: 'Heat protectant spray', why: 'Dry hair is already weakened — a UV and heat shield prevents further moisture loss from styling.', tag: 'Protection' },
-    ];
-  }
-  if (condition === 'oily') {
-    return [
-      { icon: '◎', name: 'Clarifying shampoo', why: 'Breaks down excess sebum and product buildup at the scalp. Use once a week to reset without over-drying.', tag: 'Scalp care' },
-      { icon: '◇', name: 'Lightweight leave-in', why: 'Hydrates lengths and ends without touching the scalp — oily roots need moisture-free zones.', tag: 'Hydration' },
-      { icon: '◎', name: 'Dry shampoo', why: 'Absorbs oil at the roots between washes — reduces over-washing, which can worsen oiliness over time.', tag: 'Between washes' },
-    ];
-  }
-  if (condition === 'damaged') {
-    return [
-      { icon: '◆', name: 'Protein treatment mask', why: 'Rebuilds broken protein bonds inside the hair shaft. Apply to clean, damp hair once a week for 15 minutes.', tag: 'Repair' },
-      { icon: '◎', name: 'Bond-repair conditioner', why: 'Targets internal hair structure to restore strength — look for bis-aminopropyl diglycol dimaleate as an active.', tag: 'Strength' },
-      { icon: '◇', name: 'Split-end serum', why: 'Smooths and temporarily seals split ends while reducing further breakage from friction and heat.', tag: 'Protection' },
-    ];
-  }
-  if (condition === 'thinning') {
-    return [
-      { icon: '◎', name: 'Biotin-enriched shampoo', why: 'Biotin (vitamin B7) supports keratin production — consistent use can improve hair shaft thickness over months.', tag: 'Growth' },
-      { icon: '◇', name: 'Scalp stimulating serum', why: 'Increases circulation at the follicle level — look for rosemary oil, minoxidil, or caffeine as actives.', tag: 'Scalp' },
-      { icon: '◎', name: 'Volumising mousse', why: 'Adds body to fine strands — apply to wet hair at the roots and blow-dry upward for maximum lift.', tag: 'Volume' },
-    ];
-  }
-  return [
-    { icon: '◎', name: 'Nourishing conditioner', why: 'Maintains hydration in healthy hair — consistency matters more than intensity at this stage.', tag: 'Maintenance' },
-    { icon: '◇', name: 'UV protection spray', why: 'Sun exposure degrades keratin and fades colour — a UV shield preserves your condition.', tag: 'Protection' },
-    { icon: '◆', name: 'Weekly hydrating mask', why: 'Proactive treatment to prevent dryness before it starts — easier than fixing problems later.', tag: 'Prevention' },
-  ];
-}
+// Maintenance dot colour
+const MAINT_COLOR: Record<string, string> = {
+  low:    Colors.green ?? '#7A9E7E',
+  medium: Colors.accent,
+  high:   '#E24B4A',
+};
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export default function HairDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { scanJson, gender = 'man' } = useLocalSearchParams<{ scanJson: string; gender: string }>();
-  const scan = scanJson ? (JSON.parse(scanJson) as Scan) : null;
-  const rec  = scan?.recommendations;
+  const {
+    hairRecsJson,
+    scanJson,
+    gender = 'man',
+  } = useLocalSearchParams<{ hairRecsJson?: string; scanJson?: string; gender?: string }>();
 
-  const [tab,           setTab]          = useState<Tab>('style');
-  const [selectedStyle, setSelectedStyle] = useState<string>(rec?.hair?.styles?.[0] ?? '');
+  const scan = scanJson ? (JSON.parse(scanJson) as Scan) : null;
+
+  const [hairRecs,       setHairRecs]       = useState<HairRecommendations | null>(
+    hairRecsJson ? JSON.parse(hairRecsJson) as HairRecommendations : null,
+  );
+  const [hairProfile,    setHairProfile]    = useState<HairProfile | null>(null);
+  const [loading,        setLoading]        = useState(!hairRecsJson);
+  const [tab,            setTab]            = useState<Tab>('style');
+  const [selectedStyle,  setSelectedStyle]  = useState<string>('');
   const [preferredBrands, setPreferredBrands] = useState<string[]>([]);
-  const [routineLevel,  setRoutineLevel]  = useState<RoutineLevel>('simple');
-  const [brandsLoaded,  setBrandsLoaded]  = useState(false);
+  const [routineLevel,   setRoutineLevel]   = useState<RoutineLevel>('simple');
+  const [brandsLoaded,   setBrandsLoaded]   = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
+  // Product picker state
+  const [pickerVisible,  setPickerVisible]  = useState(false);
+  const [pickerCategory, setPickerCategory] = useState('');
+  const [pickerStep,     setPickerStep]     = useState('');
+  const [pickerReason,   setPickerReason]   = useState('');
+
   useEffect(() => {
-    const loadUserPrefs = async () => {
+    const loadPrefs = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setBrandsLoaded(true); return; }
+
       const { data } = await supabase
         .from('users')
-        .select('preferred_brands, routine_level')
+        .select('preferred_brands_v2, routine_level, hair_recommendations, hair_profile')
         .eq('id', user.id)
         .single();
-      const row = data as { preferred_brands?: string[]; routine_level?: string } | null;
-      setPreferredBrands(row?.preferred_brands ?? []);
+
+      const row = data as {
+        preferred_brands_v2?: { hair?: string[] };
+        routine_level?: string;
+        hair_recommendations?: HairRecommendations | null;
+        hair_profile?: HairProfile | null;
+      } | null;
+
+      const pb = row?.preferred_brands_v2 as { hair?: string[] } | null;
+      setPreferredBrands(pb?.hair ?? []);
       setRoutineLevel((row?.routine_level as RoutineLevel | undefined) ?? 'simple');
+
+      if (!hairRecs && row?.hair_recommendations) {
+        setHairRecs(row.hair_recommendations);
+      }
+      if (row?.hair_profile) {
+        setHairProfile(row.hair_profile);
+      }
+      if (scan?.id) {
+        getProductMap(scan.id).then(setProductMap);
+      }
+      setLoading(false);
       setBrandsLoaded(true);
     };
-    loadUserPrefs();
+    loadPrefs();
   }, []);
 
-  const profileTags = [
-    scan?.hair_texture, scan?.hair_condition,
-    scan?.face_shape ? `${scan.face_shape} face` : null,
-  ].filter(Boolean) as string[];
-
-  const { frequency, steps } = getWashRoutine(scan?.hair_texture ?? null, scan?.hair_condition ?? null);
+  useEffect(() => {
+    if (hairRecs?.styles?.[0] && !selectedStyle) {
+      setSelectedStyle(hairRecs.styles[0]);
+    }
+  }, [hairRecs]);
 
   const productGender: 'all' | 'men' | 'women' =
     gender === 'woman' ? 'women' : gender === 'man' ? 'men' : 'all';
 
-  const productRecs = rec?.hair?.products ?? [];
-  const categoryLimit = CATEGORY_LIMIT[routineLevel];
+  const productRecs    = hairRecs?.products ?? [];
+  const categoryLimit  = CATEGORY_LIMIT[routineLevel];
   const visibleCategories = [...new Set(productRecs.map(p => p.category))].slice(0, categoryLimit);
+
+  // Product map for the picker — loaded from AsyncStorage (stored during scan)
+  const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
+
+  // Routine steps filtered by current routine level
+  const visibleRoutineSteps = useMemo(() => {
+    if (!hairRecs?.routine) return [];
+    const levelOrder: Record<RoutineLevel, number> = { simple: 0, balanced: 1, full: 2 };
+    const currentOrder = levelOrder[routineLevel];
+    return hairRecs.routine
+      .filter(s => levelOrder[s.level as RoutineLevel] <= currentOrder)
+      .sort((a, b) => a.order - b.order);
+  }, [hairRecs?.routine, routineLevel]);
 
   const handleBuyPress = async (product: Product, category: string) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -218,9 +167,33 @@ export default function HairDetailScreen() {
     Linking.openURL(product.nykaa_url);
   };
 
+  if (loading) {
+    return (
+      <View style={[s.screen, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={Colors.accent} size="large" />
+      </View>
+    );
+  }
+
+  if (!hairRecs) {
+    return (
+      <View style={[s.screen, { alignItems: 'center', justifyContent: 'center', padding: Spacing.xl }]}>
+        <Text style={{ color: Colors.text, fontSize: 15, textAlign: 'center', marginBottom: Spacing.lg }}>
+          No hair profile yet.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.accent, borderRadius: Radius.input, paddingHorizontal: 24, paddingVertical: 12 }}
+          onPress={() => router.push({ pathname: '/hair-profile' as any, params: { returnTo: 'hair-detail' } })}
+        >
+          <Text style={{ color: Colors.surface, fontWeight: '600' }}>Set up hair profile</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={s.screen}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       {/* Top bar */}
       <View style={[s.topBar, { paddingTop: insets.top + 4 }]}>
@@ -258,33 +231,63 @@ export default function HairDetailScreen() {
         {/* ── STYLE ── */}
         {tab === 'style' && (
           <>
-            <InfoCard title="YOUR HAIR PROFILE">
-              <View style={s.pillRow}>
-                {profileTags.map(tag => (
-                  <View key={tag} style={s.pill}>
-                    <Text style={s.pillText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            </InfoCard>
-
-            {rec?.hair?.advice && (
-              <InfoCard title="WHAT TO ASK YOUR STYLIST">
-                <Text style={s.adviceText}>"{rec.hair.advice}"</Text>
+            {hairRecs.summary && (
+              <InfoCard title="HAIR SUMMARY">
+                <Text style={s.bodyText}>{hairRecs.summary}</Text>
               </InfoCard>
             )}
 
-            {rec?.hair?.styles && rec.hair.styles.length > 0 && (
+            {hairRecs.advice && (
+              <InfoCard title="WHAT TO ASK YOUR STYLIST">
+                <Text style={s.adviceText}>"{hairRecs.advice}"</Text>
+              </InfoCard>
+            )}
+
+            {/* Detailed styles — use styles_detailed if available */}
+            {hairRecs.styles_detailed && hairRecs.styles_detailed.length > 0 ? (
+              <InfoCard title="STYLES THAT SUIT YOU">
+                {hairRecs.styles_detailed.filter(sd => !sd.avoid).map((sd, i) => (
+                  <View key={`${sd.name}-${i}`} style={s.styleCard}>
+                    <View style={s.styleHeader}>
+                      <Text style={s.styleName}>{sd.name}</Text>
+                      <View style={[s.maintDot,
+                        sd.maintenance === 'low'    ? s.maintLow :
+                        sd.maintenance === 'medium' ? s.maintMed : s.maintHigh
+                      ]} />
+                    </View>
+                    {sd.why_face_shape ? (
+                      <Text style={s.styleWhy}>{sd.why_face_shape}</Text>
+                    ) : null}
+                    {sd.why_texture ? (
+                      <Text style={s.styleWhy}>{sd.why_texture}</Text>
+                    ) : null}
+                    {sd.climate_note ? (
+                      <Text style={s.styleClimate}>{sd.climate_note}</Text>
+                    ) : null}
+                  </View>
+                ))}
+
+                {hairRecs.styles_detailed.filter(sd => sd.avoid).map((sd, i) => (
+                  <View key={`avoid-${sd.name}-${i}`} style={s.avoidCard}>
+                    <Text style={s.avoidLabel}>NOT RECOMMENDED</Text>
+                    <Text style={s.avoidName}>{sd.name}</Text>
+                    {sd.avoid_reason ? (
+                      <Text style={s.avoidReason}>{sd.avoid_reason}</Text>
+                    ) : null}
+                  </View>
+                ))}
+              </InfoCard>
+            ) : hairRecs.styles && hairRecs.styles.length > 0 ? (
               <InfoCard title="STYLES THAT SUIT YOU">
                 <View style={s.stylesRow}>
-                  {rec.hair.styles.map(style => (
+                  {hairRecs.styles.map(style => (
                     <TouchableOpacity
                       key={style}
-                      style={[s.styleCard, selectedStyle === style && s.styleCardActive]}
+                      style={[s.styleCardSimple, selectedStyle === style && s.styleCardSimpleActive]}
                       onPress={() => setSelectedStyle(style)}
                       activeOpacity={0.75}
                     >
-                      <Text style={[s.styleName, selectedStyle === style && s.styleNameActive]} numberOfLines={3}>
+                      <Text style={[s.styleNameSimple, selectedStyle === style && s.styleNameSimpleActive]} numberOfLines={3}>
                         {style}
                       </Text>
                       <View style={[s.styleLine, selectedStyle === style && s.styleLineActive]} />
@@ -299,56 +302,63 @@ export default function HairDetailScreen() {
                       const query = encodeURIComponent(`${selectedStyle} ${genderTerm} hairstyle`);
                       Linking.openURL(`https://www.google.com/search?q=${query}&tbm=isch`);
                     }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      marginTop: 16,
-                      paddingVertical: 12,
-                      paddingHorizontal: 20,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: '#C9A84C',
-                      backgroundColor: 'rgba(201,168,76,0.08)',
-                    }}
+                    style={s.searchBtn}
                     activeOpacity={0.7}
                   >
                     <Text style={{ fontSize: 15 }}>🔍</Text>
-                    <Text style={{
-                      color: '#C9A84C',
-                      fontSize: 13,
-                      fontWeight: '600',
-                    }}>
-                      See {selectedStyle} photos
-                    </Text>
+                    <Text style={s.searchBtnText}>See {selectedStyle} photos</Text>
                   </TouchableOpacity>
                 )}
               </InfoCard>
-            )}
+            ) : null}
           </>
         )}
 
         {/* ── CARE ── */}
         {tab === 'care' && (
           <>
-            <InfoCard title="WHY YOUR HAIR NEEDS THIS">
-              <Text style={s.bodyText}>
-                {getConditionExplanation(scan?.hair_texture ?? null, scan?.hair_condition ?? null)}
-              </Text>
-            </InfoCard>
+            {hairRecs.condition_explanation && (
+              <InfoCard title="WHY YOUR HAIR NEEDS THIS">
+                <Text style={s.bodyText}>{hairRecs.condition_explanation}</Text>
+              </InfoCard>
+            )}
 
-            <InfoCard title={`WASH DAYS — ${frequency.toUpperCase()}`}>
-              {steps.map((step, i) => (
-                <StepRow key={i} n={i + 1} text={step} />
-              ))}
-            </InfoCard>
+            {hairRecs.wash_frequency && (
+              <InfoCard title={`WASH DAYS — ${hairRecs.wash_frequency.toUpperCase()}`}>
+                {hairRecs.wash_steps.map((step, i) => (
+                  <StepRow key={i} n={i + 1} text={step} />
+                ))}
+              </InfoCard>
+            )}
 
-            <InfoCard title="ONCE A WEEK">
-              <Text style={s.bodyText}>
-                {getWeeklyTreatment(scan?.hair_texture ?? null, scan?.hair_condition ?? null)}
-              </Text>
-            </InfoCard>
+            {hairRecs.weekly_treatment && (
+              <InfoCard title="ONCE A WEEK">
+                <Text style={s.bodyText}>{hairRecs.weekly_treatment}</Text>
+              </InfoCard>
+            )}
+
+            {visibleRoutineSteps.length > 0 && (
+              <InfoCard title="YOUR ROUTINE">
+                {visibleRoutineSteps.map((step, i) => {
+                  const cat = getHairCategoryForStep(step.label);
+                  const hasProducts = (productMap[cat]?.length ?? 0) > 0;
+                  return (
+                    <StepRow
+                      key={`${step.label}-${i}`}
+                      n={i + 1}
+                      text={step.label}
+                      onPress={hasProducts ? () => {
+                        setPickerCategory(cat);
+                        setPickerStep(step.label);
+                        setPickerReason(step.product);
+                        setPickerVisible(true);
+                      } : undefined}
+                    />
+                  );
+                })}
+              </InfoCard>
+            )}
+
           </>
         )}
 
@@ -363,24 +373,20 @@ export default function HairDetailScreen() {
               >
                 <Text style={s.noBrandsTitle}>Set your preferred brands</Text>
                 <Text style={s.noBrandsSub}>We'll show products from brands you already trust</Text>
-                <Text style={s.noBrandsArrow}>›</Text>
+                <Text style={s.noBrandsBtnText}>Set brands →</Text>
               </TouchableOpacity>
             )}
 
             {productRecs.length === 0 ? (
               <Text style={s.openingLine}>
-                No product recommendations yet — rescan to get personalised picks.
+                No product picks yet — update your hair profile to get personalised recommendations.
               </Text>
             ) : (
               visibleCategories.map(cat => {
                 const catRec = productRecs.find(p => p.category === cat);
-                const products = getProductsForBrands({
-                  category:     cat,
-                  preferredBrands,
-                  fallbackTier: 'budget',
-                  gender:       productGender,
-                  limit:        3,
-                });
+                const product: Product | undefined =
+                  PRODUCTS.find(p => p.category === cat && p.name === catRec?.name && p.brand === catRec?.brand)
+                  ?? getProductsForBrands({ category: cat, preferredBrands, fallbackTier: 'budget', gender: productGender, limit: 1 })[0];
                 const isExpanded = expandedCategory === cat;
                 return (
                   <View key={cat} style={s.catTile}>
@@ -389,49 +395,45 @@ export default function HairDetailScreen() {
                       onPress={() => setExpandedCategory(isExpanded ? null : cat)}
                       activeOpacity={0.8}
                     >
-                      <View style={s.catHeaderLeft}>
-                        <Text style={s.catName}>{formatCategoryName(cat)}</Text>
-                        {catRec && (
-                          <View style={s.matchBadge}>
-                            <Text style={s.matchBadgeText}>{catRec.match_score}% match</Text>
-                          </View>
-                        )}
-                      </View>
+                      <Text style={s.catName}>{formatCategoryName(cat)}</Text>
                       <Text style={s.chevron}>{isExpanded ? '∧' : '∨'}</Text>
                     </TouchableOpacity>
 
                     {isExpanded && (
-                      <View style={s.catBody}>
-                        {catRec?.reason ? (
-                          <Text style={s.catReason}>{catRec.reason}</Text>
-                        ) : null}
-                        {products.length === 0 ? (
-                          <Text style={s.noProductsText}>No matching products found.</Text>
-                        ) : (
-                          products.map(product => (
-                            <View key={product.id} style={s.productRow}>
-                              <View style={s.productRowLeft}>
-                                {product.isPreferredBrand && (
-                                  <View style={s.preferredBadge}>
-                                    <Text style={s.preferredBadgeText}>Your brand</Text>
-                                  </View>
-                                )}
-                                <Text style={s.productRowName}>{product.name}</Text>
-                                <Text style={s.productRowMeta}>
-                                  {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
-                                </Text>
-                              </View>
-                              <TouchableOpacity
-                                style={s.buyBtn}
-                                onPress={() => handleBuyPress(product, cat)}
-                                activeOpacity={0.8}
-                              >
-                                <Text style={s.buyBtnText}>Buy</Text>
-                              </TouchableOpacity>
+                      product == null ? (
+                        <Text style={s.noProductsText}>No matching products found.</Text>
+                      ) : (
+                        <View style={s.expandedProduct}>
+                          <View style={s.matchMeterWrap}>
+                            <View style={s.matchMeterHeader}>
+                              <Text style={s.matchLabel}>Match</Text>
+                              <Text style={s.matchScore}>{catRec?.match_score ?? 0}%</Text>
                             </View>
-                          ))
-                        )}
-                      </View>
+                            <View style={s.matchTrack}>
+                              <View style={[s.matchFill, { width: `${catRec?.match_score ?? 0}%` }]} />
+                            </View>
+                          </View>
+                          {product.isPreferredBrand && (
+                            <View style={s.preferredBadge}>
+                              <Text style={s.preferredBadgeText}>Your brand</Text>
+                            </View>
+                          )}
+                          <Text style={s.productName}>{product.name}</Text>
+                          <Text style={s.productMeta}>
+                            {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
+                          </Text>
+                          {catRec?.reason ? (
+                            <Text style={s.productReason}>{catRec.reason}</Text>
+                          ) : null}
+                          <TouchableOpacity
+                            style={s.buyBtn}
+                            onPress={() => handleBuyPress(product!, cat)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={s.buyBtnText}>Buy on Nykaa</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )
                     )}
                   </View>
                 );
@@ -446,7 +448,7 @@ export default function HairDetailScreen() {
               >
                 <Text style={s.upsellTitle}>Want more targeted picks?</Text>
                 <Text style={s.upsellSub}>Switch to Balanced or Full routine to unlock more categories</Text>
-                <Text style={s.upsellArrow}>›</Text>
+                <Text style={s.upsellLink}>Upgrade routine →</Text>
               </TouchableOpacity>
             )}
           </>
@@ -454,6 +456,15 @@ export default function HairDetailScreen() {
 
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
+
+      <ProductPickerSheet
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        stepName={pickerStep}
+        categoryName={formatCategoryName(pickerCategory)}
+        reason={pickerReason}
+        products={productMap[pickerCategory] ?? []}
+      />
     </View>
   );
 }
@@ -469,32 +480,24 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-function StepRow({ n, text }: { n: number; text: string }) {
-  return (
-    <View style={s.stepRow}>
+function StepRow({ n, text, onPress }: { n: number; text: string; onPress?: () => void }) {
+  const inner = (
+    <View style={s.stepRowInner}>
       <View style={s.stepCircle}>
         <Text style={s.stepNum}>{n}</Text>
       </View>
       <Text style={s.stepText}>{text}</Text>
+      {onPress && <Text style={s.stepChevron}>›</Text>}
     </View>
   );
-}
-
-function ProductCard({ icon, name, why, tag, iconBg, iconColor }: ProductItem & { iconBg: string; iconColor: string }) {
-  return (
-    <View style={s.productCard}>
-      <View style={[s.productIcon, { backgroundColor: iconBg }]}>
-        <Text style={[s.productIconChar, { color: iconColor }]}>{icon}</Text>
-      </View>
-      <View style={s.productBody}>
-        <Text style={s.productName}>{name}</Text>
-        <Text style={s.productWhy}>{why}</Text>
-        <View style={s.productTagPill}>
-          <Text style={s.productTagText}>{tag}</Text>
-        </View>
-      </View>
-    </View>
-  );
+  if (onPress) {
+    return (
+      <TouchableOpacity style={s.stepRow} onPress={onPress} activeOpacity={0.7}>
+        {inner}
+      </TouchableOpacity>
+    );
+  }
+  return <View style={s.stepRow}>{inner}</View>;
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
@@ -505,17 +508,17 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
-  backArrow:   { fontSize: 32, color: Colors.gold, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.cream },
+  backArrow:   { fontSize: 32, color: Colors.surface, lineHeight: 40 },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.surface },
 
   tabBar: {
     flexDirection: 'row', gap: Spacing.sm,
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
   },
-  tabPill:         { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.pill, backgroundColor: '#1A1A1A' },
-  tabPillActive:   { backgroundColor: Colors.gold },
-  tabPillText:     { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
-  tabPillTextActive: { color: Colors.background, fontWeight: '600' },
+  tabPill:           { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.pill, backgroundColor: Colors.surface },
+  tabPillActive:     { backgroundColor: Colors.accent },
+  tabPillText:       { fontSize: 13, color: Colors.text2, fontWeight: '500' },
+  tabPillTextActive: { color: Colors.surface, fontWeight: '600' },
 
   scroll:  { flex: 1 },
   content: { paddingHorizontal: Spacing.lg },
@@ -526,99 +529,109 @@ const s = StyleSheet.create({
     padding: Spacing.lg, marginBottom: Spacing.sm,
   },
   infoCardLabel: {
-    fontSize: 10, color: Colors.gold,
+    fontSize: 10, color: Colors.accent,
     letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.md,
   },
 
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
-  pill:    { backgroundColor: Colors.goldDim, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  pillText:{ fontSize: 9, color: Colors.gold, textTransform: 'capitalize' },
+  adviceText: { fontSize: 15, color: Colors.text, fontStyle: 'italic', lineHeight: 22 },
+  bodyText:   { fontSize: 15, color: Colors.text2, lineHeight: 22 },
 
-  adviceText: { fontSize: 15, color: Colors.cream, fontStyle: 'italic', lineHeight: 22 },
-  bodyText:   { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
-
-  // Style cards
-  stylesRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+  // Detailed style cards (styles_detailed)
   styleCard: {
-    flex: 1, height: 80, backgroundColor: Colors.surface,
-    borderRadius: Radius.input, borderWidth: 1, borderColor: Colors.border,
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xs, gap: 6,
+    backgroundColor: Colors.surface, borderRadius: Radius.input,
+    borderWidth: 1, borderColor: Colors.border,
+    padding: 12, marginBottom: 8,
   },
-  styleCardActive: { borderColor: Colors.gold },
-  styleName:       { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 17 },
-  styleNameActive: { color: Colors.cream },
-  styleLine:       { width: 20, height: 1, backgroundColor: Colors.border },
-  styleLineActive: { backgroundColor: Colors.gold },
+  styleHeader:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  styleName:     { fontSize: 14, color: Colors.text, fontWeight: '600', flex: 1 },
+  maintDot:      { width: 8, height: 8, borderRadius: 4 },
+  maintLow:      { backgroundColor: MAINT_COLOR.low },
+  maintMed:      { backgroundColor: MAINT_COLOR.medium },
+  maintHigh:     { backgroundColor: MAINT_COLOR.high },
+  styleWhy:      { fontSize: 12, color: Colors.text2, lineHeight: 17, marginTop: 2 },
+  styleClimate:  { fontSize: 11, color: Colors.text3, lineHeight: 16, marginTop: 4, fontStyle: 'italic' },
+
+  // Avoid cards
+  avoidCard:   { backgroundColor: '#FEF6F2', borderRadius: Radius.input, borderWidth: 1, borderColor: '#E8C4B4', padding: 12, marginBottom: 8 },
+  avoidLabel:  { fontSize: 9, color: Colors.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
+  avoidName:   { fontSize: 13, color: '#7A4A38', fontWeight: '500', marginBottom: 2 },
+  avoidReason: { fontSize: 11, color: '#7A4A38', lineHeight: 16 },
+
+  // Simple style cards (fallback — styles array)
+  stylesRow:           { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+  styleCardSimple:     { flex: 1, height: 80, backgroundColor: Colors.surface, borderRadius: Radius.input, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xs, gap: 6 },
+  styleCardSimpleActive: { borderColor: Colors.accent },
+  styleNameSimple:     { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 17 },
+  styleNameSimpleActive: { color: Colors.text },
+  styleLine:           { width: 20, height: 1, backgroundColor: Colors.border },
+  styleLineActive:     { backgroundColor: Colors.accent },
+
+  searchBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 16, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12,
+    borderWidth: 1, borderColor: Colors.accent, backgroundColor: 'rgba(230,199,156,0.12)',
+  },
+  searchBtnText: { color: Colors.text, fontSize: 13, fontWeight: '600' },
 
   // Steps
-  stepRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, marginBottom: Spacing.md },
-  stepCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.goldDim, alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 },
-  stepNum:    { fontSize: 10, color: Colors.gold, fontWeight: '700' },
-  stepText:   { flex: 1, fontSize: 15, color: Colors.textSecondary, lineHeight: 20 },
+  stepRow:       { marginBottom: Spacing.md },
+  stepRowInner:  { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
+  stepCircle:    { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.surface2, alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 },
+  stepNum:       { fontSize: 10, color: Colors.accent, fontWeight: '700' },
+  stepText:      { flex: 1, fontSize: 15, color: Colors.text2, lineHeight: 20 },
+  stepChevron:   { fontSize: 18, color: Colors.text3, lineHeight: 22 },
 
-  openingLine: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.md },
+  openingLine: { fontSize: 15, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },
 
-  // Collapsible category tiles
+  // No brands banner
   noBrandsBanner: {
-    backgroundColor: '#1A1412', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: 'rgba(230,199,156,0.4)',
     borderRadius: 12, padding: 14, marginBottom: 8,
   },
-  noBrandsTitle: { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 3 },
-  noBrandsSub:   { fontSize: 13, color: Colors.textSecondary, lineHeight: 16 },
-  noBrandsArrow: { position: 'absolute', right: 14, top: 14, fontSize: 22, color: Colors.gold },
+  noBrandsTitle:   { fontFamily: Typography.serif, fontSize: 18, color: Colors.text },
+  noBrandsSub:     { fontSize: 13, color: Colors.text2, lineHeight: 20 },
+  noBrandsBtnText: { fontSize: 13, color: Colors.accent, marginTop: 8 },
 
+  // Collapsible category tiles
   catTile: {
-    backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
     borderRadius: 12, marginBottom: 6, overflow: 'hidden',
   },
   catHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 12,
   },
-  catHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  catName:       { fontSize: 15, color: Colors.cream, fontWeight: '600' },
-  matchBadge:    { backgroundColor: 'rgba(201,168,76,0.1)', borderRadius: Radius.pill, paddingHorizontal: 7, paddingVertical: 2 },
-  matchBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
-  chevron:       { fontSize: 13, color: Colors.textSecondary },
+  catName: { fontSize: 15, color: Colors.text, fontWeight: '600' },
+  chevron: { fontSize: 13, color: Colors.text2 },
 
-  catBody:       { borderTopWidth: 1, borderTopColor: '#2A2420', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 },
-  catReason:     { fontSize: 11, color: Colors.textSecondary, lineHeight: 16, marginBottom: 10 },
-  noProductsText:{ fontSize: 13, color: Colors.textTertiary, marginBottom: 10 },
+  noProductsText: { fontSize: 11, color: Colors.text3, padding: 14 },
 
-  productRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    gap: 10, paddingVertical: 8,
-    borderTopWidth: 1, borderTopColor: '#222222',
+  expandedProduct: {
+    backgroundColor: 'rgba(230,199,156,0.08)', borderWidth: 1, borderTopWidth: 0,
+    borderColor: 'rgba(230,199,156,0.4)', borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10, padding: 14, marginBottom: 5,
   },
-  productRowLeft:  { flex: 1 },
-  preferredBadge:  { alignSelf: 'flex-start', backgroundColor: 'rgba(201,168,76,0.12)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 3 },
-  preferredBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
-  productRowName:  { fontSize: 15, color: Colors.cream, fontWeight: '500', marginBottom: 2 },
-  productRowMeta:  { fontSize: 13, color: '#8A7A6A' },
+  matchMeterWrap:   { marginBottom: 0 },
+  matchMeterHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  matchLabel:       { fontSize: 11, color: Colors.text2 },
+  matchScore:       { fontSize: 11, color: Colors.accent, fontWeight: '500' },
+  matchTrack:       { height: 3, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
+  matchFill:        { height: '100%', backgroundColor: Colors.accent, borderRadius: 2 },
 
-  buyBtn:          { backgroundColor: Colors.gold, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0 },
-  buyBtnText:      { fontSize: 14, color: Colors.background, fontWeight: '600' },
+  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: 'rgba(230,199,156,0.2)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
+  preferredBadgeText: { fontSize: 9, color: Colors.accent, fontWeight: '500' },
+  productName:        { fontSize: 15, color: Colors.text, fontWeight: '500', marginTop: 12, marginBottom: 3 },
+  productMeta:        { fontSize: 13, color: Colors.text2, marginBottom: 8 },
+  productReason:      { fontSize: 11, color: Colors.text3, lineHeight: 17, marginBottom: 12 },
+
+  buyBtn:     { backgroundColor: Colors.accent, borderRadius: 8, paddingVertical: 12, width: '100%', alignItems: 'center' },
+  buyBtnText: { fontSize: 14, color: Colors.surface, fontWeight: '600' },
 
   upsellCard: {
-    backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
     borderRadius: 12, padding: 14, marginTop: 4,
   },
-  upsellTitle: { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 3 },
-  upsellSub:   { fontSize: 13, color: Colors.textSecondary, lineHeight: 16 },
-  upsellArrow: { position: 'absolute', right: 14, top: 14, fontSize: 22, color: Colors.gold },
-
-  // Product cards (legacy — kept for reference)
-  productCard: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: Colors.surface, borderRadius: Radius.card,
-    borderWidth: 1, borderColor: Colors.border,
-    padding: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.md,
-  },
-  productIcon:     { width: 44, height: 44, borderRadius: Radius.icon, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  productIconChar: { fontSize: 18 },
-  productBody:     { flex: 1 },
-  productName:     { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 4 },
-  productWhy:      { fontSize: 15, color: Colors.textSecondary, lineHeight: 19, marginBottom: Spacing.sm },
-  productTagPill:  { alignSelf: 'flex-start', backgroundColor: '#1A1A1A', borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  productTagText:  { fontSize: Typography.size.xs, color: Colors.textSecondary },
+  upsellTitle: { fontSize: 15, color: Colors.text, fontWeight: '600', marginBottom: 3 },
+  upsellSub:   { fontSize: 13, color: Colors.text3, lineHeight: 18 },
+  upsellLink:  { fontSize: 13, color: Colors.accent, marginTop: 8 },
 });

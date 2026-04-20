@@ -4,8 +4,8 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
-import { runScan } from '../services/scanService';
-import type { Scan } from '../types';
+import { runScanPhase1, runScanPhase2 } from '../services/scanService';
+import type { Scan, PartialScan } from '../types';
 
 export type ScanPhase = 'home' | 'camera' | 'processing' | 'result';
 
@@ -15,6 +15,8 @@ export function useScan() {
   const [processingStep, setProcessingStep] = useState('');
   const [result,         setResult]         = useState<Scan | null>(null);
   const [error,          setError]          = useState<string | null>(null);
+  const [recsLoading,    setRecsLoading]    = useState(false);
+  const [recsError,      setRecsError]      = useState(false);
 
   const openCamera = useCallback(() => {
     setError(null);
@@ -26,10 +28,13 @@ export function useScan() {
     setResult(null);
     setError(null);
     setProcessingStep('');
+    setRecsLoading(false);
+    setRecsError(false);
   }, []);
 
-  const processPhoto = useCallback(async (photoUri: string, genderParam: string) => {
+  const processPhoto = useCallback(async (photoUri: string, genderParam: string, scanType: string = 'full_face') => {
     setError(null);
+    setRecsError(false);
     setPhase('processing');
 
     try {
@@ -41,25 +46,70 @@ export function useScan() {
         return;
       }
 
-      let gender: string = genderParam;
+      let resolvedGender: string = genderParam;
       try {
         const { data: profile } = await supabase
           .from('users')
           .select('gender')
           .eq('id', user.id)
           .single();
-        if (profile?.gender) gender = profile.gender as string;
+        if (profile?.gender) resolvedGender = profile.gender as string;
       } catch (profileError: unknown) {
         console.error('[useScan] Failed to fetch gender:',
           profileError instanceof Error ? profileError.message : String(profileError));
       }
 
-      const scan = await runScan(photoUri, gender, user.id, (step) => {
-        setProcessingStep(step);
-      });
+      // PHASE 1 — vision only (~18s)
+      setProcessingStep('Analysing your skin…');
+      const phase1 = await runScanPhase1(photoUri, resolvedGender, user.id, undefined, scanType);
 
-      setResult(scan);
+      // Build partial scan to show ObservationScreen immediately
+      const partialScan: PartialScan = {
+        id:                `local_${Date.now()}`,
+        user_id:           user.id,
+        face_shape:        phase1.analysis.face_shape,
+        skin_type:         phase1.analysis.skin_type,
+        skin_concerns:     phase1.analysis.skin_concerns,
+        beard_density:     phase1.analysis.beard_density,
+        beard_condition:   phase1.analysis.beard_condition,
+        brow_condition:    phase1.analysis.brow_condition,
+        undereye:          phase1.analysis.undereye,
+        fitzpatrick_scale: phase1.analysis.fitzpatrick_scale ?? null,
+        skin_tone:         phase1.analysis.skin_tone ?? null,
+        skin_undertone:    phase1.analysis.skin_undertone ?? null,
+        score_skin:        phase1.analysis.score_skin ?? null,
+        score_beard:       phase1.analysis.score_beard ?? null,
+        score_makeup:      phase1.analysis.score_makeup ?? null,
+        score_overall:     null,
+        recommendations:   null,
+        created_at:        new Date().toISOString(),
+      };
+
+      // Show ObservationScreen immediately
+      setResult(partialScan as unknown as Scan);
       setPhase('result');
+      setRecsLoading(true);
+
+      // PHASE 2 — recommendations in background (~32s)
+      try {
+        const completeScan = await runScanPhase2(
+          phase1.analysis,
+          phase1.userProfile,
+          phase1.previousContext,
+          phase1.scanType,
+          phase1.compressedUri,
+          resolvedGender,
+          user.id,
+        );
+        setResult(completeScan);
+      } catch (phase2Error: unknown) {
+        const msg = phase2Error instanceof Error ? phase2Error.message : String(phase2Error);
+        console.error('[useScan] phase2 error:', msg);
+        setRecsError(true);
+      } finally {
+        setRecsLoading(false);
+      }
+
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       console.error('[useScan] processPhoto crashed:', msg);
@@ -73,6 +123,8 @@ export function useScan() {
     processingStep,
     result,
     error,
+    recsLoading,
+    recsError,
     openCamera,
     reset,
     processPhoto,

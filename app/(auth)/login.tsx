@@ -135,12 +135,12 @@ export default function LoginScreen() {
   const canSubmit = email.trim().length > 0 && password.length >= 6;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
@@ -170,7 +170,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email address"
-          placeholderTextColor={Colors.textTertiary}
+          placeholderTextColor={Colors.text3}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -184,7 +184,7 @@ export default function LoginScreen() {
           <TextInput
             style={styles.passwordInput}
             placeholder="Password"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={Colors.text3}
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
@@ -207,7 +207,7 @@ export default function LoginScreen() {
           activeOpacity={0.8}
         >
           {loading
-            ? <ActivityIndicator color={Colors.background} />
+            ? <ActivityIndicator color={Colors.surface} />
             : <Text style={styles.ctaText}>Sign in</Text>
           }
         </TouchableOpacity>
@@ -231,13 +231,6 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.guestLink}
-          onPress={() => router.replace('/(tabs)/scan')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.guestText}>Continue as guest</Text>
-        </TouchableOpacity>
 
       </ScrollView>
     </KeyboardAvoidingView>
@@ -257,12 +250,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily:   Typography.serif,
     fontSize:     Typography.size.xxl,
-    color:        Colors.cream,
+    color:        Colors.surface,
     marginBottom: Spacing.sm,
   },
   subtitle: {
     fontSize:     Typography.size.base,
-    color:        Colors.textSecondary,
+    color:        Colors.text2,
     marginBottom: Spacing.xxl,
     lineHeight:   20,
   },
@@ -275,7 +268,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical:   Spacing.md,
     fontSize:          Typography.size.md,
-    color:             Colors.cream,
+    color:             Colors.text,
     marginBottom:      Spacing.md,
   },
 
@@ -292,7 +285,7 @@ const styles = StyleSheet.create({
     paddingRight:      48,
     paddingVertical:   Spacing.md,
     fontSize:          Typography.size.md,
-    color:             Colors.cream,
+    color:             Colors.text,
   },
   eyeBtn: {
     position:       'absolute',
@@ -304,7 +297,7 @@ const styles = StyleSheet.create({
   eyeIcon: { fontSize: 18 },
 
   ctaButton: {
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.accent,
     borderRadius:    Radius.input,
     paddingVertical: Spacing.md,
     alignItems:      'center',
@@ -315,7 +308,7 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize:   Typography.size.md,
     fontWeight: '600',
-    color:      Colors.background,
+    color:      Colors.surface,
   },
 
   forgotLink: {
@@ -325,7 +318,7 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: Typography.size.base,
-    color:    Colors.gold,
+    color:    Colors.text,
   },
 
   googleBtn: {
@@ -340,7 +333,7 @@ const styles = StyleSheet.create({
     width:           '100%',
   },
   googleIcon: { fontSize: 18, color: '#4285F4', fontWeight: '700' },
-  googleText: { color: '#0A0A0A', fontWeight: '600', fontSize: 15 },
+  googleText: { color: '#1C1816', fontWeight: '600', fontSize: 15 },
 
   dividerRow: {
     flexDirection: 'row',
@@ -349,7 +342,7 @@ const styles = StyleSheet.create({
     gap:           Spacing.sm,
   },
   dividerLine:  { flex: 1, height: 1, backgroundColor: Colors.border },
-  dividerLabel: { fontSize: Typography.size.sm, color: Colors.textTertiary },
+  dividerLabel: { fontSize: Typography.size.sm, color: Colors.text2 },
 
   switchLink: {
     alignItems:      'center',
@@ -358,17 +351,11 @@ const styles = StyleSheet.create({
   },
   switchText: {
     fontSize: Typography.size.base,
-    color:    Colors.textSecondary,
+    color:    Colors.text2,
   },
   switchTextBold: {
-    color:      Colors.cream,
+    color:      Colors.surface,
     fontWeight: '600',
   },
 
-  guestLink: {
-    alignItems:      'center',
-    paddingVertical: Spacing.sm,
-    marginTop:       Spacing.sm,
-  },
-  guestText: { fontSize: Typography.size.base, color: Colors.textTertiary },
 });

@@ -1,11 +1,12 @@
 import { Stack } from 'expo-router';
+import { Colors } from '../../constants/theme';
 
 export default function SalonsLayout() {
   return (
     <Stack
       screenOptions={{
         headerShown:  false,
-        contentStyle: { backgroundColor: '#0A0A0A' },
+        contentStyle: { backgroundColor: Colors.background },
         animation:    'slide_from_right',
       }}
     />

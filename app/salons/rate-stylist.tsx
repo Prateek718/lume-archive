@@ -135,13 +135,13 @@ export default function RateStylistScreen() {
   if (step === 'search') {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <BackBar title="Rate a Stylist" />
         <View style={s.searchBox}>
           <TextInput
             style={s.searchInput}
             placeholder="Name or @instagram…"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={Colors.text3}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -151,7 +151,7 @@ export default function RateStylistScreen() {
         </View>
 
         {loadingList ? (
-          <ActivityIndicator color={Colors.gold} style={{ marginTop: Spacing.xl }} />
+          <ActivityIndicator color={Colors.accent} style={{ marginTop: Spacing.xl }} />
         ) : (
           <ScrollView contentContainerStyle={s.listContent} keyboardShouldPersistTaps="handled">
             {filtered.length === 0 && !query.trim() && (
@@ -195,7 +195,7 @@ export default function RateStylistScreen() {
   if (step === 'success') {
     return (
       <View style={[s.screen, s.successScreen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Text style={s.successCheck}>✓</Text>
         <Text style={s.successTitle}>Thank you!</Text>
         <Text style={s.successBody}>
@@ -213,7 +213,7 @@ export default function RateStylistScreen() {
 
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <BackBar title="Rate a Stylist" onBack={() => setStep('search')} />
 
       <ScrollView contentContainerStyle={s.formContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -283,7 +283,7 @@ export default function RateStylistScreen() {
           <TextInput
             style={s.salonInput}
             placeholder="Salon name…"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={Colors.text3}
             value={salonName}
             onChangeText={setSalonName}
             autoCapitalize="words"
@@ -300,7 +300,7 @@ export default function RateStylistScreen() {
           activeOpacity={0.85}
         >
           {submitting
-            ? <ActivityIndicator color={Colors.background} />
+            ? <ActivityIndicator color={Colors.surface} />
             : <Text style={s.submitBtnText}>Submit rating</Text>
           }
         </TouchableOpacity>
@@ -326,8 +326,8 @@ function BackBar({ title, onBack }: { title: string; onBack?: () => void }) {
 const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
-  arrow: { fontSize: 28, color: Colors.gold, lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: Colors.cream },
+  arrow: { fontSize: 28, color: Colors.surface, lineHeight: 32 },
+  title: { fontFamily: Typography.serif, fontSize: Typography.size.lg, color: Colors.surface },
 });
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
@@ -335,55 +335,55 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
 
   searchBox:    { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
-  searchInput:  { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.input, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: Colors.cream },
+  searchInput:  { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.input, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: Colors.text },
   listContent:  { paddingHorizontal: Spacing.lg },
   listRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.xs },
-  listName:     { fontSize: Typography.size.md, color: Colors.cream, fontWeight: '600', marginBottom: 2 },
+  listName:     { fontSize: Typography.size.md, color: Colors.text, fontWeight: '600', marginBottom: 2 },
   listMeta:     { flexDirection: 'row', gap: Spacing.sm },
-  listHandle:   { fontSize: Typography.size.sm, color: Colors.gold },
-  listMentions: { fontSize: Typography.size.sm, color: Colors.textSecondary },
-  listArrow:    { fontSize: 22, color: Colors.textTertiary, lineHeight: 26 },
+  listHandle:   { fontSize: Typography.size.sm, color: Colors.accent },
+  listMentions: { fontSize: Typography.size.sm, color: Colors.text2 },
+  listArrow:    { fontSize: 22, color: Colors.text3, lineHeight: 26 },
   addManualRow: { backgroundColor: Colors.surface2, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.sm },
-  addManualText:{ fontSize: Typography.size.base, color: Colors.gold },
-  emptyHint:    { textAlign: 'center', color: Colors.textTertiary, fontSize: Typography.size.base, marginTop: Spacing.xl },
+  addManualText:{ fontSize: Typography.size.base, color: Colors.accent },
+  emptyHint:    { textAlign: 'center', color: Colors.text2, fontSize: Typography.size.base, marginTop: Spacing.xl },
 
   formContent:   { paddingHorizontal: Spacing.lg },
   stylistHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: Spacing.lg },
-  stylistAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.goldDim, borderWidth: 1, borderColor: Colors.gold, alignItems: 'center', justifyContent: 'center' },
-  stylistAvatarText: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.gold },
-  stylistName:   { fontSize: Typography.size.lg, color: Colors.cream, fontWeight: '600' },
-  stylistHandle: { fontSize: Typography.size.sm, color: Colors.gold, marginTop: 2 },
-  stylistMentions:{ fontSize: Typography.size.sm, color: Colors.textSecondary, marginTop: 2 },
+  stylistAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.surface2, borderWidth: 1, borderColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
+  stylistAvatarText: { fontFamily: Typography.serif, fontSize: Typography.size.xl, color: Colors.accent },
+  stylistName:   { fontSize: Typography.size.lg, color: Colors.surface, fontWeight: '600' },
+  stylistHandle: { fontSize: Typography.size.sm, color: Colors.text, marginTop: 2 },
+  stylistMentions:{ fontSize: Typography.size.sm, color: Colors.text2, marginTop: 2 },
 
-  fieldLabel:    { fontSize: Typography.size.xs, color: Colors.gold, letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
+  fieldLabel:    { fontSize: Typography.size.xs, color: Colors.text, letterSpacing: 6, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
   catCard:       { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
   catRow:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
   catRowBorder:  { borderBottomWidth: 1, borderBottomColor: Colors.border },
-  catLabel:      { fontSize: Typography.size.base, color: Colors.cream },
+  catLabel:      { fontSize: Typography.size.base, color: Colors.text },
 
   pillRow:       { flexDirection: 'row', gap: Spacing.sm },
   pill:          { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.pill, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
-  pillActive:    { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  pillActive:    { backgroundColor: Colors.accent, borderColor: Colors.accent },
   pillActiveNo:  { backgroundColor: '#3A1A1A', borderColor: '#A32D2D' },
-  pillText:      { fontSize: Typography.size.base, color: Colors.textSecondary, fontWeight: '600' },
-  pillTextActive:{ color: Colors.background },
+  pillText:      { fontSize: Typography.size.base, color: Colors.text, fontWeight: '600' },
+  pillTextActive:{ color: Colors.surface },
   pillTextActiveNo:{ color: '#FF6B6B' },
 
   salonRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginTop: Spacing.lg },
-  salonRowLabel: { fontSize: Typography.size.sm, color: Colors.textSecondary, marginBottom: 2 },
-  salonRowValue: { fontSize: Typography.size.base, color: Colors.cream },
-  salonRowPlaceholder: { fontSize: Typography.size.base, color: Colors.textTertiary },
-  salonRowArrow: { fontSize: 18, color: Colors.textTertiary },
-  salonInput:    { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.gold, borderRadius: Radius.input, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: Colors.cream, marginTop: Spacing.xs },
+  salonRowLabel: { fontSize: Typography.size.sm, color: Colors.text2, marginBottom: 2 },
+  salonRowValue: { fontSize: Typography.size.base, color: Colors.text },
+  salonRowPlaceholder: { fontSize: Typography.size.base, color: Colors.text3 },
+  salonRowArrow: { fontSize: 18, color: Colors.text3 },
+  salonInput:    { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.accent, borderRadius: Radius.input, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: Typography.size.md, color: Colors.text, marginTop: Spacing.xs },
 
-  submitBtn:         { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
+  submitBtn:         { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
   submitBtnDisabled: { opacity: 0.4 },
-  submitBtnText:     { fontSize: Typography.size.md, fontWeight: '600', color: Colors.background },
+  submitBtnText:     { fontSize: Typography.size.md, fontWeight: '600', color: Colors.surface },
 
   successScreen: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  successCheck:  { fontSize: 64, color: Colors.gold, marginBottom: Spacing.lg },
-  successTitle:  { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.cream, marginBottom: Spacing.sm },
-  successBody:   { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
-  successBtn:    { backgroundColor: Colors.gold, borderRadius: Radius.input, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  successBtnText:{ fontSize: Typography.size.md, fontWeight: '600', color: Colors.background },
+  successCheck:  { fontSize: 64, color: Colors.text, marginBottom: Spacing.lg },
+  successTitle:  { fontFamily: Typography.serif, fontSize: Typography.size.xxl, color: Colors.surface, marginBottom: Spacing.sm },
+  successBody:   { fontSize: Typography.size.base, color: Colors.text2, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
+  successBtn:    { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  successBtnText:{ fontSize: Typography.size.md, fontWeight: '600', color: Colors.surface },
 });

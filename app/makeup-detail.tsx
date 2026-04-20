@@ -9,16 +9,32 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
-import { getProductsForBrands } from '../constants/productConstants';
+import { PRODUCTS, getProductsForBrands } from '../constants/productConstants';
 import type { Product } from '../constants/productConstants';
-import { logProductEvent } from '../services/scanService';
+import { logProductEvent, getProductMap } from '../services/scanService';
 import { supabase } from '../lib/supabase';
-import type { Scan } from '../types';
+import type { Scan, MatchedProduct } from '../types';
+import ProductPickerSheet from '../components/ProductPickerSheet';
 
 type Tab = 'features' | 'technique' | 'products';
 
 function formatCategoryName(cat: string): string {
   return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function getMakeupCategoryForStep(label: string): string {
+  const map: Record<string, string> = {
+    'Eyes':       'kajal_eyeliner',
+    'Kajal':      'kajal_eyeliner',
+    'Brows':      'eyebrow_pencil',
+    'Lips':       'lipstick_nude',
+    'Lip colour': 'lipstick_nude',
+    'Base':       'foundation_medium',
+    'Foundation': 'foundation_medium',
+    'Concealer':  'concealer',
+    'Cover':      'concealer',
+  };
+  return map[label] ?? 'kajal_eyeliner';
 }
 
 interface ProductItem { icon: string; name: string; why: string; tag: string; }
@@ -98,10 +114,16 @@ export default function MakeupDetailScreen() {
   const scan = scanJson ? (JSON.parse(scanJson) as Scan) : null;
   const rec  = scan?.recommendations;
 
-  const [tab,          setTab]          = useState<Tab>('features');
-  const [preferredBrands, setPreferredBrands] = useState<string[]>([]);
-  const [brandsLoaded, setBrandsLoaded]  = useState(false);
+  const [tab,              setTab]             = useState<Tab>('features');
+  const [preferredBrands,  setPreferredBrands]  = useState<string[]>([]);
+  const [brandsLoaded,     setBrandsLoaded]     = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+  // Product picker state
+  const [pickerVisible,  setPickerVisible]  = useState(false);
+  const [pickerCategory, setPickerCategory] = useState('');
+  const [pickerStep,     setPickerStep]     = useState('');
+  const [pickerReason,   setPickerReason]   = useState('');
 
   useEffect(() => {
     const loadUserPrefs = async () => {
@@ -109,17 +131,22 @@ export default function MakeupDetailScreen() {
       if (!user) { setBrandsLoaded(true); return; }
       const { data } = await supabase
         .from('users')
-        .select('preferred_brands')
+        .select('preferred_brands_v2')
         .eq('id', user.id)
         .single();
-      const row = data as { preferred_brands?: string[] } | null;
-      setPreferredBrands(row?.preferred_brands ?? []);
+      const row = data as { preferred_brands_v2?: { makeup?: string[] } } | null;
+      const pb = row?.preferred_brands_v2 as { makeup?: string[] } | null;
+      setPreferredBrands(pb?.makeup ?? []);
+      if (scan?.id) {
+        getProductMap(scan.id).then(setProductMap);
+      }
       setBrandsLoaded(true);
     };
     loadUserPrefs();
   }, []);
 
-  const productRecs = rec?.makeup?.products ?? [];
+  const MAKEUP_CATEGORIES = ['foundation_fair', 'foundation_medium', 'foundation_deep', 'kajal_eyeliner', 'eyebrow_pencil', 'lipstick_nude', 'lipstick_red', 'lipstick_berry', 'lip_balm'];
+  const productRecs = (rec?.products ?? []).filter(p => MAKEUP_CATEGORIES.includes(p.category));
   const visibleCategories = [...new Set(productRecs.map(p => p.category))];
 
   const handleBuyPress = async (product: Product, category: string) => {
@@ -138,17 +165,44 @@ export default function MakeupDetailScreen() {
     Linking.openURL(product.nykaa_url);
   };
 
+  const makeupRecs = rec?.makeup ?? null;
+
+  // Skin context for no-base card
+  const skinType             = scan?.skin_type;
+  const skinConcerns         = scan?.skin_concerns ?? [];
+  const hasHyperpigmentation = skinConcerns.includes('hyperpigmentation') ||
+                               skinConcerns.includes('uneven_texture');
+  const needsBase            = hasHyperpigmentation || skinType === 'uneven';
+
+  // Product map for picker — loaded from AsyncStorage (stored during scan)
+  const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
+
+  // Routine steps for technique tab — tappable, open product picker
+  const makeupRoutineSteps: { label: string; reason: string }[] = [
+    ...(needsBase
+      ? [{ label: 'Base', reason: 'Foundation or BB cream to even skin tone' }]
+      : []),
+    ...(scan?.undereye === 'dark'
+      ? [{ label: 'Concealer', reason: 'Colour correct and conceal dark circles' }]
+      : []),
+    ...(scan?.brow_condition
+      ? [{ label: 'Brows', reason: 'Define and fill brow area' }]
+      : []),
+    { label: 'Eyes',  reason: 'Kajal for eye definition' },
+    { label: 'Lips',  reason: 'Lip colour to complete the look' },
+  ];
+
   // The most notable feature to highlight
-  const primaryFeature = scan?.brow_shape === 'sparse' ? 'brow density'
+  const primaryFeature = scan?.brow_condition === 'sparse' ? 'brow density'
     : scan?.undereye === 'dark' ? 'under-eye pigmentation'
     : scan?.undereye === 'puffy' ? 'under-eye puffiness'
-    : scan?.brow_shape ? 'brow shape'
+    : scan?.brow_condition ? 'brow shape'
     : null;
 
 
   return (
     <View style={s.screen}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       <View style={[s.topBar, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity
@@ -186,9 +240,9 @@ export default function MakeupDetailScreen() {
           <>
             <InfoCard title="YOUR FEATURE PROFILE">
               <View style={s.pillRow}>
-                {scan?.brow_shape && (
+                {scan?.brow_condition && (
                   <View style={s.pill}>
-                    <Text style={s.pillText}>{scan.brow_shape} brows</Text>
+                    <Text style={s.pillText}>{scan.brow_condition} brows</Text>
                   </View>
                 )}
                 {scan?.undereye && scan.undereye !== 'normal' && (
@@ -199,10 +253,10 @@ export default function MakeupDetailScreen() {
               </View>
             </InfoCard>
 
-            {scan?.brow_shape && (
+            {scan?.brow_condition && (
               <InfoCard title="YOUR BROWS">
                 <Text style={s.bodyText}>
-                  {BROW_EXPLANATIONS[scan.brow_shape] ?? 'Your brow shape is unique — follow the natural growth pattern as your guide.'}
+                  {BROW_EXPLANATIONS[scan.brow_condition] ?? 'Your brow shape is unique — follow the natural growth pattern as your guide.'}
                 </Text>
               </InfoCard>
             )}
@@ -230,10 +284,10 @@ export default function MakeupDetailScreen() {
               </InfoCard>
             )}
 
-            {scan?.brow_shape && (
+            {scan?.brow_condition && (
               <TouchableOpacity
                 onPress={() => {
-                  const query = encodeURIComponent(`${scan.brow_shape} brow makeup look`);
+                  const query = encodeURIComponent(`${scan.brow_condition} brow makeup look`);
                   Linking.openURL(`https://www.google.com/search?q=${query}&tbm=isch`);
                 }}
                 style={{
@@ -247,18 +301,18 @@ export default function MakeupDetailScreen() {
                   paddingHorizontal: 20,
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: '#C9A84C',
-                  backgroundColor: 'rgba(201,168,76,0.08)',
+                  borderColor: Colors.accent,
+                  backgroundColor: 'rgba(230,199,156,0.12)',
                 }}
                 activeOpacity={0.7}
               >
                 <Text style={{ fontSize: 15 }}>🔍</Text>
                 <Text style={{
-                  color: '#C9A84C',
+                  color: Colors.text,
                   fontSize: 14,
                   fontWeight: '600',
                 }}>
-                  See {scan.brow_shape} brow makeup photos
+                  See {scan.brow_condition} brow makeup photos
                 </Text>
               </TouchableOpacity>
             )}
@@ -274,13 +328,13 @@ export default function MakeupDetailScreen() {
               </InfoCard>
             )}
 
-            {scan?.brow_shape && (
+            {scan?.brow_condition && (
               <InfoCard title="BROW TECHNIQUE">
                 <View style={s.featureLabel}>
-                  <Text style={s.featureLabelText}>{scan.brow_shape} brows</Text>
+                  <Text style={s.featureLabelText}>{scan.brow_condition} brows</Text>
                 </View>
                 <Text style={s.bodyText}>
-                  {BROW_TECHNIQUE[scan.brow_shape] ?? 'Follow your natural brow shape as your guide — fill in gaps lightly with feather strokes and set with clear brow gel.'}
+                  {BROW_TECHNIQUE[scan.brow_condition] ?? 'Follow your natural brow shape as your guide — fill in gaps lightly with feather strokes and set with clear brow gel.'}
                 </Text>
               </InfoCard>
             )}
@@ -295,6 +349,38 @@ export default function MakeupDetailScreen() {
                 </Text>
               </InfoCard>
             )}
+
+            {!needsBase && (
+              <View style={s.noBaseCard}>
+                <Text style={s.noBaseLabel}>YOU DON'T NEED A BASE</Text>
+                <Text style={s.noBaseBody}>
+                  Your skin tone is even — foundation or BB cream isn't necessary. The products below enhance your features without coverage.
+                </Text>
+              </View>
+            )}
+
+            {makeupRoutineSteps.length > 0 && (
+              <InfoCard title="YOUR ROUTINE">
+                {makeupRoutineSteps.map((step, i) => {
+                  const cat = getMakeupCategoryForStep(step.label);
+                  const hasProducts = (productMap[cat]?.length ?? 0) > 0;
+                  return (
+                    <StepRow
+                      key={i}
+                      n={i + 1}
+                      text={step.label}
+                      onPress={hasProducts ? () => {
+                        setPickerCategory(cat);
+                        setPickerStep(step.label);
+                        setPickerReason(step.reason);
+                        setPickerVisible(true);
+                      } : undefined}
+                    />
+                  );
+                })}
+              </InfoCard>
+            )}
+
           </>
         )}
 
@@ -309,7 +395,7 @@ export default function MakeupDetailScreen() {
               >
                 <Text style={s.noBrandsTitle}>Set your preferred brands</Text>
                 <Text style={s.noBrandsSub}>We'll show products from brands you already trust</Text>
-                <Text style={s.noBrandsArrow}>›</Text>
+                <Text style={s.noBrandsBtnText}>Set brands →</Text>
               </TouchableOpacity>
             )}
 
@@ -320,13 +406,9 @@ export default function MakeupDetailScreen() {
             ) : (
               visibleCategories.map(cat => {
                 const catRec = productRecs.find(p => p.category === cat);
-                const products = getProductsForBrands({
-                  category:     cat,
-                  preferredBrands,
-                  fallbackTier: 'budget',
-                  gender:       'women',
-                  limit:        3,
-                });
+                const product: Product | undefined =
+                  PRODUCTS.find(p => p.category === cat && p.name === catRec?.name && p.brand === catRec?.brand)
+                  ?? getProductsForBrands({ category: cat, preferredBrands, fallbackTier: 'budget', gender: 'women', limit: 1 })[0];
                 const isExpanded = expandedCategory === cat;
                 return (
                   <View key={cat} style={s.catTile}>
@@ -335,49 +417,45 @@ export default function MakeupDetailScreen() {
                       onPress={() => setExpandedCategory(isExpanded ? null : cat)}
                       activeOpacity={0.8}
                     >
-                      <View style={s.catHeaderLeft}>
-                        <Text style={s.catName}>{formatCategoryName(cat)}</Text>
-                        {catRec && (
-                          <View style={s.matchBadge}>
-                            <Text style={s.matchBadgeText}>{catRec.match_score}% match</Text>
-                          </View>
-                        )}
-                      </View>
+                      <Text style={s.catName}>{formatCategoryName(cat)}</Text>
                       <Text style={s.chevron}>{isExpanded ? '∧' : '∨'}</Text>
                     </TouchableOpacity>
 
                     {isExpanded && (
-                      <View style={s.catBody}>
-                        {catRec?.reason ? (
-                          <Text style={s.catReason}>{catRec.reason}</Text>
-                        ) : null}
-                        {products.length === 0 ? (
-                          <Text style={s.noProductsText}>No matching products found.</Text>
-                        ) : (
-                          products.map(product => (
-                            <View key={product.id} style={s.productRow}>
-                              <View style={s.productRowLeft}>
-                                {product.isPreferredBrand && (
-                                  <View style={s.preferredBadge}>
-                                    <Text style={s.preferredBadgeText}>Your brand</Text>
-                                  </View>
-                                )}
-                                <Text style={s.productRowName}>{product.name}</Text>
-                                <Text style={s.productRowMeta}>
-                                  {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
-                                </Text>
-                              </View>
-                              <TouchableOpacity
-                                style={s.buyBtn}
-                                onPress={() => handleBuyPress(product, cat)}
-                                activeOpacity={0.8}
-                              >
-                                <Text style={s.buyBtnText}>Buy</Text>
-                              </TouchableOpacity>
+                      product == null ? (
+                        <Text style={s.noProductsText}>No matching products found.</Text>
+                      ) : (
+                        <View style={s.expandedProduct}>
+                          <View style={s.matchMeterWrap}>
+                            <View style={s.matchMeterHeader}>
+                              <Text style={s.matchLabel}>Match</Text>
+                              <Text style={s.matchScore}>{catRec?.match_score ?? 0}%</Text>
                             </View>
-                          ))
-                        )}
-                      </View>
+                            <View style={s.matchTrack}>
+                              <View style={[s.matchFill, { width: `${catRec?.match_score ?? 0}%` as `${number}%` }]} />
+                            </View>
+                          </View>
+                          {product.isPreferredBrand && (
+                            <View style={s.preferredBadge}>
+                              <Text style={s.preferredBadgeText}>Your brand</Text>
+                            </View>
+                          )}
+                          <Text style={s.productName}>{product.name}</Text>
+                          <Text style={s.productMeta}>
+                            {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
+                          </Text>
+                          {catRec?.reason ? (
+                            <Text style={s.productReason}>{catRec.reason}</Text>
+                          ) : null}
+                          <TouchableOpacity
+                            style={s.buyBtn}
+                            onPress={() => handleBuyPress(product!, cat)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={s.buyBtnText}>Buy on Nykaa</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )
                     )}
                   </View>
                 );
@@ -388,6 +466,15 @@ export default function MakeupDetailScreen() {
 
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
+
+      <ProductPickerSheet
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        stepName={pickerStep}
+        categoryName={formatCategoryName(pickerCategory)}
+        reason={pickerReason}
+        products={productMap[pickerCategory] ?? []}
+      />
     </View>
   );
 }
@@ -401,6 +488,26 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
       {children}
     </View>
   );
+}
+
+function StepRow({ n, text, onPress }: { n: number; text: string; onPress?: () => void }) {
+  const inner = (
+    <>
+      <View style={s.stepCircle}>
+        <Text style={s.stepNum}>{n}</Text>
+      </View>
+      <Text style={s.stepText}>{text}</Text>
+      {onPress && <Text style={s.stepChevron}>›</Text>}
+    </>
+  );
+  if (onPress) {
+    return (
+      <TouchableOpacity style={s.stepRow} onPress={onPress} activeOpacity={0.7}>
+        {inner}
+      </TouchableOpacity>
+    );
+  }
+  return <View style={s.stepRow}>{inner}</View>;
 }
 
 function ProductCard({ icon, name, why, tag, iconBg, iconColor }: ProductItem & { iconBg: string; iconColor: string }) {
@@ -428,17 +535,17 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
-  backArrow:   { fontSize: 32, color: Colors.gold, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.cream },
+  backArrow:   { fontSize: 32, color: Colors.surface, lineHeight: 40 },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 18, color: Colors.surface },
 
   tabBar: {
     flexDirection: 'row', gap: Spacing.sm,
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
   },
-  tabPill:           { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.pill, backgroundColor: '#1A1A1A' },
-  tabPillActive:     { backgroundColor: Colors.gold },
-  tabPillText:       { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
-  tabPillTextActive: { color: Colors.background, fontWeight: '600' },
+  tabPill:           { paddingHorizontal: Spacing.md, paddingVertical: 7, borderRadius: Radius.pill, backgroundColor: Colors.surface },
+  tabPillActive:     { backgroundColor: Colors.accent },
+  tabPillText:       { fontSize: 13, color: Colors.text2, fontWeight: '500' },
+  tabPillTextActive: { color: Colors.surface, fontWeight: '600' },
 
   scroll:  { flex: 1 },
   content: { paddingHorizontal: Spacing.lg },
@@ -449,65 +556,78 @@ const s = StyleSheet.create({
     padding: Spacing.lg, marginBottom: Spacing.sm,
   },
   infoCardLabel: {
-    fontSize: 10, color: Colors.gold,
+    fontSize: 10, color: Colors.accent,
     letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.md,
   },
 
   pillRow:           { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
-  pill:              { backgroundColor: Colors.goldDim, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  pillText:          { fontSize: 9, color: Colors.gold, textTransform: 'capitalize' },
-  pillSecondary:     { backgroundColor: '#1A1A1A' },
-  pillTextSecondary: { fontSize: 9, color: Colors.textSecondary, textTransform: 'capitalize' },
+  pill:              { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  pillText:          { fontSize: 9, color: Colors.accent, textTransform: 'capitalize' },
+  pillSecondary:     { backgroundColor: Colors.surface2 },
+  pillTextSecondary: { fontSize: 9, color: Colors.text2, textTransform: 'capitalize' },
 
-  bodyText:   { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
-  adviceText: { fontSize: 15, color: Colors.cream, fontStyle: 'italic', lineHeight: 22 },
+  bodyText:   { fontSize: 15, color: Colors.text2, lineHeight: 22 },
+  adviceText: { fontSize: 15, color: Colors.text, fontStyle: 'italic', lineHeight: 22 },
 
-  featureLabel:     { backgroundColor: '#1A1020', borderRadius: Radius.input, paddingHorizontal: 12, paddingVertical: 8, marginBottom: Spacing.md, alignSelf: 'flex-start' },
-  featureLabelText: { fontSize: 11, color: '#C47FD4', fontWeight: '500', textTransform: 'capitalize' },
+  featureLabel:     { backgroundColor: Colors.surface2, borderRadius: Radius.input, paddingHorizontal: 12, paddingVertical: 8, marginBottom: Spacing.md, alignSelf: 'flex-start' },
+  featureLabelText: { fontSize: 11, color: Colors.text2, fontWeight: '500', textTransform: 'capitalize' },
 
+  // Routine steps
+  stepRow:     { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
+  stepCircle:  { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.surface2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  stepNum:     { fontSize: 10, color: Colors.accent, fontWeight: '700' },
+  stepText:    { flex: 1, fontSize: 14, color: Colors.text2 },
+  stepChevron: { fontSize: 18, color: Colors.accent, lineHeight: 22 },
 
-  openingLine: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.md },
+  // No-base card
+  noBaseCard:  { backgroundColor: '#EAF2EB', borderRadius: 11, borderWidth: 1, borderColor: '#C8DFC9', padding: 12, marginBottom: 12 },
+  noBaseLabel: { fontSize: 9, color: Colors.green, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
+  noBaseBody:  { fontSize: 12, color: '#4A7A4E', lineHeight: 18 },
+
+  openingLine: { fontSize: 15, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },
 
   // Collapsible category tiles
   noBrandsBanner: {
-    backgroundColor: '#1A1412', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: 'rgba(230,199,156,0.4)',
     borderRadius: 12, padding: 14, marginBottom: 8,
   },
-  noBrandsTitle: { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 3 },
-  noBrandsSub:   { fontSize: 13, color: Colors.textSecondary, lineHeight: 16 },
-  noBrandsArrow: { position: 'absolute', right: 14, top: 14, fontSize: 22, color: Colors.gold },
+  noBrandsTitle:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: 6 },
+  noBrandsSub:     { fontSize: 13, color: Colors.text2, lineHeight: 20 },
+  noBrandsBtnText: { fontSize: 13, color: Colors.accent, marginTop: 8 },
 
   catTile: {
-    backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
     borderRadius: 12, marginBottom: 6, overflow: 'hidden',
   },
   catHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 12,
   },
-  catHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  catName:       { fontSize: 15, color: Colors.cream, fontWeight: '600' },
-  matchBadge:    { backgroundColor: 'rgba(201,168,76,0.1)', borderRadius: Radius.pill, paddingHorizontal: 7, paddingVertical: 2 },
-  matchBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
-  chevron:       { fontSize: 13, color: Colors.textSecondary },
+  catName:   { fontSize: 15, color: Colors.text, fontWeight: '600' },
+  catReason: { fontSize: 13, color: Colors.text3, lineHeight: 18 },
+  chevron:   { fontSize: 13, color: Colors.text2 },
 
-  catBody:       { borderTopWidth: 1, borderTopColor: '#2A2420', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 },
-  catReason:     { fontSize: 11, color: Colors.textSecondary, lineHeight: 16, marginBottom: 10 },
-  noProductsText:{ fontSize: 11, color: Colors.textTertiary, marginBottom: 10 },
+  noProductsText: { fontSize: 11, color: Colors.text3, padding: 14 },
 
-  productRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    gap: 10, paddingVertical: 8,
-    borderTopWidth: 1, borderTopColor: '#222222',
+  expandedProduct: {
+    backgroundColor: 'rgba(230,199,156,0.08)', borderWidth: 1, borderTopWidth: 0,
+    borderColor: 'rgba(230,199,156,0.4)', borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10, padding: 14, marginBottom: 5,
   },
-  productRowLeft:  { flex: 1 },
-  preferredBadge:  { alignSelf: 'flex-start', backgroundColor: 'rgba(201,168,76,0.12)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 3 },
-  preferredBadgeText: { fontSize: 9, color: Colors.gold, fontWeight: '500' },
-  productRowName:  { fontSize: 15, color: Colors.cream, fontWeight: '500', marginBottom: 2 },
-  productRowMeta:  { fontSize: 13, color: '#8A7A6A' },
+  matchMeterWrap:   { marginBottom: 0 },
+  matchMeterHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  matchLabel:       { fontSize: 11, color: Colors.text2 },
+  matchScore:       { fontSize: 11, color: Colors.accent, fontWeight: '500' },
+  matchTrack:       { height: 3, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
+  matchFill:        { height: '100%', backgroundColor: Colors.accent, borderRadius: 2 },
 
-  buyBtn:          { backgroundColor: Colors.gold, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12, flexShrink: 0 },
-  buyBtnText:      { fontSize: 14, color: Colors.background, fontWeight: '600' },
+  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: 'rgba(230,199,156,0.2)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
+  preferredBadgeText: { fontSize: 9, color: Colors.accent, fontWeight: '500' },
+  productName:        { fontSize: 15, color: Colors.text, fontWeight: '500', marginTop: 12, marginBottom: 3 },
+  productMeta:        { fontSize: 13, color: Colors.text2, marginBottom: 8 },
+  productReason:      { fontSize: 11, color: Colors.text3, lineHeight: 17, marginBottom: 12 },
+  buyBtn:     { backgroundColor: Colors.accent, borderRadius: 8, paddingVertical: 12, width: '100%', alignItems: 'center' },
+  buyBtnText: { fontSize: 14, color: Colors.surface, fontWeight: '600' },
 
   productCard: {
     flexDirection: 'row', alignItems: 'flex-start',
@@ -518,8 +638,7 @@ const s = StyleSheet.create({
   productIcon:     { width: 44, height: 44, borderRadius: Radius.icon, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   productIconChar: { fontSize: 18 },
   productBody:     { flex: 1 },
-  productName:     { fontSize: 15, color: Colors.cream, fontWeight: '600', marginBottom: 4 },
-  productWhy:      { fontSize: 15, color: Colors.textSecondary, lineHeight: 19, marginBottom: Spacing.sm },
-  productTagPill:  { alignSelf: 'flex-start', backgroundColor: '#1A1A1A', borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  productTagText:  { fontSize: Typography.size.xs, color: Colors.textSecondary },
+  productWhy:      { fontSize: 15, color: Colors.text2, lineHeight: 19, marginBottom: Spacing.sm },
+  productTagPill:  { alignSelf: 'flex-start', backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  productTagText:  { fontSize: Typography.size.xs, color: Colors.text2 },
 });

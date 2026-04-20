@@ -61,7 +61,7 @@ export default function RoutineLevelScreen() {
 
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       <View style={s.topBar}>
         <TouchableOpacity
@@ -107,7 +107,7 @@ export default function RoutineLevelScreen() {
           activeOpacity={0.8}
         >
           {saving
-            ? <ActivityIndicator color={Colors.background} />
+            ? <ActivityIndicator color={Colors.surface} />
             : <Text style={s.saveBtnText}>Save</Text>
           }
         </TouchableOpacity>
@@ -123,20 +123,20 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm,
   },
-  backArrow:   { fontSize: 32, color: Colors.gold, lineHeight: 40 },
-  screenTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.cream },
+  backArrow:   { fontSize: 32, color: Colors.surface, lineHeight: 40 },
+  screenTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
 
   subtitle: {
-    fontSize: 13, color: Colors.textSecondary,
+    fontSize: 13, color: Colors.text2,
     paddingHorizontal: Spacing.lg, marginBottom: Spacing.xl,
   },
 
   card: {
     marginHorizontal: Spacing.lg,
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2420',
+    borderColor: Colors.border,
     overflow: 'hidden',
   },
 
@@ -145,21 +145,21 @@ const s = StyleSheet.create({
     paddingVertical: 18, paddingHorizontal: Spacing.md,
   },
   rowTexts:    { flex: 1, marginRight: Spacing.md },
-  rowLabel:    { fontSize: 15, color: Colors.textSecondary, marginBottom: 3 },
-  rowLabelActive: { color: Colors.cream, fontWeight: '600' },
-  rowSub:      { fontSize: 13, color: Colors.textTertiary },
+  rowLabel:    { fontSize: 15, color: Colors.text2, marginBottom: 3 },
+  rowLabelActive: { color: Colors.text, fontWeight: '600' },
+  rowSub:      { fontSize: 13, color: Colors.text3 },
 
-  divider: { height: 1, backgroundColor: '#2A2420', marginHorizontal: Spacing.md },
+  divider: { height: 1, backgroundColor: Colors.border, marginHorizontal: Spacing.md },
 
   radioOuter: {
     width: 20, height: 20, borderRadius: 10,
-    borderWidth: 1.5, borderColor: '#4A4540',
+    borderWidth: 1.5, borderColor: Colors.text2,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  radioOuterActive: { borderColor: Colors.gold },
+  radioOuterActive: { borderColor: Colors.accent },
   radioInner: {
     width: 10, height: 10, borderRadius: 5,
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.accent,
   },
 
   footer: {
@@ -169,9 +169,9 @@ const s = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   saveBtn: {
-    backgroundColor: Colors.gold, borderRadius: Radius.input,
+    backgroundColor: Colors.accent, borderRadius: Radius.input,
     paddingVertical: Spacing.md, alignItems: 'center',
   },
   saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { fontSize: Typography.size.md, fontWeight: '600', color: Colors.background },
+  saveBtnText: { fontSize: Typography.size.md, fontWeight: '600', color: Colors.surface },
 });

@@ -55,8 +55,8 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 const si = StyleSheet.create({
   row:        { flexDirection: 'row', gap: 6, marginBottom: Spacing.lg },
-  line:       { flex: 1, height: 3, borderRadius: 2, backgroundColor: '#2A2420' },
-  lineActive: { backgroundColor: '#C9A84C' },
+  line:       { flex: 1, height: 3, borderRadius: 2, backgroundColor: Colors.border },
+  lineActive: { backgroundColor: Colors.accent },
 });
 
 function ServicePillGroup({
@@ -93,12 +93,12 @@ function ServicePillGroup({
 }
 const pg = StyleSheet.create({
   block:      { marginBottom: Spacing.lg },
-  groupLabel: { fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
+  groupLabel: { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
   pillsWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill:       { backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  pillActive: { backgroundColor: 'rgba(201,168,76,0.12)', borderColor: 'rgba(201,168,76,0.4)' },
-  pillText:       { fontSize: 13, color: '#4A4540' },
-  pillTextActive: { fontSize: 13, color: '#C9A84C', fontWeight: '600' },
+  pill:       { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
+  pillActive: { backgroundColor: 'rgba(230,199,156,0.18)', borderColor: 'rgba(230,199,156,0.5)' },
+  pillText:       { fontSize: 13, color: Colors.text },
+  pillTextActive: { fontSize: 13, color: Colors.accent, fontWeight: '600' },
 });
 
 // ── Main screen ───────────────────────────────────────────────────────────────
@@ -198,7 +198,7 @@ export default function SalonProfileCreateScreen() {
   if (submitted) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <View style={s.confirmBox}>
           <View style={s.confirmCheck}>
             <Text style={s.confirmCheckText}>✓</Text>
@@ -239,7 +239,7 @@ export default function SalonProfileCreateScreen() {
 
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       {/* Back bar */}
       <View style={s.backBar}>
@@ -277,7 +277,7 @@ export default function SalonProfileCreateScreen() {
                 value={form.salonName}
                 onChangeText={v => setField('salonName', v)}
                 placeholder="e.g. Naturals Salon"
-                placeholderTextColor="#4A4540"
+                placeholderTextColor={Colors.text3}
                 autoCapitalize="words"
               />
 
@@ -287,7 +287,7 @@ export default function SalonProfileCreateScreen() {
                 value={form.ownerName}
                 onChangeText={v => setField('ownerName', v)}
                 placeholder="Your name"
-                placeholderTextColor="#4A4540"
+                placeholderTextColor={Colors.text3}
                 autoCapitalize="words"
               />
 
@@ -303,7 +303,7 @@ export default function SalonProfileCreateScreen() {
                     if (phoneError && cleaned.length === 10) setPhoneError(false);
                   }}
                   placeholder="10-digit mobile number"
-                  placeholderTextColor="#4A4540"
+                  placeholderTextColor={Colors.text3}
                   keyboardType="phone-pad"
                   maxLength={10}
                 />
@@ -318,7 +318,7 @@ export default function SalonProfileCreateScreen() {
                 value={form.city}
                 onChangeText={v => setField('city', v)}
                 placeholder="e.g. Bangalore"
-                placeholderTextColor="#4A4540"
+                placeholderTextColor={Colors.text3}
                 autoCapitalize="words"
               />
             </>
@@ -451,7 +451,7 @@ export default function SalonProfileCreateScreen() {
             activeOpacity={0.85}
           >
             {submitting
-              ? <ActivityIndicator color="#0A0A0A" />
+              ? <ActivityIndicator color={Colors.surface} />
               : <Text style={s.nextBtnText}>Create profile</Text>
             }
           </TouchableOpacity>
@@ -470,64 +470,64 @@ export default function SalonProfileCreateScreen() {
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen:  { flex: 1, backgroundColor: '#0A0A0A' },
+  screen:  { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
 
   backBar:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   backBtn:    { width: 48, alignItems: 'center' },
-  backArrow:  { fontSize: 28, color: '#C9A84C', lineHeight: 32 },
-  stepCaption:{ fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase' },
+  backArrow:  { fontSize: 28, color: Colors.surface, lineHeight: 32 },
+  stepCaption:{ fontSize: 10, color: Colors.text2, letterSpacing: 1.5, textTransform: 'uppercase' },
 
-  stepTitle: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', marginBottom: 6 },
-  stepSub:   { fontSize: 13, color: '#8A7A6A', marginBottom: Spacing.xl, lineHeight: 20 },
-  step4Body: { fontSize: 13, color: '#8A7A6A', lineHeight: 20, marginBottom: Spacing.xl },
+  stepTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: 6 },
+  stepSub:   { fontSize: 13, color: Colors.text2, marginBottom: Spacing.xl, lineHeight: 20 },
+  step4Body: { fontSize: 13, color: Colors.text2, lineHeight: 20, marginBottom: Spacing.xl },
 
   // Underline text fields
-  fieldLabel:     { fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6, marginTop: Spacing.lg },
+  fieldLabel:     { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6, marginTop: Spacing.lg },
   underlineInput: {
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2420',
+    borderBottomColor: Colors.border,
     paddingVertical:   10,
     fontSize:          15,
-    color:             '#F5F0E8',
+    color:             Colors.surface,
     marginBottom:      4,
   },
 
   // Phone row
-  phoneRow:   { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#2A2420', marginBottom: 4 },
-  phonePrefix:{ fontSize: 15, color: '#8A7A6A', paddingVertical: 10, marginRight: 8 },
+  phoneRow:   { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: 4 },
+  phonePrefix:{ fontSize: 15, color: Colors.text2, paddingVertical: 10, marginRight: 8 },
 
   phoneInput: { flex: 1, borderBottomWidth: 0, marginBottom: 0 },
   phoneError: { fontSize: 11, color: '#E24B4A', marginTop: 4 },
 
   // Radio option rows
   optionsCard: {
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderRadius:    12,
     borderWidth:     1,
-    borderColor:     '#2A2420',
+    borderColor:     Colors.border,
     overflow:        'hidden',
     marginBottom:    Spacing.lg,
   },
   optionRow:        { flexDirection: 'row', alignItems: 'center', padding: Spacing.md },
-  optionRowBorder:  { borderBottomWidth: 1, borderBottomColor: '#2A2420' },
-  optionRowActive:  { backgroundColor: 'rgba(201,168,76,0.06)' },
-  radio:            { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#2A2420', alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
-  radioActive:      { borderColor: '#C9A84C' },
-  radioDot:         { width: 10, height: 10, borderRadius: 5, backgroundColor: '#C9A84C' },
-  optionLabel:      { fontSize: 15, color: '#8A7A6A', marginBottom: 2 },
-  optionLabelActive:{ color: '#F5F0E8', fontWeight: '600' },
-  optionSub:        { fontSize: 13, color: '#4A4540' },
+  optionRowBorder:  { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  optionRowActive:  { backgroundColor: 'rgba(230,199,156,0.12)' },
+  radio:            { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
+  radioActive:      { borderColor: Colors.accent },
+  radioDot:         { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.accent },
+  optionLabel:      { fontSize: 15, color: Colors.text2, marginBottom: 2 },
+  optionLabelActive:{ color: Colors.text, fontWeight: '600' },
+  optionSub:        { fontSize: 13, color: Colors.text3 },
 
   // Info card (step 4)
   infoCard: {
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderWidth:     1,
-    borderColor:     '#2A2420',
+    borderColor:     Colors.border,
     borderRadius:    12,
     padding:         Spacing.md,
   },
-  infoText: { fontSize: 11, color: '#4A4540', lineHeight: 20 },
+  infoText: { fontSize: 11, color: Colors.text3, lineHeight: 20 },
 
   // Bottom bar
   bottomBar: {
@@ -537,13 +537,13 @@ const s = StyleSheet.create({
     right:             0,
     paddingHorizontal: Spacing.lg,
     paddingTop:        Spacing.sm,
-    backgroundColor:   '#0A0A0A',
+    backgroundColor:   Colors.background,
     borderTopWidth:    1,
-    borderTopColor:    '#2A2420',
+    borderTopColor:    Colors.border,
   },
-  nextBtn:         { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center' },
+  nextBtn:         { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center' },
   nextBtnDisabled: { opacity: 0.4 },
-  nextBtnText:     { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
+  nextBtnText:     { fontSize: 14, fontWeight: '600', color: Colors.surface },
 
   // Confirmation
   confirmBox: {
@@ -564,10 +564,10 @@ const s = StyleSheet.create({
     marginBottom:    Spacing.xl,
   },
   confirmCheckText:      { fontSize: 28, color: '#5DCAA5' },
-  confirmTitle:          { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', marginBottom: 8, textAlign: 'center' },
-  confirmSub:            { fontSize: 13, color: '#8A7A6A', textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xxl },
-  confirmPrimaryBtn:     { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 32, width: '100%', alignItems: 'center', marginBottom: Spacing.sm },
-  confirmPrimaryBtnText: { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
+  confirmTitle:          { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: 8, textAlign: 'center' },
+  confirmSub:            { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xxl },
+  confirmPrimaryBtn:     { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 32, width: '100%', alignItems: 'center', marginBottom: Spacing.sm },
+  confirmPrimaryBtnText: { fontSize: 14, fontWeight: '600', color: Colors.surface },
   confirmSecondaryBtn:   { paddingVertical: 12, alignItems: 'center' },
-  confirmSecondaryBtnText:{ fontSize: 13, color: '#8A7A6A' },
+  confirmSecondaryBtnText:{ fontSize: 13, color: Colors.text2 },
 });

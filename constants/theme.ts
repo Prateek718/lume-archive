@@ -2,31 +2,21 @@
 // Import from here in every screen and component — never hardcode values.
 
 export const Colors = {
-  // Backgrounds
-  background:     '#0A0A0A', // near-black — used on every screen
-  surface:        '#1A1412', // warm dark — cards, inputs
-  surface2:       '#2A2A2A', // slightly lighter — nested elements inside cards
+  background: '#F7F4EF',
+  surface:    '#EDE6DC',
+  surface2:   '#E2D9CC',
+  card:       '#FFFFFF',
+  text:       '#2C2420',
+  text2:      '#8A7E76',
+  text3:      '#B0A49A',
+  accent:     '#C17B5C',
+  green:      '#7A9E7E',
+  border:     '#D8CFC4',
+  border2:    '#EAE3DA',
 
-  // Brand
-  gold:           '#C9A84C', // primary accent — buttons, active tabs, highlights
-  goldDim:        '#2A2010', // gold-tinted background — used behind badges
-
-  // Text
-  cream:          '#F5F0E8', // primary text on dark backgrounds
-  textSecondary:  '#888888', // secondary / supporting text
-  textTertiary:   '#555555', // placeholder text inside inputs
-
-  // Borders
-  border:         '#333333', // card borders
-  borderSubtle:   '#222222', // dividers between sections
-
-  // State
-  danger:         '#A32D2D', // destructive actions only (delete, remove)
-
-  // Tab bar
-  tabBar:         '#111111', // tab bar background
-  tabActive:      '#C9A84C', // active tab icon and label
-  tabInactive:    '#444444', // inactive tab icon and label
+  tabBar:     '#FFFFFF',
+  tabActive:  '#C17B5C',
+  tabInactive:'#B0A49A',
 } as const;
 
 export const Typography = {

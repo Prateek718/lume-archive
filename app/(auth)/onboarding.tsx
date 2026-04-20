@@ -14,12 +14,15 @@ import { FIRST_LAUNCH_KEY } from '../_layout';
 
 type GenderValue    = 'man' | 'woman' | 'other';
 type RoutineLevel   = 'simple' | 'balanced' | 'full';
+type AgeRange       = '18-25' | '26-35' | '36-45' | '46-55' | '55+';
 
 const GENDER_OPTIONS: { label: string; emoji: string; value: GenderValue }[] = [
   { label: 'Man',                emoji: '🧔', value: 'man'   },
   { label: 'Woman',              emoji: '👩', value: 'woman' },
   { label: 'Non-binary / Other', emoji: '🌟', value: 'other' },
 ];
+
+const AGE_RANGE_OPTIONS: AgeRange[] = ['18-25', '26-35', '36-45', '46-55', '55+'];
 
 const ROUTINE_OPTIONS: { label: string; sub: string; value: RoutineLevel }[] = [
   { label: 'Keep it simple',   sub: '2–3 essential products only',  value: 'simple'   },
@@ -31,9 +34,10 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [step,         setStep]         = useState<1 | 2 | 3 | 4>(1);
+  const [step,         setStep]         = useState<1 | 2 | 3 | 4 | 5>(1);
   const [displayName,  setDisplayName]  = useState('');
   const [gender,       setGender]       = useState<GenderValue | null>(null);
+  const [ageRange,     setAgeRange]     = useState<AgeRange | null>(null);
   const [city,         setCity]         = useState('');
   const [routineLevel, setRoutineLevel] = useState<RoutineLevel>('simple');
   const [loading,      setLoading]      = useState(false);
@@ -42,6 +46,7 @@ export default function OnboardingScreen() {
     if (step === 2) setStep(1);
     else if (step === 3) setStep(2);
     else if (step === 4) setStep(3);
+    else if (step === 5) setStep(4);
   };
 
   const handleComplete = async () => {
@@ -57,6 +62,7 @@ export default function OnboardingScreen() {
     const { error } = await supabase.from('users').update({
       display_name:        displayName.trim(),
       gender:              gender,
+      age_range:           ageRange,
       city:                city.trim(),
       routine_level:       routineLevel,
       onboarding_complete: true,
@@ -73,12 +79,12 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
     <KeyboardAvoidingView
       style={s.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       {/* Top bar — back arrow + progress dots */}
       <View style={[s.topBar, { paddingTop: insets.top + Spacing.sm }]}>
@@ -94,7 +100,7 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={s.dotsRow}>
-          {([1, 2, 3, 4] as const).map(i => (
+          {([1, 2, 3, 4, 5] as const).map(i => (
             <View key={i} style={[s.dot, i === step && s.dotActive]} />
           ))}
         </View>
@@ -116,7 +122,7 @@ export default function OnboardingScreen() {
             <TextInput
               style={s.input}
               placeholder="Your name"
-              placeholderTextColor={Colors.textTertiary}
+              placeholderTextColor={Colors.text3}
               value={displayName}
               onChangeText={setDisplayName}
               autoFocus
@@ -139,7 +145,7 @@ export default function OnboardingScreen() {
         {step === 2 && (
           <>
             <Text style={s.title}>How do you{'\n'}identify?</Text>
-            <Text style={s.subtitle}>This helps us tailor grooming recommendations for you</Text>
+            <Text style={s.subtitle}>This helps us tailor care recommendations for you</Text>
             <View style={s.genderCol}>
               {GENDER_OPTIONS.map(opt => (
                 <TouchableOpacity
@@ -166,25 +172,53 @@ export default function OnboardingScreen() {
           </>
         )}
 
-        {/* ── STEP 3: City ── */}
+        {/* ── STEP 3: Age range ── */}
         {step === 3 && (
+          <>
+            <Text style={s.title}>How old{'\n'}are you?</Text>
+            <Text style={s.subtitle}>Helps us factor age into your skin and care advice</Text>
+            <View style={s.ageGrid}>
+              {AGE_RANGE_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[s.ageCard, ageRange === opt && s.ageCardActive]}
+                  onPress={() => setAgeRange(opt)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[s.ageLabel, ageRange === opt && s.ageLabelActive]}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[s.cta, !ageRange && s.ctaDisabled]}
+              onPress={() => setStep(4)}
+              disabled={!ageRange}
+              activeOpacity={0.8}
+            >
+              <Text style={s.ctaText}>Continue</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* ── STEP 4: City ── */}
+        {step === 4 && (
           <>
             <Text style={s.title}>Which city{'\n'}are you in?</Text>
             <Text style={s.subtitle}>We'll show you the best salons near you</Text>
             <TextInput
               style={s.input}
               placeholder="e.g. Mumbai, Delhi, Bangalore"
-              placeholderTextColor={Colors.textTertiary}
+              placeholderTextColor={Colors.text3}
               value={city}
               onChangeText={setCity}
               autoFocus
               autoCapitalize="words"
               returnKeyType="next"
-              onSubmitEditing={() => city.trim() && setStep(4)}
+              onSubmitEditing={() => city.trim() && setStep(5)}
             />
             <TouchableOpacity
               style={[s.cta, !city.trim() && s.ctaDisabled]}
-              onPress={() => setStep(4)}
+              onPress={() => setStep(5)}
               disabled={!city.trim()}
               activeOpacity={0.8}
             >
@@ -193,8 +227,8 @@ export default function OnboardingScreen() {
           </>
         )}
 
-        {/* ── STEP 4: Routine level ── */}
-        {step === 4 && (
+        {/* ── STEP 5: Routine level ── */}
+        {step === 5 && (
           <>
             <Text style={s.title}>What kind of routine{'\n'}are you looking for?</Text>
             <Text style={s.subtitle}>We'll recommend the right number of products</Text>
@@ -227,10 +261,13 @@ export default function OnboardingScreen() {
               activeOpacity={0.8}
             >
               {loading
-                ? <ActivityIndicator color={Colors.background} />
+                ? <ActivityIndicator color={Colors.surface} />
                 : <Text style={s.ctaText}>Finish setup</Text>
               }
             </TouchableOpacity>
+            <Text style={s.privacyNote}>
+              Your scans are private — photos are{'\n'}analysed and immediately deleted.
+            </Text>
           </>
         )}
 
@@ -251,7 +288,7 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom:  Spacing.md,
   },
-  backArrow: { fontSize: 32, color: Colors.gold, lineHeight: 40 },
+  backArrow: { fontSize: 32, color: Colors.surface, lineHeight: 40 },
 
   dotsRow: {
     flexDirection: 'row',
@@ -262,10 +299,10 @@ const s = StyleSheet.create({
     width:           8,
     height:          8,
     borderRadius:    4,
-    backgroundColor: '#2A2420',
+    backgroundColor: Colors.surface,
   },
   dotActive: {
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.accent,
   },
 
   content: {
@@ -278,13 +315,13 @@ const s = StyleSheet.create({
   title: {
     fontFamily:   Typography.serif,
     fontSize:     Typography.size.xxxl,
-    color:        Colors.cream,
+    color:        Colors.surface,
     lineHeight:   42,
     marginBottom: Spacing.sm,
   },
   subtitle: {
     fontSize:     Typography.size.base,
-    color:        Colors.textSecondary,
+    color:        Colors.text2,
     marginBottom: Spacing.xl,
     lineHeight:   20,
   },
@@ -297,7 +334,7 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical:   Spacing.md,
     fontSize:          Typography.size.lg,
-    color:             Colors.cream,
+    color:             Colors.text,
     marginBottom:      Spacing.lg,
   },
 
@@ -308,29 +345,29 @@ const s = StyleSheet.create({
   genderCard: {
     flexDirection:   'row',
     alignItems:      'center',
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderRadius:    12,
     borderWidth:     1,
-    borderColor:     '#2A2420',
+    borderColor:     Colors.border,
     padding:         18,
     gap:             Spacing.md,
   },
   genderCardActive: {
-    borderColor:     Colors.gold,
-    backgroundColor: Colors.goldDim,
+    borderColor:     Colors.accent,
+    backgroundColor: Colors.surface2,
   },
   genderEmoji: { fontSize: 22 },
   genderLabel: {
     fontSize: Typography.size.md,
-    color:    Colors.textSecondary,
+    color:    Colors.text2,
   },
   genderLabelActive: {
-    color:      Colors.cream,
+    color:      Colors.text,
     fontWeight: '600',
   },
 
   cta: {
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.accent,
     borderRadius:    Radius.input,
     paddingVertical: Spacing.md,
     alignItems:      'center',
@@ -339,15 +376,46 @@ const s = StyleSheet.create({
   ctaText: {
     fontSize:   Typography.size.md,
     fontWeight: '600',
-    color:      Colors.background,
+    color:      Colors.surface,
+  },
+
+  // Age range step
+  ageGrid: {
+    flexDirection:  'row',
+    flexWrap:       'wrap',
+    gap:            Spacing.sm,
+    marginBottom:   Spacing.lg,
+  },
+  ageCard: {
+    flex:            1,
+    minWidth:        '28%',
+    backgroundColor: Colors.surface,
+    borderRadius:    12,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    paddingVertical: 16,
+    alignItems:      'center',
+  },
+  ageCardActive: {
+    borderColor:     Colors.accent,
+    backgroundColor: Colors.surface2,
+  },
+  ageLabel: {
+    fontSize:   Typography.size.md,
+    color:      Colors.text2,
+    fontWeight: '500',
+  },
+  ageLabelActive: {
+    color:      Colors.text,
+    fontWeight: '600',
   },
 
   // Routine level step
   routineCol: {
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderRadius:    12,
     borderWidth:     1,
-    borderColor:     '#2A2420',
+    borderColor:     Colors.border,
     marginBottom:    Spacing.lg,
     overflow:        'hidden',
   },
@@ -361,20 +429,29 @@ const s = StyleSheet.create({
   routineTexts: { flex: 1, marginRight: Spacing.md },
   routineLabel: {
     fontSize:  Typography.size.md,
-    color:     Colors.textSecondary,
+    color:     Colors.text2,
     marginBottom: 3,
   },
-  routineLabelActive: { color: Colors.cream, fontWeight: '600' },
-  routineSub:  { fontSize: 13, color: Colors.textTertiary },
-  routineDivider: { height: 1, backgroundColor: '#2A2420', marginHorizontal: Spacing.md },
+  routineLabelActive: { color: Colors.text, fontWeight: '600' },
+  routineSub:  { fontSize: 13, color: Colors.text3 },
+  routineDivider: { height: 1, backgroundColor: Colors.border, marginHorizontal: Spacing.md },
   radioOuter: {
     width: 20, height: 20, borderRadius: 10,
-    borderWidth: 1.5, borderColor: '#4A4540',
+    borderWidth: 1.5, borderColor: Colors.text2,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  radioOuterActive: { borderColor: Colors.gold },
+  radioOuterActive: { borderColor: Colors.accent },
   radioInner: {
     width: 10, height: 10, borderRadius: 5,
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.accent,
+  },
+
+  privacyNote: {
+    fontSize:    11,
+    color:       Colors.text2,
+    textAlign:   'center',
+    marginTop:   Spacing.md,
+    letterSpacing: 0.2,
+    lineHeight:  17,
   },
 });

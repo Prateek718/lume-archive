@@ -36,7 +36,7 @@ function MiniStars({ rating }: { rating: number }) {
   return (
     <View style={{ flexDirection: 'row', gap: 2 }}>
       {[1, 2, 3, 4, 5].map(n => (
-        <Text key={n} style={{ fontSize: 13, color: n <= filled ? '#C9A84C' : '#2A2420' }}>★</Text>
+        <Text key={n} style={{ fontSize: 13, color: n <= filled ? Colors.accent : Colors.border }}>★</Text>
       ))}
     </View>
   );
@@ -106,7 +106,7 @@ export default function SalonDetailScreen() {
 
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       {/* Back bar */}
       <View style={s.backBar}>
@@ -135,7 +135,7 @@ export default function SalonDetailScreen() {
         )}
 
         {loading ? (
-          <ActivityIndicator color="#C9A84C" style={{ marginTop: Spacing.xxl }} />
+          <ActivityIndicator color={Colors.accent} style={{ marginTop: Spacing.xxl }} />
         ) : (
           <>
             {/* ── Community ratings ── */}
@@ -255,64 +255,64 @@ export default function SalonDetailScreen() {
 }
 
 const s = StyleSheet.create({
-  screen:  { flex: 1, backgroundColor: '#0A0A0A' },
+  screen:  { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm },
 
   backBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   backBtn:  { width: 40, alignItems: 'center' },
-  backArrow:{ fontSize: 28, color: '#C9A84C', lineHeight: 32 },
+  backArrow:{ fontSize: 28, color: Colors.surface, lineHeight: 32 },
 
-  salonName: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', marginBottom: 4 },
-  salonMeta: { fontSize: 13, color: '#8A7A6A', lineHeight: 18, marginBottom: Spacing.sm },
+  salonName: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: 4 },
+  salonMeta: { fontSize: 13, color: Colors.text2, lineHeight: 18, marginBottom: Spacing.sm },
 
   ratingRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.lg },
-  ratingNum:    { fontSize: 13, color: '#C9A84C', fontWeight: '600' },
-  ratingSource: { fontSize: 13, color: '#4A4540' },
+  ratingNum:    { fontSize: 13, color: Colors.text, fontWeight: '600' },
+  ratingSource: { fontSize: 13, color: Colors.text2 },
 
-  sectionLabel: { fontSize: 10, color: '#C9A84C', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
+  sectionLabel: { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm, marginTop: Spacing.lg },
 
   card: {
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderRadius:    12,
     borderWidth:     1,
-    borderColor:     '#2A2420',
+    borderColor:     Colors.border,
     overflow:        'hidden',
     marginBottom:    Spacing.sm,
   },
   catRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
-  catRowBorder: { borderBottomWidth: 1, borderBottomColor: '#2A2420' },
-  catLabel:     { fontSize: 15, color: '#F5F0E8' },
+  catRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  catLabel:     { fontSize: 15, color: Colors.text },
   catRight:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  catNum:       { fontSize: 15, color: '#C9A84C', fontWeight: '600', minWidth: 28, textAlign: 'right' },
-  ratingCount:  { fontSize: 11, color: '#4A4540', textAlign: 'center', paddingVertical: Spacing.sm },
+  catNum:       { fontSize: 15, color: Colors.accent, fontWeight: '600', minWidth: 28, textAlign: 'right' },
+  ratingCount:  { fontSize: 11, color: Colors.text3, textAlign: 'center', paddingVertical: Spacing.sm },
 
   // Services
   serviceBlock:        { padding: Spacing.md },
-  serviceBlockBorder:  { borderBottomWidth: 1, borderBottomColor: '#2A2420' },
-  serviceGroupLabel:   { fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs },
+  serviceBlockBorder:  { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  serviceGroupLabel:   { fontSize: 10, color: Colors.text2, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs },
   pillsWrap:           { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   servicePill: {
-    backgroundColor: 'rgba(201,168,76,0.12)',
+    backgroundColor: 'rgba(230,199,156,0.18)',
     borderWidth:     1,
-    borderColor:     'rgba(201,168,76,0.25)',
+    borderColor:     'rgba(230,199,156,0.45)',
     borderRadius:    999,
     paddingHorizontal: 10,
     paddingVertical:   4,
   },
-  servicePillText: { fontSize: 13, color: '#C9A84C' },
+  servicePillText: { fontSize: 13, color: Colors.accent },
 
   // Claim card
   claimCard: {
     borderWidth:  1,
-    borderColor:  'rgba(201,168,76,0.3)',
+    borderColor:  'rgba(230,199,156,0.5)',
     borderRadius: 12,
     padding:      Spacing.lg,
     marginBottom: Spacing.sm,
   },
-  claimTitle: { fontSize: 15, color: '#F5F0E8', marginBottom: 6 },
-  claimSub:   { fontSize: 13, color: '#8A7A6A', lineHeight: 20, marginBottom: Spacing.lg },
-  claimBtn:   { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  claimBtnText:{ fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
+  claimTitle: { fontSize: 15, color: Colors.surface, marginBottom: 6 },
+  claimSub:   { fontSize: 13, color: Colors.text2, lineHeight: 20, marginBottom: Spacing.lg },
+  claimBtn:   { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  claimBtnText:{ fontSize: 14, fontWeight: '600', color: Colors.surface },
 
   // Bottom actions
   bottomBar: {
@@ -324,12 +324,12 @@ const s = StyleSheet.create({
     gap:             Spacing.sm,
     paddingHorizontal: Spacing.lg,
     paddingTop:      Spacing.sm,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: Colors.background,
     borderTopWidth:  1,
-    borderTopColor:  '#2A2420',
+    borderTopColor:  Colors.border,
   },
-  rateBtn:     { flex: 1, backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center' },
-  rateBtnText: { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
-  dirBtn:      { flex: 1, borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', backgroundColor: '#1A1412' },
-  dirBtnText:  { fontSize: 13, fontWeight: '600', color: '#F5F0E8' },
+  rateBtn:     { flex: 1, backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center' },
+  rateBtnText: { fontSize: 14, fontWeight: '600', color: Colors.surface },
+  dirBtn:      { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', backgroundColor: Colors.surface },
+  dirBtnText:  { fontSize: 13, fontWeight: '600', color: Colors.text },
 });

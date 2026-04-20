@@ -47,7 +47,7 @@ function StarsLarge({ value, onChange }: { value: number; onChange: (v: number) 
     <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
       {[1, 2, 3, 4, 5].map(n => (
         <TouchableOpacity key={n} onPress={() => onChange(n)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
-          <Text style={{ fontSize: 32, color: n <= value ? '#C9A84C' : '#2A2420', lineHeight: 40 }}>★</Text>
+          <Text style={{ fontSize: 32, color: n <= value ? Colors.accent : Colors.border, lineHeight: 40 }}>★</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -59,7 +59,7 @@ function StarsSmall({ value, onChange }: { value: number; onChange: (v: number) 
     <View style={{ flexDirection: 'row', gap: 4 }}>
       {[1, 2, 3, 4, 5].map(n => (
         <TouchableOpacity key={n} onPress={() => onChange(n)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
-          <Text style={{ fontSize: 22, color: n <= value ? '#C9A84C' : '#2A2420', lineHeight: 28 }}>★</Text>
+          <Text style={{ fontSize: 22, color: n <= value ? Colors.accent : Colors.border, lineHeight: 28 }}>★</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -213,13 +213,13 @@ export default function RateSalonScreen() {
   if (step === 'search') {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <BackBar title="Rate a Salon" />
         <View style={s.searchBox}>
           <TextInput
             style={s.searchInput}
             placeholder="Search by name or area…"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={Colors.text3}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="words"
@@ -228,7 +228,7 @@ export default function RateSalonScreen() {
           />
         </View>
         {loadingList ? (
-          <ActivityIndicator color="#C9A84C" style={{ marginTop: Spacing.xl }} />
+          <ActivityIndicator color={Colors.accent} style={{ marginTop: Spacing.xl }} />
         ) : (
           <ScrollView contentContainerStyle={s.listContent} keyboardShouldPersistTaps="handled">
             {filtered.map(salon => (
@@ -263,7 +263,7 @@ export default function RateSalonScreen() {
   if (step === 'success') {
     return (
       <View style={[s.screen, s.successScreen, { paddingTop: insets.top }]}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Text style={s.successCheck}>✓</Text>
         <Text style={s.successTitle}>Rating submitted</Text>
         <Text style={s.successBody}>
@@ -279,7 +279,7 @@ export default function RateSalonScreen() {
   // ── Form ──────────────────────────────────────────────────────────────────
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <BackBar
         title="Rate a Salon"
         onBack={() => (params.placeId ? router.back() : setStep('search'))}
@@ -354,7 +354,7 @@ export default function RateSalonScreen() {
           activeOpacity={0.85}
         >
           {submitting
-            ? <ActivityIndicator color="#0A0A0A" />
+            ? <ActivityIndicator color={Colors.surface} />
             : <Text style={s.submitBtnText}>Submit rating</Text>
           }
         </TouchableOpacity>
@@ -381,80 +381,80 @@ function BackBar({ title, onBack }: { title: string; onBack?: () => void }) {
 const bb = StyleSheet.create({
   row:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
   btn:   { width: 40, alignItems: 'center' },
-  arrow: { fontSize: 28, color: '#C9A84C', lineHeight: 32 },
-  title: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8' },
+  arrow: { fontSize: 28, color: Colors.surface, lineHeight: 32 },
+  title: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
 });
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0A0A0A' },
+  screen: { flex: 1, backgroundColor: Colors.background },
 
   // Search
   searchBox:    { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
-  searchInput:  { backgroundColor: '#1A1412', borderWidth: 1, borderColor: '#2A2420', borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: 15, color: '#F5F0E8' },
+  searchInput:  { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, fontSize: 15, color: Colors.text },
   listContent:  { paddingHorizontal: Spacing.lg },
-  listRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', padding: Spacing.md, marginBottom: Spacing.xs },
-  listName:     { fontSize: 15, color: '#F5F0E8', fontWeight: '600', marginBottom: 2 },
-  listAddr:     { fontSize: 13, color: Colors.textSecondary },
-  listArrow:    { fontSize: 22, color: Colors.textTertiary, lineHeight: 26 },
-  addManualRow: { backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', padding: Spacing.md, alignItems: 'center', marginTop: Spacing.sm },
-  addManualText:{ fontSize: 13, color: '#C9A84C' },
-  emptyHint:    { textAlign: 'center', color: Colors.textTertiary, fontSize: 13, marginTop: Spacing.xl },
+  listRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.xs },
+  listName:     { fontSize: 15, color: Colors.text, fontWeight: '600', marginBottom: 2 },
+  listAddr:     { fontSize: 13, color: Colors.text2 },
+  listArrow:    { fontSize: 22, color: Colors.text3, lineHeight: 26 },
+  addManualRow: { backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.sm },
+  addManualText:{ fontSize: 13, color: Colors.accent },
+  emptyHint:    { textAlign: 'center', color: Colors.text2, fontSize: 13, marginTop: Spacing.xl },
 
   // Form
   formContent:     { paddingHorizontal: Spacing.lg },
-  salonHeader:     { paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: '#2A2420', marginBottom: Spacing.lg },
-  salonHeaderName: { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8' },
-  salonHeaderAddr: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
+  salonHeader:     { paddingVertical: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: Spacing.lg },
+  salonHeaderName: { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface },
+  salonHeaderAddr: { fontSize: 13, color: Colors.text2, marginTop: 4 },
 
-  sectionLabel: { fontSize: 10, color: '#C9A84C', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs, marginTop: Spacing.xl },
-  sectionSub:   { fontSize: 13, color: '#8A7A6A', marginBottom: Spacing.md },
+  sectionLabel: { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs, marginTop: Spacing.xl },
+  sectionSub:   { fontSize: 13, color: Colors.text2, marginBottom: Spacing.md },
 
   overallBox: {
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderRadius:    12,
     borderWidth:     1,
-    borderColor:     '#2A2420',
+    borderColor:     Colors.border,
     padding:         Spacing.xl,
     alignItems:      'center',
   },
 
   // Service groups
   serviceGroup:      { marginBottom: Spacing.lg },
-  serviceGroupLabel: { fontSize: 10, color: '#8A7A6A', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
+  serviceGroupLabel: { fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
   pillsWrap:         { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   pill: {
-    backgroundColor: '#1A1412',
+    backgroundColor: Colors.surface,
     borderWidth:     1,
-    borderColor:     '#2A2420',
+    borderColor:     Colors.border,
     borderRadius:    999,
     paddingHorizontal: 14,
     paddingVertical:   7,
   },
   pillActive: {
-    backgroundColor: 'rgba(201,168,76,0.12)',
-    borderColor:     'rgba(201,168,76,0.4)',
+    backgroundColor: 'rgba(230,199,156,0.18)',
+    borderColor:     'rgba(230,199,156,0.5)',
   },
-  pillText:       { fontSize: 13, color: '#4A4540' },
+  pillText:       { fontSize: 13, color: Colors.text },
 
-  pillTextActive: { color: '#C9A84C', fontWeight: '600' },
+  pillTextActive: { color: Colors.accent, fontWeight: '600' },
 
   // Detail ratings
-  detailCard:      { backgroundColor: '#1A1412', borderRadius: 12, borderWidth: 1, borderColor: '#2A2420', overflow: 'hidden' },
+  detailCard:      { backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
   detailRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md },
-  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#2A2420' },
-  detailLabel:     { fontSize: 15, color: '#F5F0E8' },
+  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  detailLabel:     { fontSize: 15, color: Colors.text },
 
   // Submit
-  submitBtn:         { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
+  submitBtn:         { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.xl },
   submitBtnDisabled: { opacity: 0.4 },
-  submitBtnText:     { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
+  submitBtnText:     { fontSize: 14, fontWeight: '600', color: Colors.surface },
 
   // Success
   successScreen: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
-  successCheck:  { fontSize: 32, color: '#C9A84C', marginBottom: Spacing.lg },
-  successTitle:  { fontFamily: Typography.serif, fontSize: 22, color: '#F5F0E8', marginBottom: Spacing.sm },
-  successBody:   { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
-  successBtn:    { backgroundColor: '#C9A84C', borderRadius: 10, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
-  successBtnText:{ fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
+  successCheck:  { fontSize: 32, color: Colors.text, marginBottom: Spacing.lg },
+  successTitle:  { fontFamily: Typography.serif, fontSize: 22, color: Colors.surface, marginBottom: Spacing.sm },
+  successBody:   { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.xxl },
+  successBtn:    { backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
+  successBtnText:{ fontSize: 14, fontWeight: '600', color: Colors.surface },
 });

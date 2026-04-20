@@ -37,7 +37,7 @@ export default function SplashScreen() {
         return;
       }
 
-      // Not signed in — first launch or returning guest?
+      // Not signed in — first launch or new user
       const firstLaunchDone = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
       if (!firstLaunchDone) {
         router.replace('/(auth)/signup');
@@ -52,7 +52,7 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       <Animated.View style={[styles.inner, { opacity: fadeAnim, transform: [{ translateY: riseAnim }] }]}>
 
@@ -63,6 +63,7 @@ export default function SplashScreen() {
 
         {/* Brand name */}
         <Text style={styles.brand}>Lumé</Text>
+        <Text style={styles.tagline}>INTELLIGENT CARE</Text>
 
       </Animated.View>
     </View>
@@ -89,14 +90,20 @@ const styles = StyleSheet.create({
   diamond: {
     width:           52,
     height:          52,
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.accent,
     borderRadius:    10,
     transform:       [{ rotate: '45deg' }],
   },
   brand: {
     fontFamily:    Typography.serif,
     fontSize:      32,
-    color:         Colors.cream,
+    color:         Colors.text,
     letterSpacing: 3,
+  },
+  tagline: {
+    fontSize:      11,
+    color:         Colors.text2,
+    letterSpacing: 3,
+    marginTop:     6,
   },
 });

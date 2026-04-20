@@ -1,6 +1,6 @@
-// Profile tab — user info, stats, routine reminders, account actions
+// Profile tab — hero, tier card, flat preference/notification/about sections
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Switch, Alert, Platform,
@@ -14,21 +14,20 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { FIRST_LAUNCH_KEY } from '../_layout';
-import { getTierFromScore } from '../../constants/tiers';
+import { getSavedRecommendations } from '../../services/scanService';
+import type { Scan, HairProfile, PreferredBrands } from '../../types';
+import { isBaldProfile } from '../../types';
+import { inferBudgetFromBrands } from '../../constants/productConstants';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [displayName,       setDisplayName]       = useState('');
-  const [gender,            setGender]            = useState('');
   const [city,              setCity]              = useState('');
-  const [preferredBrands,   setPreferredBrands]   = useState<string[]>([]);
-  const [routineLevel,      setRoutineLevel]      = useState('');
-  const [scanCount,         setScanCount]         = useState(0);
-  const [currentStreak,     setCurrentStreak]     = useState(0);
-  const [bestStreak,        setBestStreak]        = useState(0);
-  const [topTier,           setTopTier]           = useState('');
+  const [preferredBrandsV2, setPreferredBrandsV2] = useState<PreferredBrands | null>(null);
+  const [hairProfile,       setHairProfile]       = useState<HairProfile | null>(null);
+  const [scans,             setScans]             = useState<Scan[]>([]);
   const [reminderEnabled,   setReminderEnabled]   = useState(false);
   const [morningTime,       setMorningTime]       = useState(new Date(new Date().setHours(8, 0, 0, 0)));
   const [eveningTime,       setEveningTime]       = useState(new Date(new Date().setHours(21, 0, 0, 0)));
@@ -45,49 +44,46 @@ export default function ProfileScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Load user profile
     const { data: profile } = await supabase
       .from('users')
-      .select('display_name, gender, city, preferred_brands, routine_level')
+      .select('display_name, gender, city, preferred_brands_v2, hair_profile')
       .eq('id', user.id)
       .single();
 
     if (profile) {
       setDisplayName(profile.display_name ?? '');
-      setGender(profile.gender ?? '');
       setCity(profile.city ?? '');
-      type ProfileRow = { preferred_brands?: string[]; routine_level?: string };
+      type ProfileRow = {
+        preferred_brands_v2?: PreferredBrands | null;
+        hair_profile?: HairProfile | null;
+      };
       const p = profile as ProfileRow;
-      setPreferredBrands(p.preferred_brands ?? []);
-      setRoutineLevel(p.routine_level ?? '');
+      setPreferredBrandsV2(p.preferred_brands_v2 ?? null);
+      const hp = p.hair_profile ?? null;
+      setHairProfile(hp && Object.keys(hp).length > 0 ? hp : null);
     }
 
-    // Load scan count and top tier
-    const { data: scans } = await supabase
+    const { data: scansData } = await supabase
       .from('scans')
-      .select('score_overall, tier_label')
+      .select('id, score_overall, tier_label, face_shape, skin_type, created_at')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-    if (scans) {
-      setScanCount(scans.length);
-      const bestScore = scans.length > 0
-        ? Math.max(...scans.map(sc => sc.score_overall ?? 0))
-        : 0;
-      if (bestScore > 0) setTopTier(getTierFromScore(bestScore).name);
-    }
+    if (scansData) setScans(scansData as Scan[]);
 
-    // Load streak from AsyncStorage
-    const streakRaw = await AsyncStorage.getItem('@lume/routine_streak');
-    if (streakRaw) {
-      const streak = JSON.parse(streakRaw) as { current: number; best: number };
-      setCurrentStreak(streak.current ?? 0);
-      setBestStreak(streak.best ?? 0);
-    }
-
-    // Load notification settings
     const reminderRaw = await AsyncStorage.getItem('@lume/reminder_enabled');
-    setReminderEnabled(reminderRaw === 'true');
+    if (reminderRaw === 'true') {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status === 'granted') {
+        setReminderEnabled(true);
+      } else {
+        setReminderEnabled(false);
+        await AsyncStorage.setItem('@lume/reminder_enabled', 'false');
+      }
+    } else {
+      setReminderEnabled(false);
+    }
 
     const morningRaw = await AsyncStorage.getItem('@lume/morning_time');
     if (morningRaw) setMorningTime(new Date(morningRaw));
@@ -117,30 +113,41 @@ export default function ProfileScreen() {
   async function scheduleReminders(morning: Date, evening: Date) {
     await Notifications.cancelAllScheduledNotificationsAsync();
 
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('routine-reminders', {
+        name:             'Routine Reminders',
+        importance:       Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: Colors.accent,
+      });
+    }
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Lumé',
-        body: 'Time for your morning grooming routine ☀️',
-        data: { type: 'routine_morning' },
+        body:  'Time for your morning care routine ☀️',
+        data:  { type: 'routine_morning' },
+        ...(Platform.OS === 'android' ? { channelId: 'routine-reminders' } : {}),
       },
       trigger: {
-        hour: morning.getHours(),
+        type:   Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour:   morning.getHours(),
         minute: morning.getMinutes(),
-        repeats: true,
-      } as any,
+      },
     });
 
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Lumé',
-        body: 'Time for your evening grooming routine 🌙',
-        data: { type: 'routine_evening' },
+        body:  'Time for your evening care routine 🌙',
+        data:  { type: 'routine_evening' },
+        ...(Platform.OS === 'android' ? { channelId: 'routine-reminders' } : {}),
       },
       trigger: {
-        hour: evening.getHours(),
+        type:   Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour:   evening.getHours(),
         minute: evening.getMinutes(),
-        repeats: true,
-      } as any,
+      },
     });
   }
 
@@ -227,58 +234,89 @@ export default function ProfileScreen() {
     );
   }
 
+  const hairProfileSet = hairProfile !== null;
+
+  const latestScan = scans[0] ?? null;
+  const scanPills  = latestScan
+    ? [
+        latestScan.face_shape && `${latestScan.face_shape} face`,
+        latestScan.skin_type  && `${latestScan.skin_type} skin`,
+      ].filter(Boolean) as string[]
+    : [];
+
+  async function openLatestRecommendation() {
+    if (!latestScan) return;
+    const cached = await getSavedRecommendations(latestScan.id ?? '');
+    if (cached) {
+      router.push({ pathname: '/recommendations', params: { scanJson: JSON.stringify(cached) } });
+    } else {
+      router.push({ pathname: '/recommendations', params: { scanId: latestScan.id } });
+    }
+  }
+
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={s.pageTitle}>Profile</Text>
 
-        {/* User info card */}
-        <View style={s.userCard}>
+        {/* ── Hero ── */}
+        <View style={s.hero}>
           <View style={s.avatar}>
             <Text style={s.avatarText}>
               {displayName?.[0]?.toUpperCase() ?? 'U'}
             </Text>
           </View>
-          <Text style={s.userName}>{displayName}</Text>
-          <Text style={s.userMeta}>
-            {city}{city && gender ? ' · ' : ''}{gender === 'man' ? 'Man' : gender === 'woman' ? 'Woman' : ''}
-          </Text>
-          {topTier ? (
-            <View style={s.tierBadge}>
-              <Text style={s.tierBadgeText}>{topTier}</Text>
+          <Text style={s.heroName}>{displayName}</Text>
+          {city ? <Text style={s.heroCity}>{city}</Text> : null}
+
+          {latestScan && (
+            <TouchableOpacity style={s.tierCard} onPress={openLatestRecommendation} activeOpacity={0.85}>
+              <Text style={s.scanDateText}>
+                {new Date(latestScan.created_at).toLocaleDateString('en-GB', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                })}
+              </Text>
+              {scanPills.length > 0 && (
+                <View style={s.tierPills}>
+                  {scanPills.map(p => (
+                    <View key={p} style={s.tierPill}>
+                      <Text style={s.tierPillText}>{p}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              <Text style={s.viewRecsLink}>View recommendations →</Text>
+            </TouchableOpacity>
+          )}
+
+          {!latestScan && (
+            <View style={s.noScanCard}>
+              <Text style={s.noScanText}>Take your first scan to see your personalised plan.</Text>
             </View>
-          ) : null}
+          )}
+
+          <TouchableOpacity
+            style={s.viewAllBtn}
+            onPress={() => router.push('/profile/recommendations' as any)}
+            activeOpacity={0.7}
+          >
+            <Text style={s.viewAllText}>View all recommendations →</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Stats */}
-        <View style={s.statsRow}>
-          <View style={s.statCard}>
-            <Text style={s.statNum}>{scanCount}</Text>
-            <Text style={s.statLabel}>SCANS</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statNum}>🔥 {currentStreak}</Text>
-            <Text style={s.statLabel}>STREAK</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statNum}>{bestStreak}</Text>
-            <Text style={s.statLabel}>BEST</Text>
-          </View>
-        </View>
-
-        {/* Routine reminders */}
-        <Text style={s.sectionLabel}>ROUTINE REMINDERS</Text>
+        {/* ── Notifications ── */}
+        <Text style={s.sectionLabel}>NOTIFICATIONS</Text>
         <View style={s.card}>
           <View style={s.row}>
             <Text style={s.rowLabel}>Daily reminder</Text>
             <Switch
               value={reminderEnabled}
               onValueChange={handleReminderToggle}
-              trackColor={{ false: Colors.border, true: Colors.gold }}
-              thumbColor={Colors.cream}
+              trackColor={{ false: Colors.border, true: Colors.accent }}
+              thumbColor={Colors.text}
             />
           </View>
+
           {reminderEnabled && (
             <>
               <View style={s.divider} />
@@ -330,21 +368,26 @@ export default function ProfileScreen() {
           />
         )}
 
-        {/* Preferences */}
+        {/* ── Preferences ── */}
         <Text style={s.sectionLabel}>PREFERENCES</Text>
         <View style={s.card}>
           <TouchableOpacity
             style={s.row}
-            onPress={() => router.push('/profile/my-brands')}
+            onPress={() => router.push('/profile/my-brands' as any)}
             activeOpacity={0.7}
           >
             <View>
               <Text style={s.rowLabel}>My brands</Text>
               <Text style={s.rowSub}>
-                {preferredBrands.length > 0
-                  ? preferredBrands.slice(0, 3).join(' · ')
-                  : 'Not set yet'
-                }
+                {(() => {
+                  const pb = preferredBrandsV2;
+                  const totalBrands = (pb?.skin?.length ?? 0) +
+                    (pb?.hair?.length ?? 0) +
+                    (pb?.makeup?.length ?? 0);
+                  if (totalBrands === 0 || !pb) return 'Not set yet';
+                  const budgetLabel = inferBudgetFromBrands(pb);
+                  return `${totalBrands} brands · ${budgetLabel}`;
+                })()}
               </Text>
             </View>
             <Text style={s.rowArrow}>›</Text>
@@ -352,23 +395,24 @@ export default function ProfileScreen() {
           <View style={s.divider} />
           <TouchableOpacity
             style={s.row}
-            onPress={() => router.push('/profile/routine-level')}
+            onPress={() => router.push('/hair-profile' as any)}
             activeOpacity={0.7}
           >
             <View>
-              <Text style={s.rowLabel}>Routine level</Text>
+              <Text style={s.rowLabel}>Hair profile</Text>
               <Text style={s.rowSub}>
-                {routineLevel === 'simple'   ? 'Keep it simple · 2–3 products' :
-                 routineLevel === 'balanced' ? 'Balanced · 4–5 products' :
-                 routineLevel === 'full'     ? 'Full routine · 6+ products' :
-                 'Not set yet'}
+                {hairProfileSet && hairProfile
+                  ? isBaldProfile(hairProfile)
+                    ? 'Bald / Shaved · Scalp care'
+                    : `${hairProfile.texture ?? ''} · ${hairProfile.primary_concern ?? ''}`.replace(/^ · | · $/, '')
+                  : 'Not set yet'}
               </Text>
             </View>
             <Text style={s.rowArrow}>›</Text>
           </TouchableOpacity>
         </View>
 
-        {/* About */}
+        {/* ── About ── */}
         <Text style={s.sectionLabel}>ABOUT</Text>
         <View style={s.card}>
           <TouchableOpacity style={s.row} activeOpacity={0.7}>
@@ -387,7 +431,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Account actions */}
+        {/* ── Account actions ── */}
         <View style={s.accountActions}>
           <TouchableOpacity onPress={handleSignOut} style={s.signOutBtn} activeOpacity={0.7}>
             <Text style={s.signOutText}>Sign out</Text>
@@ -406,75 +450,100 @@ export default function ProfileScreen() {
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen:       { flex: 1, backgroundColor: Colors.background },
+  screen:        { flex: 1, backgroundColor: Colors.background },
   scrollContent: { paddingBottom: Spacing.xl },
 
-  pageTitle: {
-    fontFamily:        Typography.serif,
-    fontSize:          22,
-    color:             Colors.cream,
+  // ── Hero ──
+  hero: {
+    alignItems:        'center',
+    paddingTop:        Spacing.xl,
+    paddingBottom:     Spacing.lg,
     paddingHorizontal: Spacing.lg,
-    paddingTop:        Spacing.md,
-    marginBottom:      Spacing.lg,
-  },
-
-  // User card
-  userCard: {
-    alignItems:      'center',
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
-    marginBottom:    Spacing.sm,
   },
   avatar: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: 'rgba(201,168,76,0.12)',
-    borderWidth: 1, borderColor: 'rgba(201,168,76,0.3)',
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: Colors.surface,
+    borderWidth: 2, borderColor: Colors.accent,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: Spacing.md,
   },
-  avatarText:    { fontFamily: Typography.serif, fontSize: 22, color: Colors.gold },
-  userName:      { fontFamily: Typography.serif, fontSize: 18, color: Colors.cream, marginBottom: 4 },
-  userMeta:      { fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.sm },
-  tierBadge:     { backgroundColor: 'rgba(201,168,76,0.12)', borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 4 },
-  tierBadgeText: { fontSize: 9, color: Colors.gold },
+  avatarText: { fontFamily: Typography.serif, fontSize: 26, color: Colors.accent },
+  heroName:   { fontFamily: Typography.serif, fontSize: 20, color: Colors.surface, marginBottom: 4 },
+  heroCity:   { fontSize: 13, color: Colors.text, marginBottom: Spacing.md },
 
-  // Stats
-  statsRow: {
-    flexDirection: 'row', gap: Spacing.sm,
-    marginHorizontal: Spacing.lg, marginBottom: Spacing.lg,
+  // Tier card
+  tierCard: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
-  statCard:  { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.sm, alignItems: 'center' },
-  statNum:   { fontFamily: Typography.serif, fontSize: 18, color: Colors.cream, marginBottom: 2 },
-  statLabel: { fontSize: 9, color: Colors.textSecondary, letterSpacing: 1.5, textTransform: 'uppercase' },
+  scanDateText: { fontSize: 12, color: Colors.text2, marginBottom: Spacing.xs },
+  viewRecsLink: { fontSize: 12, color: Colors.accent, marginTop: Spacing.xs },
+  tierPills:    { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
+  tierPill:     { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  tierPillText: { fontSize: 10, color: Colors.accent, textTransform: 'capitalize' },
 
-  // Section / card
+  // No scan state
+  noScanCard: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
+    alignItems: 'center',
+  },
+  noScanText: { fontSize: 13, color: Colors.text2, textAlign: 'center' },
+
+  viewAllBtn:  { paddingVertical: 8, marginTop: 4 },
+  viewAllText: { fontSize: 13, color: Colors.text },
+
+  // ── Section label ──
   sectionLabel: {
-    fontSize: 10, color: Colors.textSecondary, letterSpacing: 1.5, textTransform: 'uppercase',
-    marginHorizontal: Spacing.lg, marginBottom: Spacing.sm, marginTop: Spacing.xs,
+    fontSize: 10, color: Colors.surface, letterSpacing: 1.5, textTransform: 'uppercase',
+    marginHorizontal: Spacing.lg, marginBottom: Spacing.xs, marginTop: Spacing.lg,
   },
-  card: {
-    backgroundColor:  Colors.surface,
-    borderRadius:     Radius.card,
-    borderWidth:      1,
-    borderColor:      Colors.border,
-    marginHorizontal: Spacing.lg,
-    marginBottom:     Spacing.lg,
-    paddingHorizontal: Spacing.md,
-  },
-  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
-  rowLabel: { fontSize: 15, color: Colors.cream },
-  rowSub:   { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  rowValue: { fontSize: 13, color: Colors.textSecondary },
-  rowArrow: { fontSize: 18, color: Colors.gold },
-  divider:  { height: 1, backgroundColor: Colors.border },
-  timeBtn:     { backgroundColor: Colors.surface2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  timeBtnText: { fontSize: 13, color: Colors.gold },
 
-  // Account actions
-  accountActions:  { marginHorizontal: Spacing.lg, borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.md },
-  signOutBtn:      { paddingVertical: 12, alignItems: 'center' },
-  signOutText:     { fontSize: 13, color: Colors.textSecondary },
-  actionsDivider:  { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
-  deleteBtn:       { paddingVertical: 12, alignItems: 'center' },
-  deleteText:      { fontSize: 13, color: '#FF4444' },
+  // ── Card ──
+  card: {
+    backgroundColor:   Colors.surface,
+    borderRadius:      Radius.card,
+    borderWidth:       1,
+    borderColor:       Colors.border,
+    marginHorizontal:  Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    overflow:          'hidden',
+  },
+
+  // ── Row primitives ──
+  row:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13 },
+  rowLabel: { fontSize: 15, color: Colors.text },
+  rowSub:   { fontSize: 12, color: Colors.text2, marginTop: 2 },
+  rowValue: { fontSize: 13, color: Colors.text2 },
+  rowArrow: { fontSize: 18, color: Colors.accent },
+  divider:  { height: 1, backgroundColor: Colors.border2 },
+
+  timeBtn:     { backgroundColor: Colors.surface2, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  timeBtnText: { fontSize: 13, color: Colors.accent },
+
+  // ── Account actions ──
+  accountActions: {
+    marginHorizontal: Spacing.lg,
+    borderTopWidth:   1,
+    borderTopColor:   Colors.border,
+    paddingTop:       Spacing.md,
+    marginTop:        Spacing.lg,
+  },
+  signOutBtn:     { paddingVertical: 12, alignItems: 'center' },
+  signOutText:    { fontSize: 13, color: Colors.surface },
+  actionsDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
+  deleteBtn:      { paddingVertical: 12, alignItems: 'center' },
+  deleteText:     { fontSize: 13, color: '#A32D2D' },
 });
