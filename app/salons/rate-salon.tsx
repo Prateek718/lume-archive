@@ -432,8 +432,8 @@ const s = StyleSheet.create({
     paddingVertical:   7,
   },
   pillActive: {
-    backgroundColor: 'rgba(230,199,156,0.18)',
-    borderColor:     'rgba(230,199,156,0.5)',
+    backgroundColor: Colors.accentTintMedium,
+    borderColor:     Colors.accentTintBorderStrong,
   },
   pillText:       { fontSize: 13, color: Colors.text },
 

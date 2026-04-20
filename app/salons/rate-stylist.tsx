@@ -364,10 +364,10 @@ const s = StyleSheet.create({
   pillRow:       { flexDirection: 'row', gap: Spacing.sm },
   pill:          { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.pill, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
   pillActive:    { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  pillActiveNo:  { backgroundColor: '#3A1A1A', borderColor: '#A32D2D' },
+  pillActiveNo:  { backgroundColor: Colors.statusClosedBg, borderColor: Colors.danger },
   pillText:      { fontSize: Typography.size.base, color: Colors.text, fontWeight: '600' },
   pillTextActive:{ color: Colors.textOnAccent },
-  pillTextActiveNo:{ color: '#FF6B6B' },
+  pillTextActiveNo:{ color: Colors.dangerLight },
 
   salonRow:      { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginTop: Spacing.lg },
   salonRowLabel: { fontSize: Typography.size.sm, color: Colors.text2, marginBottom: 2 },

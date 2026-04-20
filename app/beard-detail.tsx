@@ -246,7 +246,7 @@ export default function BeardDetailScreen() {
                   borderRadius: 12,
                   borderWidth: 1,
                   borderColor: Colors.accent,
-                  backgroundColor: 'rgba(230,199,156,0.12)',
+                  backgroundColor: Colors.accentTint,
                 }}
                 activeOpacity={0.7}
               >
@@ -573,12 +573,12 @@ const s = StyleSheet.create({
   stepChevron: { fontSize: 18, color: Colors.accent, lineHeight: 22 },
 
   // Condition cards
-  honestCard:  { backgroundColor: '#FEF6F2', borderRadius: 11, borderWidth: 1, borderColor: '#E8C4B4', padding: 12, marginBottom: 12 },
+  honestCard:  { backgroundColor: Colors.dangerBg, borderRadius: 11, borderWidth: 1, borderColor: Colors.dangerBorder, padding: 12, marginBottom: 12 },
   honestLabel: { fontSize: 9, color: Colors.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
-  honestBody:  { fontSize: 12, color: '#7A4A38', lineHeight: 18 },
-  goodCard:    { backgroundColor: '#EAF2EB', borderRadius: 11, borderWidth: 1, borderColor: '#C8DFC9', padding: 12, marginBottom: 12 },
+  honestBody:  { fontSize: 12, color: Colors.dangerText, lineHeight: 18 },
+  goodCard:    { backgroundColor: Colors.successBg, borderRadius: 11, borderWidth: 1, borderColor: Colors.successBorder, padding: 12, marginBottom: 12 },
   goodLabel:   { fontSize: 9, color: Colors.green, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
-  goodBody:    { fontSize: 12, color: '#4A7A4E', lineHeight: 18 },
+  goodBody:    { fontSize: 12, color: Colors.successText, lineHeight: 18 },
 
   // Beard styles section
   stylesSection:      { marginTop: 8 },
@@ -589,18 +589,18 @@ const s = StyleSheet.create({
   maintDot:    { width: 8, height: 8, borderRadius: 4 },
   maintLow:    { backgroundColor: Colors.green },
   maintMed:    { backgroundColor: Colors.accent },
-  maintHigh:   { backgroundColor: '#E24B4A' },
+  maintHigh:   { backgroundColor: Colors.dangerStrong },
   styleWhy:    { fontSize: 11, color: Colors.text2, lineHeight: 17 },
-  avoidCard:   { backgroundColor: '#FEF6F2', borderRadius: 10, borderWidth: 1, borderColor: '#E8C4B4', padding: 12, marginBottom: 8 },
+  avoidCard:   { backgroundColor: Colors.dangerBg, borderRadius: 10, borderWidth: 1, borderColor: Colors.dangerBorder, padding: 12, marginBottom: 8 },
   avoidLabel:  { fontSize: 9, color: Colors.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
-  avoidName:   { fontSize: 12, fontWeight: '500', color: '#7A4A38', marginBottom: 3 },
-  avoidReason: { fontSize: 11, color: '#7A4A38', lineHeight: 17 },
+  avoidName:   { fontSize: 12, fontWeight: '500', color: Colors.dangerText, marginBottom: 3 },
+  avoidReason: { fontSize: 11, color: Colors.dangerText, lineHeight: 17 },
 
   openingLine: { fontSize: 15, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },
 
   // Collapsible category tiles
   noBrandsBanner: {
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: 'rgba(230,199,156,0.4)',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.accentTintBorder,
     borderRadius: 12, padding: 14, marginBottom: 8,
   },
   noBrandsTitle:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: 6 },
@@ -622,8 +622,8 @@ const s = StyleSheet.create({
   noProductsText: { fontSize: 11, color: Colors.text3, padding: 14 },
 
   expandedProduct: {
-    backgroundColor: 'rgba(230,199,156,0.08)', borderWidth: 1, borderTopWidth: 0,
-    borderColor: 'rgba(230,199,156,0.4)', borderBottomLeftRadius: 10,
+    backgroundColor: Colors.accentTintLight, borderWidth: 1, borderTopWidth: 0,
+    borderColor: Colors.accentTintBorder, borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10, padding: 14, marginBottom: 5,
   },
   matchMeterWrap:   { marginBottom: 0 },
@@ -633,7 +633,7 @@ const s = StyleSheet.create({
   matchTrack:       { height: 3, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
   matchFill:        { height: '100%', backgroundColor: Colors.accent, borderRadius: 2 },
 
-  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: 'rgba(230,199,156,0.2)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
+  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: Colors.accentTintStrong, borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
   preferredBadgeText: { fontSize: 9, color: Colors.accent, fontWeight: '500' },
   productName:        { fontSize: 15, color: Colors.text, fontWeight: '500', marginTop: 12, marginBottom: 3 },
   productMeta:        { fontSize: 13, color: Colors.text2, marginBottom: 8 },

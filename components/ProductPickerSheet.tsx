@@ -161,7 +161,7 @@ export default function ProductPickerSheet({
 const s = StyleSheet.create({
   overlay: {
     flex:            1,
-    backgroundColor: 'rgba(44, 36, 32, 0.5)',
+    backgroundColor: Colors.overlaySheet,
     justifyContent:  'flex-end',
   },
 
@@ -211,7 +211,7 @@ const s = StyleSheet.create({
   },
 
   cardFeatured: {
-    backgroundColor: '#FEF6F2',
+    backgroundColor: Colors.dangerBg,
     borderWidth:     1.5,
     borderColor:     Colors.accent,
     borderRadius:    10,
@@ -230,7 +230,7 @@ const s = StyleSheet.create({
 
   featuredBadgeText: {
     fontSize:    9,
-    color:       '#FFFFFF',
+    color:       Colors.textOnAccent,
     fontWeight:  '600',
   },
 

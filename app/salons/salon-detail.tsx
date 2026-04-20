@@ -292,9 +292,9 @@ const s = StyleSheet.create({
   serviceGroupLabel:   { fontSize: 10, color: Colors.text2, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.xs },
   pillsWrap:           { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   servicePill: {
-    backgroundColor: 'rgba(230,199,156,0.18)',
+    backgroundColor: Colors.accentTintMedium,
     borderWidth:     1,
-    borderColor:     'rgba(230,199,156,0.45)',
+    borderColor:     Colors.accentTintBorder,
     borderRadius:    999,
     paddingHorizontal: 10,
     paddingVertical:   4,
@@ -304,7 +304,7 @@ const s = StyleSheet.create({
   // Claim card
   claimCard: {
     borderWidth:  1,
-    borderColor:  'rgba(230,199,156,0.5)',
+    borderColor:  Colors.accentTintBorderStrong,
     borderRadius: 12,
     padding:      Spacing.lg,
     marginBottom: Spacing.sm,

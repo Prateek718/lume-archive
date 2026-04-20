@@ -52,9 +52,9 @@ function formatCategoryName(cat: string): string {
 
 // Maintenance dot colour
 const MAINT_COLOR: Record<string, string> = {
-  low:    Colors.green ?? '#7A9E7E',
+  low:    Colors.green,
   medium: Colors.accent,
-  high:   '#E24B4A',
+  high:   Colors.dangerStrong,
 };
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
@@ -552,10 +552,10 @@ const s = StyleSheet.create({
   styleClimate:  { fontSize: 11, color: Colors.text3, lineHeight: 16, marginTop: 4, fontStyle: 'italic' },
 
   // Avoid cards
-  avoidCard:   { backgroundColor: '#FEF6F2', borderRadius: Radius.input, borderWidth: 1, borderColor: '#E8C4B4', padding: 12, marginBottom: 8 },
+  avoidCard:   { backgroundColor: Colors.dangerBg, borderRadius: Radius.input, borderWidth: 1, borderColor: Colors.dangerBorder, padding: 12, marginBottom: 8 },
   avoidLabel:  { fontSize: 9, color: Colors.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
-  avoidName:   { fontSize: 13, color: '#7A4A38', fontWeight: '500', marginBottom: 2 },
-  avoidReason: { fontSize: 11, color: '#7A4A38', lineHeight: 16 },
+  avoidName:   { fontSize: 13, color: Colors.dangerText, fontWeight: '500', marginBottom: 2 },
+  avoidReason: { fontSize: 11, color: Colors.dangerText, lineHeight: 16 },
 
   // Simple style cards (fallback — styles array)
   stylesRow:           { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
@@ -569,7 +569,7 @@ const s = StyleSheet.create({
   searchBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     marginTop: 16, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12,
-    borderWidth: 1, borderColor: Colors.accent, backgroundColor: 'rgba(230,199,156,0.12)',
+    borderWidth: 1, borderColor: Colors.accent, backgroundColor: Colors.accentTint,
   },
   searchBtnText: { color: Colors.text, fontSize: 13, fontWeight: '600' },
 
@@ -585,7 +585,7 @@ const s = StyleSheet.create({
 
   // No brands banner
   noBrandsBanner: {
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: 'rgba(230,199,156,0.4)',
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.accentTintBorder,
     borderRadius: 12, padding: 14, marginBottom: 8,
   },
   noBrandsTitle:   { fontFamily: Typography.serif, fontSize: 18, color: Colors.text },
@@ -607,8 +607,8 @@ const s = StyleSheet.create({
   noProductsText: { fontSize: 11, color: Colors.text3, padding: 14 },
 
   expandedProduct: {
-    backgroundColor: 'rgba(230,199,156,0.08)', borderWidth: 1, borderTopWidth: 0,
-    borderColor: 'rgba(230,199,156,0.4)', borderBottomLeftRadius: 10,
+    backgroundColor: Colors.accentTintLight, borderWidth: 1, borderTopWidth: 0,
+    borderColor: Colors.accentTintBorder, borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10, padding: 14, marginBottom: 5,
   },
   matchMeterWrap:   { marginBottom: 0 },
@@ -618,7 +618,7 @@ const s = StyleSheet.create({
   matchTrack:       { height: 3, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
   matchFill:        { height: '100%', backgroundColor: Colors.accent, borderRadius: 2 },
 
-  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: 'rgba(230,199,156,0.2)', borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
+  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: Colors.accentTintStrong, borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
   preferredBadgeText: { fontSize: 9, color: Colors.accent, fontWeight: '500' },
   productName:        { fontSize: 15, color: Colors.text, fontWeight: '500', marginTop: 12, marginBottom: 3 },
   productMeta:        { fontSize: 13, color: Colors.text2, marginBottom: 8 },

@@ -38,6 +38,29 @@ export const Colors = {
   accentTint:       'rgba(230,199,156,0.12)',   // lightest gold tint
   accentTintMedium: 'rgba(230,199,156,0.18)',   // active pill bg
   accentTintBorder: 'rgba(230,199,156,0.45)',   // active pill border
+
+  // Accent tint variants (continued)
+  accentTintStrong:       'rgba(230,199,156,0.2)',   // preferred badge bg
+  accentTintLight:        'rgba(230,199,156,0.08)',  // lightest gold bg
+  accentTintBorderStrong: 'rgba(230,199,156,0.5)',   // stronger gold border
+
+  // Danger (light variant — for high-contrast text on dark backgrounds)
+  dangerLight:   '#FF6B6B',
+
+  // Success — pill variant (dark bg, light text)
+  successPillBg:   '#1A2A1A',
+  successPillText: '#5A9A5A',
+
+  // Open/closed status badges (salons)
+  statusOpenBg:    '#1A3A1A',
+  statusOpenText:  '#6BCB77',
+  statusClosedBg:  '#3A1A1A',
+
+  // Overlays
+  overlayLight:  'rgba(0,0,0,0.2)',       // thumbnail overlay
+  overlayMedium: 'rgba(0,0,0,0.55)',      // camera overlay
+  overlayDark:   'rgba(28,24,22,0.88)',   // refresh overlay
+  overlaySheet:  'rgba(44,36,32,0.5)',    // bottom sheet backdrop
 } as const;
 
 export const Typography = {

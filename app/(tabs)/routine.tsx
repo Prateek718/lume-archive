@@ -651,7 +651,7 @@ const s = StyleSheet.create({
   changeLevelLinkText: { fontSize: 13, color: Colors.text },
 
   // Hair profile setup box
-  hairSetupBox:  { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: 'rgba(230,199,156,0.5)', padding: Spacing.lg, marginBottom: Spacing.md },
+  hairSetupBox:  { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.accentTintBorderStrong, padding: Spacing.lg, marginBottom: Spacing.md },
   hairSetupTitle:{ fontFamily: Typography.serif, fontSize: 18, color: Colors.text, marginBottom: Spacing.xs },
   hairSetupBody: { fontSize: 13, color: Colors.text2, lineHeight: 20, marginBottom: Spacing.md },
   hairSetupBtn:  { fontSize: 13, color: Colors.accent },

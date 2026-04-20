@@ -484,5 +484,5 @@ const s = StyleSheet.create({
   savingText: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: Spacing.xs },
   savingNote: { fontSize: 13, color: Colors.text2 },
 
-  errorText: { fontSize: 13, color: '#A32D2D', marginTop: Spacing.lg, textAlign: 'center' },
+  errorText: { fontSize: 13, color: Colors.danger, marginTop: Spacing.lg, textAlign: 'center' },
 });

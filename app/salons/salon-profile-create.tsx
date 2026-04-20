@@ -96,7 +96,7 @@ const pg = StyleSheet.create({
   groupLabel: { fontSize: 10, color: Colors.text, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: Spacing.sm },
   pillsWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill:       { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  pillActive: { backgroundColor: 'rgba(230,199,156,0.18)', borderColor: 'rgba(230,199,156,0.5)' },
+  pillActive: { backgroundColor: Colors.accentTintMedium, borderColor: Colors.accentTintBorderStrong },
   pillText:       { fontSize: 13, color: Colors.text },
   pillTextActive: { fontSize: 13, color: Colors.accent, fontWeight: '600' },
 });
@@ -498,7 +498,7 @@ const s = StyleSheet.create({
   phonePrefix:{ fontSize: 15, color: Colors.text2, paddingVertical: 10, marginRight: 8 },
 
   phoneInput: { flex: 1, borderBottomWidth: 0, marginBottom: 0 },
-  phoneError: { fontSize: 11, color: '#E24B4A', marginTop: 4 },
+  phoneError: { fontSize: 11, color: Colors.dangerStrong, marginTop: 4 },
 
   // Radio option rows
   optionsCard: {
@@ -511,7 +511,7 @@ const s = StyleSheet.create({
   },
   optionRow:        { flexDirection: 'row', alignItems: 'center', padding: Spacing.md },
   optionRowBorder:  { borderBottomWidth: 1, borderBottomColor: Colors.border },
-  optionRowActive:  { backgroundColor: 'rgba(230,199,156,0.12)' },
+  optionRowActive:  { backgroundColor: Colors.accentTint },
   radio:            { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
   radioActive:      { borderColor: Colors.accent },
   radioDot:         { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.accent },
@@ -552,6 +552,7 @@ const s = StyleSheet.create({
     justifyContent:    'center',
     paddingHorizontal: Spacing.xl,
   },
+  // TODO: migrate #5DCAA5 / rgba(93,202,165,0.15) to a theme token when we design a second success tone
   confirmCheck: {
     width:           64,
     height:          64,
@@ -563,6 +564,7 @@ const s = StyleSheet.create({
     justifyContent:  'center',
     marginBottom:    Spacing.xl,
   },
+  // TODO: migrate #5DCAA5 to a theme token when we design a second success tone
   confirmCheckText:      { fontSize: 28, color: '#5DCAA5' },
   confirmTitle:          { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: 8, textAlign: 'center' },
   confirmSub:            { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.xxl },

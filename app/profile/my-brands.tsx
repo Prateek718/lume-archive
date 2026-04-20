@@ -248,8 +248,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 7,
   },
   pillSelected: {
-    backgroundColor: 'rgba(230,199,156,0.18)',
-    borderColor: 'rgba(230,199,156,0.5)',
+    backgroundColor: Colors.accentTintMedium,
+    borderColor: Colors.accentTintBorderStrong,
   },
   pillText:         { fontSize: 13, color: Colors.text },
   pillTextSelected: { color: Colors.accent },
@@ -273,7 +273,7 @@ const s = StyleSheet.create({
 
   refreshOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(28,24,22,0.88)',
+    backgroundColor: Colors.overlayDark,
     alignItems: 'center', justifyContent: 'center',
     zIndex: 100,
   },

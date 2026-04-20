@@ -451,8 +451,8 @@ const s = StyleSheet.create({
   cancelLink:   { alignItems: 'center', paddingVertical: Spacing.sm },
   cancelLinkText:{ fontSize: 13, color: Colors.text },
 
-  // Camera
-  overlay:        { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.55)' },
+  // Camera UI — high-contrast overlays on live video feed, intentionally not themed
+  overlay:        { position: 'absolute', backgroundColor: Colors.overlayMedium },
   ovalGuide:      { position: 'absolute', borderRadius: 999, borderWidth: 2, borderColor: Colors.accent },
   cameraHintWrap: { position: 'absolute', bottom: 120, left: 0, right: 0, alignItems: 'center' },
   cameraHint:     { fontSize: 13, color: 'rgba(255,255,255,0.75)', letterSpacing: 0.3, textAlign: 'center' },
@@ -469,7 +469,7 @@ const s = StyleSheet.create({
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.8)',
     alignItems: 'center', justifyContent: 'center',
   },
-  captureInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFFFFF' },
+  captureInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.card },
   cameraIconBtn:  { width: 72, alignItems: 'flex-end' },
   flipIconCircle: {
     width: 44, height: 44, borderRadius: 22,
@@ -477,8 +477,8 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center', justifyContent: 'center',
   },
-  flipIconText: { color: '#FFFFFF', fontSize: 22, fontWeight: '300' },
-  errorBanner:  { position: 'absolute', bottom: 160, left: Spacing.lg, right: Spacing.lg, backgroundColor: '#A32D2D', borderRadius: Radius.input, padding: Spacing.md },
+  flipIconText: { color: Colors.textOnAccent, fontSize: 22, fontWeight: '300' },
+  errorBanner:  { position: 'absolute', bottom: 160, left: Spacing.lg, right: Spacing.lg, backgroundColor: Colors.danger, borderRadius: Radius.input, padding: Spacing.md },
   errorText:    { color: Colors.text, fontSize: 13, textAlign: 'center' },
   permissionBox:{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   permissionTitle:{ fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
@@ -589,14 +589,14 @@ const rs = StyleSheet.create({
     textTransform: 'capitalize',
   },
   pillHealthy: {
-    backgroundColor:  '#1A2A1A',
+    backgroundColor:  Colors.successPillBg,
     borderRadius:     Radius.pill,
     paddingHorizontal: Spacing.sm,
     paddingVertical:  4,
   },
   pillHealthyText: {
     fontSize:      11,
-    color:         '#5A9A5A',
+    color:         Colors.successPillText,
     textTransform: 'capitalize',
   },
   deltaCard: {

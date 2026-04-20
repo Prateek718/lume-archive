@@ -434,7 +434,7 @@ const s = StyleSheet.create({
     alignItems:      'center',
   },
   listThumb:        { width: 80, height: 80, backgroundColor: Colors.surface2, overflow: 'hidden' },
-  listThumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
+  listThumbOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: Colors.overlayLight },
   listBody:         { flex: 1, padding: Spacing.sm },
   listName:         { fontSize: 15, color: Colors.text, fontWeight: '600', marginBottom: 2 },
   listAddr:         { fontSize: 13, color: Colors.text2, marginBottom: Spacing.xs },
@@ -446,16 +446,16 @@ const s = StyleSheet.create({
   reviewText: { fontSize: 11, color: Colors.text2 },
   distText:   { fontSize: 13, color: Colors.text2 },
 
-  openBadge:     { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: '#1A3A1A', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
-  closedBadge:   { backgroundColor: '#3A1A1A' },
-  openBadgeText: { fontSize: 10, color: '#6BCB77', fontWeight: '600' },
+  openBadge:     { position: 'absolute', top: Spacing.sm, left: Spacing.sm, backgroundColor: Colors.statusOpenBg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  closedBadge:   { backgroundColor: Colors.statusClosedBg },
+  openBadgeText: { fontSize: 10, color: Colors.statusOpenText, fontWeight: '600' },
 
   // Service pills
   pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: Spacing.xs },
   servicePill: {
-    backgroundColor: 'rgba(230,199,156,0.18)',
+    backgroundColor: Colors.accentTintMedium,
     borderWidth:     1,
-    borderColor:     'rgba(230,199,156,0.45)',
+    borderColor:     Colors.accentTintBorder,
     borderRadius:    999,
     paddingHorizontal: 8,
     paddingVertical:   2,

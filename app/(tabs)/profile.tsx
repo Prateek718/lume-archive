@@ -545,5 +545,5 @@ const s = StyleSheet.create({
   signOutText:    { fontSize: 13, color: Colors.text },
   actionsDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
   deleteBtn:      { paddingVertical: 12, alignItems: 'center' },
-  deleteText:     { fontSize: 13, color: '#A32D2D' },
+  deleteText:     { fontSize: 13, color: Colors.danger },
 });
