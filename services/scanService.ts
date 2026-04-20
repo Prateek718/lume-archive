@@ -146,7 +146,7 @@ import {
 } from '../lib/gemini';
 import type { GeminiAnalysis } from '../lib/gemini';
 import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
-import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits } from '../types';
+import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier } from '../types';
 import { isBaldProfile } from '../types';
 import { resolveTraits, buildTraitsToSave, fetchUserTraits, saveUserTraits } from '../lib/traits';
 
@@ -588,7 +588,7 @@ export async function runScanPhase2(
     categories:      [...skinCategories, ...beardCategories, ...makeupCategories],
     preferredBrands: userProfile.preferredBrands,
     gender:          productGender,
-    budget:          userProfile.budget,
+    budget:          userProfile.budget as BudgetTier,
   });
   const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
 

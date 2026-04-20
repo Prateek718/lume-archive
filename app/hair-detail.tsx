@@ -231,12 +231,6 @@ export default function HairDetailScreen() {
         {/* ── STYLE ── */}
         {tab === 'style' && (
           <>
-            {hairRecs.summary && (
-              <InfoCard title="HAIR SUMMARY">
-                <Text style={s.bodyText}>{hairRecs.summary}</Text>
-              </InfoCard>
-            )}
-
             {hairRecs.advice && (
               <InfoCard title="WHAT TO ASK YOUR STYLIST">
                 <Text style={s.adviceText}>"{hairRecs.advice}"</Text>
@@ -246,36 +240,26 @@ export default function HairDetailScreen() {
             {/* Detailed styles — use styles_detailed if available */}
             {hairRecs.styles_detailed && hairRecs.styles_detailed.length > 0 ? (
               <InfoCard title="STYLES THAT SUIT YOU">
-                {hairRecs.styles_detailed.filter(sd => !sd.avoid).map((sd, i) => (
-                  <View key={`${sd.name}-${i}`} style={s.styleCard}>
-                    <View style={s.styleHeader}>
-                      <Text style={s.styleName}>{sd.name}</Text>
-                      <View style={[s.maintDot,
-                        sd.maintenance === 'low'    ? s.maintLow :
-                        sd.maintenance === 'medium' ? s.maintMed : s.maintHigh
-                      ]} />
+                {hairRecs.styles_detailed.filter(sd => !sd.avoid).map((sd, i) => {
+                  const whyText = sd.why || sd.why_face_shape || sd.why_texture;
+                  return (
+                    <View key={`${sd.name}-${i}`} style={s.styleCard}>
+                      <View style={s.styleHeader}>
+                        <Text style={s.styleName}>{sd.name}</Text>
+                        <View style={[s.maintDot,
+                          sd.maintenance === 'low'    ? s.maintLow :
+                          sd.maintenance === 'medium' ? s.maintMed : s.maintHigh
+                        ]} />
+                      </View>
+                      {whyText ? (
+                        <Text style={s.styleWhy}>{whyText}</Text>
+                      ) : null}
+                      {sd.climate_note ? (
+                        <Text style={s.styleClimate}>{sd.climate_note}</Text>
+                      ) : null}
                     </View>
-                    {sd.why_face_shape ? (
-                      <Text style={s.styleWhy}>{sd.why_face_shape}</Text>
-                    ) : null}
-                    {sd.why_texture ? (
-                      <Text style={s.styleWhy}>{sd.why_texture}</Text>
-                    ) : null}
-                    {sd.climate_note ? (
-                      <Text style={s.styleClimate}>{sd.climate_note}</Text>
-                    ) : null}
-                  </View>
-                ))}
-
-                {hairRecs.styles_detailed.filter(sd => sd.avoid).map((sd, i) => (
-                  <View key={`avoid-${sd.name}-${i}`} style={s.avoidCard}>
-                    <Text style={s.avoidLabel}>NOT RECOMMENDED</Text>
-                    <Text style={s.avoidName}>{sd.name}</Text>
-                    {sd.avoid_reason ? (
-                      <Text style={s.avoidReason}>{sd.avoid_reason}</Text>
-                    ) : null}
-                  </View>
-                ))}
+                  );
+                })}
               </InfoCard>
             ) : hairRecs.styles && hairRecs.styles.length > 0 ? (
               <InfoCard title="STYLES THAT SUIT YOU">
@@ -323,20 +307,6 @@ export default function HairDetailScreen() {
               </InfoCard>
             )}
 
-            {hairRecs.wash_frequency && (
-              <InfoCard title={`WASH DAYS — ${hairRecs.wash_frequency.toUpperCase()}`}>
-                {hairRecs.wash_steps.map((step, i) => (
-                  <StepRow key={i} n={i + 1} text={step} />
-                ))}
-              </InfoCard>
-            )}
-
-            {hairRecs.weekly_treatment && (
-              <InfoCard title="ONCE A WEEK">
-                <Text style={s.bodyText}>{hairRecs.weekly_treatment}</Text>
-              </InfoCard>
-            )}
-
             {visibleRoutineSteps.length > 0 && (
               <InfoCard title="YOUR ROUTINE">
                 {visibleRoutineSteps.map((step, i) => {
@@ -347,6 +317,7 @@ export default function HairDetailScreen() {
                       key={`${step.label}-${i}`}
                       n={i + 1}
                       text={step.label}
+                      cadence={step.cadence}
                       onPress={hasProducts ? () => {
                         setPickerCategory(cat);
                         setPickerStep(step.label);
@@ -480,13 +451,23 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-function StepRow({ n, text, onPress }: { n: number; text: string; onPress?: () => void }) {
+const CADENCE_LABEL: Record<string, string> = {
+  every_wash: 'Every wash',
+  weekly:     'Weekly',
+  monthly:    'Monthly',
+};
+
+function StepRow({ n, text, cadence, onPress }: { n: number; text: string; cadence?: string; onPress?: () => void }) {
+  const cadenceLabel = cadence ? CADENCE_LABEL[cadence] : undefined;
   const inner = (
     <View style={s.stepRowInner}>
       <View style={s.stepCircle}>
         <Text style={s.stepNum}>{n}</Text>
       </View>
-      <Text style={s.stepText}>{text}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={s.stepText}>{text}</Text>
+        {cadenceLabel ? <Text style={s.stepCadence}>{cadenceLabel}</Text> : null}
+      </View>
       {onPress && <Text style={s.stepChevron}>›</Text>}
     </View>
   );
@@ -551,12 +532,6 @@ const s = StyleSheet.create({
   styleWhy:      { fontSize: 12, color: Colors.text2, lineHeight: 17, marginTop: 2 },
   styleClimate:  { fontSize: 11, color: Colors.text3, lineHeight: 16, marginTop: 4, fontStyle: 'italic' },
 
-  // Avoid cards
-  avoidCard:   { backgroundColor: Colors.dangerBg, borderRadius: Radius.input, borderWidth: 1, borderColor: Colors.dangerBorder, padding: 12, marginBottom: 8 },
-  avoidLabel:  { fontSize: 9, color: Colors.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
-  avoidName:   { fontSize: 13, color: Colors.dangerText, fontWeight: '500', marginBottom: 2 },
-  avoidReason: { fontSize: 11, color: Colors.dangerText, lineHeight: 16 },
-
   // Simple style cards (fallback — styles array)
   stylesRow:           { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
   styleCardSimple:     { flex: 1, height: 80, backgroundColor: Colors.surface, borderRadius: Radius.input, borderWidth: 1, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xs, gap: 6 },
@@ -578,7 +553,8 @@ const s = StyleSheet.create({
   stepRowInner:  { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
   stepCircle:    { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.surface2, alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 },
   stepNum:       { fontSize: 10, color: Colors.accent, fontWeight: '700' },
-  stepText:      { flex: 1, fontSize: 15, color: Colors.text2, lineHeight: 20 },
+  stepText:      { fontSize: 15, color: Colors.text2, lineHeight: 20 },
+  stepCadence:   { fontSize: 11, color: Colors.text3, marginTop: 2, letterSpacing: 0.5 },
   stepChevron:   { fontSize: 18, color: Colors.text3, lineHeight: 22 },
 
   openingLine: { fontSize: 15, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },

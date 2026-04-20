@@ -447,6 +447,7 @@ const s = StyleSheet.create({
   productIcon:     { width: 44, height: 44, borderRadius: Radius.icon, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   productIconChar: { fontSize: 18 },
   productBody:     { flex: 1 },
+  productName:     { fontSize: 15, color: Colors.text, fontWeight: '500', marginBottom: 3 },
   productWhy:      { fontSize: 15, color: Colors.text2, lineHeight: 19, marginBottom: Spacing.sm },
   productTagPill:  { alignSelf: 'flex-start', backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
   productTagText:  { fontSize: Typography.size.xs, color: Colors.text2 },

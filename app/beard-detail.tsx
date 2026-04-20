@@ -279,15 +279,6 @@ export default function BeardDetailScreen() {
                     <Text style={s.styleWhy}>{style.why}</Text>
                   </View>
                 ))}
-                {beardRecs.beard_styles
-                  .filter(bs => bs.not_recommended)
-                  .map((style, i) => (
-                  <View key={i} style={s.avoidCard}>
-                    <Text style={s.avoidLabel}>NOT RECOMMENDED</Text>
-                    <Text style={s.avoidName}>{style.name}</Text>
-                    <Text style={s.avoidReason}>{style.why}</Text>
-                  </View>
-                ))}
               </View>
             )}
           </>
@@ -591,10 +582,6 @@ const s = StyleSheet.create({
   maintMed:    { backgroundColor: Colors.accent },
   maintHigh:   { backgroundColor: Colors.dangerStrong },
   styleWhy:    { fontSize: 11, color: Colors.text2, lineHeight: 17 },
-  avoidCard:   { backgroundColor: Colors.dangerBg, borderRadius: 10, borderWidth: 1, borderColor: Colors.dangerBorder, padding: 12, marginBottom: 8 },
-  avoidLabel:  { fontSize: 9, color: Colors.accent, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
-  avoidName:   { fontSize: 12, fontWeight: '500', color: Colors.dangerText, marginBottom: 3 },
-  avoidReason: { fontSize: 11, color: Colors.dangerText, lineHeight: 17 },
 
   openingLine: { fontSize: 15, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },
 

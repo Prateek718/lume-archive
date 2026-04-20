@@ -15,6 +15,12 @@ import { Colors, Typography, Spacing } from '../constants/theme';
 import type { Scan, HairProfile, HairRecommendations } from '../types';
 import { isBaldProfile } from '../types';
 
+function firstSentence(text?: string): string {
+  if (!text) return '';
+  const end = text.search(/[.!?]/);
+  return end === -1 ? text.trim() : text.slice(0, end + 1).trim();
+}
+
 export default function RecommendationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -127,7 +133,7 @@ export default function RecommendationsScreen() {
   const hairTags = hairProfile
     ? bald
       ? ['Bald / Shaved', hairProfile.scalp_concern && hairProfile.scalp_concern !== 'none' ? hairProfile.scalp_concern : null].filter(Boolean) as string[]
-      : [hairProfile.texture, hairProfile.primary_concern && hairProfile.primary_concern !== 'none' ? hairProfile.primary_concern : null].filter(Boolean) as string[]
+      : [hairProfile.texture, hairProfile.primary_concern?.[0] && hairProfile.primary_concern[0] !== 'none' ? hairProfile.primary_concern[0] : null].filter(Boolean) as string[]
     : [];
   const skinTags  = [scan?.skin_type, ...(scan?.skin_concerns?.slice(0, 2) ?? [])].filter(Boolean) as string[];
   const thirdTags = isWoman
@@ -179,7 +185,7 @@ export default function RecommendationsScreen() {
             ? `${hairRecs?.routine?.length ?? 0} steps · ${hairRecs?.products?.length ?? 0} products`
             : 'Set up hair profile'}
           tags={hairTags}
-          preview={hairRecs?.summary ?? (hairProfile ? 'Personalised routine ready.' : 'Tap to create your hair profile.')}
+          preview={firstSentence(hairRecs?.advice) || hairRecs?.summary || (hairProfile ? 'Personalised routine ready.' : 'Tap to create your hair profile.')}
           onPress={() => {
             if (!hairProfile) {
               router.push({ pathname: '/hair-profile' as any, params: { returnTo: 'hair-detail' } });
@@ -193,7 +199,7 @@ export default function RecommendationsScreen() {
           title="Skin"
           meta={`${skinStepCount} products · AM + PM routine`}
           tags={skinTags}
-          preview={rec.skin?.summary ?? ''}
+          preview={firstSentence(rec.skin?.advice) || rec.skin?.summary || ''}
           onPress={() => goDetail('/skin-detail')}
         />
 
@@ -202,7 +208,7 @@ export default function RecommendationsScreen() {
             title="Makeup"
             meta={`${rec.makeup?.techniques?.length ?? 0} steps · ${makeupProductCount} products`}
             tags={thirdTags}
-            preview={rec.makeup?.summary ?? ''}
+            preview={firstSentence(rec.makeup?.advice) || rec.makeup?.summary || ''}
             onPress={() => goDetail('/makeup-detail')}
           />
         ) : (
@@ -210,7 +216,7 @@ export default function RecommendationsScreen() {
             title="Beard"
             meta={`${beardProductCount} products · Daily`}
             tags={thirdTags}
-            preview={rec.beard?.summary ?? ''}
+            preview={firstSentence(rec.beard?.advice) || rec.beard?.summary || ''}
             onPress={() => goDetail('/beard-detail')}
           />
         )}

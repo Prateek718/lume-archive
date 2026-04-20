@@ -17,6 +17,12 @@ import type { Scan } from '../../types';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
+function firstSentence(text?: string): string {
+  if (!text) return '';
+  const end = text.search(/[.!?]/);
+  return end === -1 ? text.trim() : text.slice(0, end + 1).trim();
+}
+
 // Oval guide
 const OVAL_W    = SW * 0.75;
 const OVAL_H    = SH * 0.60;
@@ -340,7 +346,7 @@ function ObservationScreen({
         <View style={rs.summaryCard}>
           <Text style={rs.summaryLabel}>WHAT WE SEE</Text>
           <Text style={rs.summaryText}>
-            {scan.recommendations?.skin?.summary ?? 'Analysis complete.'}
+            {firstSentence(scan.recommendations?.skin?.advice) || scan.recommendations?.skin?.summary || 'Analysis complete.'}
           </Text>
         </View>
 

@@ -168,11 +168,10 @@ export default function MakeupDetailScreen() {
   const makeupRecs = rec?.makeup ?? null;
 
   // Skin context for no-base card
-  const skinType             = scan?.skin_type;
   const skinConcerns         = scan?.skin_concerns ?? [];
   const hasHyperpigmentation = skinConcerns.includes('hyperpigmentation') ||
                                skinConcerns.includes('uneven_texture');
-  const needsBase            = hasHyperpigmentation || skinType === 'uneven';
+  const needsBase            = hasHyperpigmentation;
 
   // Product map for picker — loaded from AsyncStorage (stored during scan)
   const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
