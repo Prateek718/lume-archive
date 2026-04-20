@@ -3,11 +3,17 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { runScanPhase1, runScanPhase2 } from '../services/scanService';
-import type { Scan, PartialScan } from '../types';
+import type { Scan } from '../types';
 
 export type ScanPhase = 'home' | 'camera' | 'processing' | 'result';
+
+// Shared with app/confirm-traits.tsx — when the confirmation flow finalizes
+// a scan, it drops the completed Scan here and routes back to the scan tab,
+// where hydratePendingObservation() picks it up and jumps to 'result'.
+export const PENDING_OBSERVATION_KEY = '@lume/pending_observation_scan';
 
 export function useScan() {
   const router = useRouter();
@@ -30,6 +36,23 @@ export function useScan() {
     setProcessingStep('');
     setRecsLoading(false);
     setRecsError(false);
+  }, []);
+
+  // Called by scan.tsx on focus. Picks up a scan finalized by the
+  // confirm-traits flow and jumps straight to ObservationScreen.
+  const hydratePendingObservation = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_OBSERVATION_KEY);
+      if (!raw) return;
+      await AsyncStorage.removeItem(PENDING_OBSERVATION_KEY);
+      const scan = JSON.parse(raw) as Scan;
+      setResult(scan);
+      setPhase('result');
+      setRecsLoading(false);
+      setRecsError(false);
+    } catch (e) {
+      console.warn('[useScan] hydratePendingObservation failed:', e);
+    }
   }, []);
 
   const processPhoto = useCallback(async (photoUri: string, genderParam: string, scanType: string = 'full_face') => {
@@ -59,33 +82,42 @@ export function useScan() {
           profileError instanceof Error ? profileError.message : String(profileError));
       }
 
-      // PHASE 1 — vision only (~18s)
+      // PHASE 1 — vision + trait resolution (~18s)
       setProcessingStep('Analysing your skin…');
       const phase1 = await runScanPhase1(photoUri, resolvedGender, user.id, undefined, scanType);
+      const { partialScan } = phase1;
 
-      // Build partial scan to show ObservationScreen immediately
-      const partialScan: PartialScan = {
-        id:                `local_${Date.now()}`,
-        user_id:           user.id,
-        face_shape:        phase1.analysis.face_shape,
-        skin_type:         phase1.analysis.skin_type,
-        skin_concerns:     phase1.analysis.skin_concerns,
-        beard_density:     phase1.analysis.beard_density,
-        beard_condition:   phase1.analysis.beard_condition,
-        brow_condition:    phase1.analysis.brow_condition,
-        undereye:          phase1.analysis.undereye,
-        fitzpatrick_scale: phase1.analysis.fitzpatrick_scale ?? null,
-        skin_tone:         phase1.analysis.skin_tone ?? null,
-        skin_undertone:    phase1.analysis.skin_undertone ?? null,
-        score_skin:        phase1.analysis.score_skin ?? null,
-        score_beard:       phase1.analysis.score_beard ?? null,
-        score_makeup:      phase1.analysis.score_makeup ?? null,
-        score_overall:     null,
-        recommendations:   null,
-        created_at:        new Date().toISOString(),
-      };
+      // If any trait needs user input, hand off to confirm-traits. We skip
+      // phase 2 until the user has resolved all decisions — recs must be
+      // based on confirmed traits.
+      const pending = partialScan._pendingTraitDecisions;
+      if (pending && (pending.confirmations.length > 0 || pending.overrides.length > 0)) {
+        setPhase('home');                    // release the processing screen
+        setProcessingStep('');
 
-      // Show ObservationScreen immediately
+        // compressedUri is unused in phase 2 (base64 isn't re-sent) so we
+        // drop it here to keep the router params small.
+        const phase1ContextJson = JSON.stringify({
+          analysis:        phase1.analysis,
+          userProfile:     phase1.userProfile,
+          previousContext: phase1.previousContext,
+          scanType:        phase1.scanType,
+          existingTraits:  phase1.existingTraits,
+          gender:          resolvedGender,
+        });
+        // Cast: router's generated route types may not yet include the new
+        // /confirm-traits screen on first build — expo regenerates them.
+        router.push({
+          pathname: '/confirm-traits' as never,
+          params:   {
+            partialScanJson:   JSON.stringify(partialScan),
+            phase1ContextJson,
+          },
+        });
+        return;
+      }
+
+      // Happy path — show ObservationScreen immediately, run phase 2 in bg.
       setResult(partialScan as unknown as Scan);
       setPhase('result');
       setRecsLoading(true);
@@ -100,6 +132,8 @@ export function useScan() {
           phase1.compressedUri,
           resolvedGender,
           user.id,
+          undefined,
+          partialScan,
         );
         setResult(completeScan);
       } catch (phase2Error: unknown) {
@@ -128,5 +162,6 @@ export function useScan() {
     openCamera,
     reset,
     processPhoto,
+    hydratePendingObservation,
   };
 }

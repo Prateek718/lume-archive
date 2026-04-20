@@ -391,12 +391,14 @@ function ObservationScreen({
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function ScanScreen() {
-  const { phase, processingStep, result, error, recsLoading, recsError, openCamera, reset, processPhoto } = useScan();
+  const { phase, processingStep, result, error, recsLoading, recsError, openCamera, reset, processPhoto, hydratePendingObservation } = useScan();
   const router = useRouter();
   const [gender, setGender] = useState<string>('man');
   const [userId, setUserId] = useState<string>('');
 
-  // Load gender whenever the tab comes into focus.
+  // Load gender whenever the tab comes into focus. Also picks up a scan
+  // finalized by the confirm-traits flow so we land on ObservationScreen
+  // instead of the home screen.
   useFocusEffect(
     useCallback(() => {
       const loadGender = async () => {
@@ -411,7 +413,8 @@ export default function ScanScreen() {
         if (profile?.gender) setGender(profile.gender as string);
       };
       loadGender();
-    }, []),
+      hydratePendingObservation();
+    }, [hydratePendingObservation]),
   );
 
   const navigateToRecs = () => {

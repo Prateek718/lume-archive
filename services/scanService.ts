@@ -146,8 +146,9 @@ import {
 } from '../lib/gemini';
 import type { GeminiAnalysis } from '../lib/gemini';
 import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
-import type { Scan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands } from '../types';
+import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits } from '../types';
 import { isBaldProfile } from '../types';
+import { resolveTraits, buildTraitsToSave, fetchUserTraits, saveUserTraits } from '../lib/traits';
 
 const RECOMMENDATIONS_KEY = (scanId: string) => `@lume/recommendations_${scanId}`;
 const LATEST_SCAN_KEY    = '@lume/latest_scan';
@@ -411,17 +412,11 @@ export function buildMakeupCategories(
   return categories;
 }
 
-// ── Phase 1 — vision analysis only (~18s) ─────────────────────────────────────
-// Compresses image, fetches user context, calls Gemini vision.
-// Returns analysis + all context needed for phase 2.
-export async function runScanPhase1(
-  photoUri:    string,
-  gender:      string,
-  userId:      string,
-  onProgress?: ProgressCallback,
-  scanType:    string = 'full_face',
-): Promise<{
-  analysis:    GeminiAnalysis;
+// Shape of phase 1's output — phase 2 and finalize both consume this.
+export interface Phase1Result {
+  partialScan:     PartialScan;
+  existingTraits:  UserTraits | undefined;
+  analysis:        GeminiAnalysis;
   userProfile: {
     city:            string | null;
     preferredBrands: PreferredBrands;
@@ -431,7 +426,20 @@ export async function runScanPhase1(
   previousContext: string;
   scanType:        string;
   compressedUri:   string;
-}> {
+}
+
+// ── Phase 1 — vision analysis only (~18s) ─────────────────────────────────────
+// Compresses image, fetches user context, calls Gemini vision, resolves
+// traits against the user's locked history, and returns a PartialScan ready
+// for ObservationScreen. If any traits need user input, _pendingTraitDecisions
+// is attached to the PartialScan and Phase 2 should be deferred.
+export async function runScanPhase1(
+  photoUri:    string,
+  gender:      string,
+  userId:      string,
+  onProgress?: ProgressCallback,
+  scanType:    string = 'full_face',
+): Promise<Phase1Result> {
   onProgress?.('Preparing image…');
   const base64 = await compressImage(photoUri);
 
@@ -472,7 +480,57 @@ export async function runScanPhase1(
   const analysis = await analyseWithGemini(base64, city, resolvedGender, inferredBudget, previousScanSummary, ageRange);
   console.log('[scanService] Gemini analysis:', JSON.stringify(analysis).slice(0, 500));
 
+  // Build the PartialScan used by ObservationScreen and (eventually) phase 2.
+  const partialScan: PartialScan = {
+    id:                `local_${Date.now()}`,
+    user_id:           userId,
+    face_shape:        analysis.face_shape ?? null,
+    skin_type:         analysis.skin_type ?? null,
+    skin_concerns:     analysis.skin_concerns ?? null,
+    beard_density:     analysis.beard_density ?? null,
+    beard_condition:   analysis.beard_condition ?? null,
+    brow_condition:    analysis.brow_condition ?? null,
+    undereye:          analysis.undereye ?? null,
+    fitzpatrick_scale: analysis.fitzpatrick_scale ?? null,
+    skin_tone:         analysis.skin_tone ?? null,
+    skin_undertone:    analysis.skin_undertone ?? null,
+    score_skin:        analysis.score_skin ?? null,
+    score_beard:       analysis.score_beard ?? null,
+    score_makeup:      analysis.score_makeup ?? null,
+    score_overall:     null,
+    recommendations:   null,
+    created_at:        new Date().toISOString(),
+    confidence:        analysis.confidence,
+    alternatives:      analysis.alternatives,
+  };
+
+  // Resolve traits against any previously locked values.
+  const existingTraits = await fetchUserTraits(userId);
+  const { resolvedTraits, pendingConfirmations, pendingOverrides } =
+    resolveTraits(partialScan, existingTraits);
+
+  // Apply the resolved values back onto the scan — if a trait is already
+  // locked we trust the locked value over the model's call.
+  if (resolvedTraits.face_shape)     partialScan.face_shape     = resolvedTraits.face_shape;
+  if (resolvedTraits.skin_undertone) partialScan.skin_undertone = resolvedTraits.skin_undertone;
+
+  if (pendingConfirmations.length > 0 || pendingOverrides.length > 0) {
+    // Defer trait locking and phase 2 until the user resolves the decisions.
+    partialScan._pendingTraitDecisions = {
+      confirmations: pendingConfirmations,
+      overrides:     pendingOverrides,
+    };
+  } else {
+    // No user input needed — auto-lock first-scan high-confidence traits.
+    const traitsToSave = buildTraitsToSave(partialScan, {}, existingTraits);
+    if (JSON.stringify(traitsToSave) !== JSON.stringify(existingTraits ?? {})) {
+      await saveUserTraits(userId, traitsToSave);
+    }
+  }
+
   return {
+    partialScan,
+    existingTraits,
     analysis,
     userProfile: {
       city,
@@ -503,7 +561,21 @@ export async function runScanPhase2(
   gender:          string,
   userId:          string,
   onProgress?:     ProgressCallback,
+  partialScan?:    PartialScan,
 ): Promise<Scan> {
+  // Guard: recommendations must be based on confirmed traits. If the caller
+  // hands us a scan that still has pending decisions, that's a wiring bug —
+  // the UI should have routed through confirm-traits first.
+  if (partialScan?._pendingTraitDecisions) {
+    const { confirmations, overrides } = partialScan._pendingTraitDecisions;
+    if (confirmations.length > 0 || overrides.length > 0) {
+      throw new Error(
+        '[scanService] runScanPhase2 called with unresolved trait decisions. ' +
+        'Call finalizeTraitsAndRunPhase2 after user confirmation instead.',
+      );
+    }
+  }
+
   const productGender: 'all' | 'men' | 'women' =
     gender === 'woman' ? 'women' :
     gender === 'man'   ? 'men'   : 'all';
@@ -642,7 +714,9 @@ export async function runScanPhase2(
 }
 
 // Run the full scan — calls phase 1 then phase 2 in sequence.
-// Kept for backwards compatibility with any existing callers.
+// Kept for backwards compatibility with any existing callers. This path
+// assumes no trait confirmation is needed; if pending decisions exist,
+// phase 2 throws and the caller should route through confirm-traits instead.
 export async function runScan(
   photoUri:    string,
   gender:      string,
@@ -661,11 +735,71 @@ export async function runScan(
       gender,
       userId,
       onProgress,
+      phase1Result.partialScan,
     );
   } catch (error: unknown) {
     console.error('[scanService] CRASH:', error instanceof Error ? error.stack : String(error));
     throw error;
   }
+}
+
+// ── Finalize traits + run phase 2 ────────────────────────────────────────────
+// Called by the confirm-traits screen after the user resolves all pending
+// decisions. Persists the final trait values, clears the pending marker on
+// the partialScan, applies confirmed values onto both the scan and the
+// Gemini analysis (so recommendations reflect the user's pick), and then
+// runs the existing phase 2 logic to generate recs and save the scan.
+export async function finalizeTraitsAndRunPhase2(
+  userId:        string,
+  partialScan:   PartialScan,
+  confirmations: Record<string, { value: string; source: UserTrait['source'] }>,
+  phase1Context: {
+    analysis:        GeminiAnalysis;
+    userProfile: {
+      city:            string | null;
+      preferredBrands: PreferredBrands;
+      budget:          string;
+      ageRange:        string | null;
+    };
+    previousContext: string;
+    scanType:        string;
+    compressedUri:   string;
+    existingTraits:  UserTraits | undefined;
+    gender:          string;
+  },
+  onProgress?:   ProgressCallback,
+): Promise<Scan> {
+  const traitsToSave = buildTraitsToSave(
+    partialScan,
+    confirmations,
+    phase1Context.existingTraits,
+  );
+  await saveUserTraits(userId, traitsToSave);
+
+  // Apply confirmed values to the scan + analysis so recs reflect them.
+  const applied: GeminiAnalysis = { ...phase1Context.analysis };
+  if (confirmations.face_shape) {
+    partialScan.face_shape        = confirmations.face_shape.value;
+    applied.face_shape            = confirmations.face_shape.value as GeminiAnalysis['face_shape'];
+  }
+  if (confirmations.skin_undertone) {
+    partialScan.skin_undertone    = confirmations.skin_undertone.value;
+    applied.skin_undertone        = confirmations.skin_undertone.value as GeminiAnalysis['skin_undertone'];
+  }
+
+  delete partialScan._pendingTraitDecisions;
+
+  return runScanPhase2(
+    applied,
+    phase1Context.userProfile,
+    phase1Context.previousContext,
+    phase1Context.scanType,
+    phase1Context.compressedUri,
+    phase1Context.gender,
+    userId,
+    onProgress,
+    partialScan,
+  );
 }
 
 // Regenerate recommendations for the user's latest scan using updated preferences.

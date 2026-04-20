@@ -62,7 +62,18 @@ export type GeminiAnalysis = Pick<
   | 'fitzpatrick_scale'
   | 'skin_tone'
   | 'skin_undertone'
->;
+> & {
+  confidence?: {
+    face_shape?:     number;
+    hair_texture?:   number;
+    skin_undertone?: number;
+  };
+  alternatives?: {
+    face_shape?:     string | null;
+    hair_texture?:   string | null;
+    skin_undertone?: string | null;
+  };
+};
 
 function buildPrompt(
   gender:              string,
@@ -176,6 +187,13 @@ score_makeup: brow definition + skin base quality + presentation readiness (0-10
   : `MEN-SPECIFIC: Assess beard_density and beard_condition carefully. Note edge definition and beard care evidence. Brow_condition and undereye must be null.`
 }
 
+CONFIDENCE RULES (applies to TRAIT fields only — face_shape, skin_undertone):
+- confidence reflects how clearly the photo supports your classification of a TRAIT (bone structure, undertone). Lighting, angle, and partial occlusion reduce confidence.
+- If the face is genuinely borderline between two categories (e.g. oval/round), return confidence 0.55–0.70 and name the second category in alternatives.
+- If the trait is unambiguous, return confidence ≥ 0.85 and alternatives: null.
+- Never invent confidence. If unsure, return 0.5.
+- Confidence applies to TRAITS only. State fields (skin_concerns, condition, density, scores) are direct observations and DO NOT get confidence scores.
+
 Return ONLY a valid JSON object.
 No markdown, no code fences, no explanation.
 No text before or after the JSON.
@@ -194,8 +212,24 @@ Return exactly this structure:
   "skin_undertone": one of ["warm","cool","neutral"],
   "score_skin": integer 0-100,
   "score_beard": integer 0-100 or null if woman,
-  "score_makeup": integer 0-100 or null if man
+  "score_makeup": integer 0-100 or null if man,
+  "confidence": {
+    "face_shape": number 0.0–1.0,
+    "skin_undertone": number 0.0–1.0
+  },
+  "alternatives": {
+    "face_shape": one of the face_shape values (second-best choice if within ~15% of top pick) OR null,
+    "skin_undertone": one of the undertone values OR null
+  }
 }
+
+Example — unambiguous classification:
+  "face_shape": "oval", "confidence": { "face_shape": 0.92, "skin_undertone": 0.88 },
+  "alternatives": { "face_shape": null, "skin_undertone": null }
+
+Example — borderline between two categories:
+  "face_shape": "oval", "confidence": { "face_shape": 0.62, "skin_undertone": 0.80 },
+  "alternatives": { "face_shape": "round", "skin_undertone": null }
 `.trim();
 }
 
@@ -316,13 +350,26 @@ Face analysis: ${JSON.stringify(analysis)}
 
 ${matchedSection}
 
-FRAMING RULES:
-- Frame fixed traits (face shape, features) as assets, never flaws
-- Frame care habits as improvable opportunities
-- For dark circles: "To brighten the under-eye area..." not "you have dark circles"
-- For skin concerns: "Your skin will benefit from..." not "Your skin is..."
-- summary: 1 sentence maximum, 20 words maximum
-- advice: 2 sentences maximum, plain language, no quotes, no italic
+EDITORIAL RULES — apply to every field:
+- Never begin a field with "Your", "With your", "For your", or any phrase that names a user trait (face shape, skin type, texture, density, condition). The app already knows these.
+- Use imperative voice for actionable fields (advice, why). "Do X" — not "You should do X" or "X is recommended."
+- Return only what to do. Do NOT include avoid or not_recommended items. Absence communicates negative recommendation.
+- Every field is a single idea. If you have two reasons, pick the stronger one.
+- advice: max 2 sentences. The FIRST SENTENCE must stand alone as a 1-line preview — it is rendered without the second sentence on the recommendations card.
+- why (on beard_styles): max 18 words, one sentence, imperative.
+    Good: "Keep length at the chin to lengthen a round face."
+    Bad:  "With your round face, keeping length at the chin will help."
+- Frame fixed traits (face shape, features) as assets, never flaws.
+- For dark circles: "Brighten the under-eye area..." not "you have dark circles."
+- step_id values must match the documented format EXACTLY. The app uses them as stable keys across scans to track adherence over time — if the format drifts, tracking breaks.
+
+step_id FORMAT — required on every routine step:
+  Skin morning: "skin_am_<category>"
+  Skin evening: "skin_pm_<category>"
+  Beard:        "beard_<category>"
+  <category> for skin: one of cleanse, toner, serum, treatment, moisturize, spf
+  <category> for beard: one of wash, oil, balm, comb
+  Use "serum" for niacinamide / vitamin C / HA. Use "treatment" for retinol / AHA / eye cream.
 
 SKIN ROUTINE RULES:
 
@@ -331,23 +378,24 @@ on the two-layer framework below.
 The routine is a structured checklist —
 short labels only, no advice in steps.
 
-Each step: { "label": "1-2 words", "product": "1-4 words", "order": integer }
+Each step: { "step_id": "skin_am_<cat>" | "skin_pm_<cat>", "label": "1-2 words", "product": "1-4 words", "order": integer }
 
 FOUNDATION steps (always include):
 Morning:
-  order 1: Cleanse — type based on skin_type:
+  order 1: { step_id "skin_am_cleanse", label "Cleanse", product by skin_type:
     oily/acne → Salicylic cleanser
     dry → Cream cleanser
     sensitive → Gentle cleanser
-    normal/combination → Gel cleanser
-  order 2: Protect — Sunscreen SPF 50 (MORNING ONLY)
+    normal/combination → Gel cleanser }
+  order 2: { step_id "skin_am_spf", label "Protect", product "Sunscreen SPF 50" } (MORNING ONLY)
 
 Evening:
-  order 1: Cleanse — same type as morning
-  Last order: Nourish — Moisturiser
+  order 1: { step_id "skin_pm_cleanse", label "Cleanse", product: same type as morning }
+  Last order: { step_id "skin_pm_moisturize", label "Nourish", product:
     oily → Gel moisturiser
     dry → Cream moisturiser
     normal/combination → Lightweight moisturiser
+    sensitive → Fragrance-free moisturiser }
 
 Moisturiser (Nourish step):
 Always include in BOTH morning and evening.
@@ -369,25 +417,25 @@ TREATMENT steps (add only if concern detected):
 For each concern, add ONE step:
 
   oiliness OR acne detected:
-    Morning order 3: Balance — Niacinamide serum
+    Morning order 3: { step_id "skin_am_serum", label "Balance", product "Niacinamide serum" }
 
   dark_circles detected:
-    Evening, second-to-last order: Eye care — Eye cream
+    Evening, second-to-last order: { step_id "skin_pm_treatment", label "Eye care", product "Eye cream" }
 
   dark_spots OR hyperpigmentation detected:
     Morning order 3 (or 4 if niacinamide present):
-    Brighten — Vitamin C serum
+    { step_id "skin_am_serum", label "Brighten", product "Vitamin C serum" }
 
   dehydration detected:
-    Morning after cleanse: Hydrate — HA serum
+    Morning after cleanse: { step_id "skin_am_serum", label "Hydrate", product "HA serum" }
 
   uneven_texture detected AND no retinol:
-    Evening, before moisturiser: Renew — AHA exfoliant
+    Evening, before moisturiser: { step_id "skin_pm_treatment", label "Renew", product "AHA exfoliant" }
     Add note "2-3x/week" to product field
 
   fine_lines detected AND age_range is
   '26-35' or older:
-    Evening, before moisturiser: Renew — Retinol
+    Evening, before moisturiser: { step_id "skin_pm_treatment", label "Renew", product "Retinol" }
     Add note "2-3x/week" to product field
     NEVER add retinol if age_range is '18-25'
     or age_range is not set
@@ -420,7 +468,7 @@ Include toner ONLY if:
   - skin_type is oily OR acne-prone AND
   - no niacinamide serum is being added
 In that case: add after cleanse, morning only:
-  { "label": "Tone", "product": "BHA toner", "order": 2 }
+  { "step_id": "skin_am_toner", "label": "Tone", "product": "BHA toner", "order": 2 }
   Then renumber subsequent steps.
 
 In all other cases: do NOT include toner.
@@ -440,17 +488,15 @@ beard_density = stubble or none:
   No beard products. beard.routine = []
 
 beard_density = medium or heavy:
-  Always: Cleanse (beard wash) + Nourish (beard oil)
-  Add Shape (beard balm) ONLY if needs_shaping
-  Add anti-dandruff wash ONLY if dandruff detected
+  Always: { step_id "beard_wash", label "Cleanse", product "Beard wash" }
+        + { step_id "beard_oil",  label "Nourish", product "Beard oil"  }
+  Add { step_id "beard_balm", label "Shape", product "Beard balm" } ONLY if beard_condition = needs_shaping
+  Add anti-dandruff wash ONLY if dandruff detected (still step_id "beard_wash")
   MAX 3 products
 
-beard_styles: return 2-3 recommended styles
-  + 1 not_recommended style, each with:
-  name, why (face shape + condition reason),
-  maintenance (low/medium/high),
-  not_recommended?: true (for the avoid style),
-  avoid_reason?: string (for the avoid style)
+beard_styles: return 2-3 RECOMMENDED styles ONLY.
+  Do NOT return avoid or not_recommended entries — omitting a style is how you communicate "don't do this".
+  Each entry: { "name": "<style name>", "why": "<max 18 words, imperative, no trait-naming openings>", "maintenance": "low" | "medium" | "high" }
 
 MAKEUP RULES (women only):
 Base: include ONLY if hyperpigmentation
@@ -465,34 +511,30 @@ MAX 3 products total
 Return ONLY valid JSON, no markdown, no fences:
 {
   "skin": {
-    "summary": "max 1 sentence, max 20 words",
-    "advice": "max 2 sentences, plain language",
+    "advice": "max 2 sentences, first sentence stands alone as preview, imperative",
     "routine": {
       "morning": [
-        { "label": "Cleanse", "product": "Gel cleanser", "order": 1 },
-        { "label": "Protect", "product": "Sunscreen SPF 50", "order": 2 }
+        { "step_id": "skin_am_cleanse", "label": "Cleanse", "product": "Gel cleanser",      "order": 1 },
+        { "step_id": "skin_am_spf",     "label": "Protect", "product": "Sunscreen SPF 50", "order": 2 }
       ],
       "evening": [
-        { "label": "Cleanse", "product": "Gel cleanser", "order": 1 },
-        { "label": "Nourish", "product": "Gel moisturiser", "order": 2 }
+        { "step_id": "skin_pm_cleanse",    "label": "Cleanse", "product": "Gel cleanser",    "order": 1 },
+        { "step_id": "skin_pm_moisturize", "label": "Nourish", "product": "Gel moisturiser", "order": 2 }
       ]
     }
   },
   "beard": {
-    "summary": "max 1 sentence",
-    "advice": "max 2 sentences",
+    "advice": "max 2 sentences, first sentence stands alone as preview, imperative",
     "routine": [
-      { "label": "Cleanse", "product": "Beard wash", "order": 1 },
-      { "label": "Nourish", "product": "Beard oil", "order": 2 }
+      { "step_id": "beard_wash", "label": "Cleanse", "product": "Beard wash", "order": 1 },
+      { "step_id": "beard_oil",  "label": "Nourish", "product": "Beard oil",  "order": 2 }
     ],
     "beard_styles": [
-      { "name": "Style name", "why": "reason", "maintenance": "low" },
-      { "name": "Avoid style", "why": "reason", "maintenance": "high", "not_recommended": true, "avoid_reason": "why to avoid" }
+      { "name": "Short boxed beard", "why": "Trim edges sharply to frame a round face.", "maintenance": "medium" }
     ]
   },
   "makeup": {
-    "summary": "max 1 sentence",
-    "advice": "max 2 sentences",
+    "advice": "max 2 sentences, first sentence stands alone as preview, imperative",
     "techniques": ["technique 1", "technique 2"]
   },
   "products": [
@@ -636,41 +678,50 @@ ${userCtx}
 
 ${matchedSection}
 
+EDITORIAL RULES — apply to every field:
+- Never begin a field with "Your", "With your", "For your", or any phrase that names a user trait (scalp type, concern, face shape). The app already knows these.
+- Use imperative voice for actionable fields (advice, condition_explanation). "Do X" — not "You should do X" or "X is recommended."
+- Return only what to do. Do NOT return "avoid" or "not_recommended" entries. Absence communicates negative recommendation.
+- Every field is a single idea. If two reasons exist, pick the stronger one.
+- advice: max 2 sentences. The FIRST SENTENCE must stand alone as a 1-line preview — it is rendered without the second sentence on the recommendations card.
+- condition_explanation: max 2 sentences. State why this scalp needs this care — no trait-naming openings.
+- step_id values must match the documented format EXACTLY. The app uses them as stable keys across scans to track adherence over time.
+
+step_id FORMAT — required on every routine step:
+  hair_<category> where <category> is one of:
+    shampoo, condition, mask, oil, serum, scalp_treatment
+
+cadence — required on every routine step, one of:
+  "every_wash" | "weekly" | "monthly"
+
 Return ONLY a valid JSON object with no markdown, no code fences, no explanation, matching this exact structure:
 {
-  "summary": "one sentence summary of scalp care recommendation for a bald/shaved head",
-  "advice": "specific scalp care advice — what to do daily and weekly for their scalp type",
+  "advice": "max 2 sentences, first sentence stands alone as preview, imperative",
   "styles": [],
-  "wash_frequency": "recommended scalp wash frequency in plain English (e.g. 'Every 2–3 days')",
-  "condition_explanation": "2–3 sentences explaining why their scalp behaves the way it does based on their profile",
-  "wash_steps": ["step 1", "step 2", "step 3", "step 4"],
-  "weekly_treatment": "one paragraph describing a weekly scalp treatment routine tailored to their profile, including sun protection",
+  "styles_detailed": [],
+  "condition_explanation": "max 2 sentences, no trait-naming openings",
   "routine": [
-    { "label": "Cleanse",  "product": "Gentle scalp shampoo",  "level": "simple",   "order": 1 },
-    { "label": "Hydrate",  "product": "Scalp moisturiser",     "level": "simple",   "order": 2 },
-    { "label": "Protect",  "product": "SPF 50 sunscreen",      "level": "balanced", "order": 3 },
-    { "label": "Treat",    "product": "Scalp serum",           "level": "full",     "order": 4 }
+    { "step_id": "hair_shampoo",         "label": "Cleanse", "product": "Gentle scalp shampoo", "cadence": "every_wash", "level": "simple",   "order": 1 },
+    { "step_id": "hair_condition",       "label": "Hydrate", "product": "Scalp moisturiser",    "cadence": "every_wash", "level": "simple",   "order": 2 },
+    { "step_id": "hair_scalp_treatment", "label": "Protect", "product": "SPF 50 sunscreen",     "cadence": "every_wash", "level": "balanced", "order": 3 },
+    { "step_id": "hair_scalp_treatment", "label": "Treat",   "product": "Scalp serum",          "cadence": "weekly",     "level": "full",     "order": 4 }
   ],
   "products": [
     {
       "category": "scalp_serum",
       "name": "exact product name as provided above",
       "brand": "exact brand as provided above",
-      "reason": "personalised one sentence for this user referencing their scalp type and concern",
+      "reason": "personalised one sentence referencing scalp type and concern",
       "match_score": <integer 60-100>
     }
   ]
 }
 
 styles: Must be an empty array — do NOT suggest hair styles for bald users.
-routine: Exactly 4 steps tailored for scalp care. Use generic product category names only in every product field — see rule below.
-CRITICAL: wash_steps and weekly_treatment must NEVER mention specific product names or brand names. Use only generic category descriptions.
-Instead of: 'Apply 1-2 pumps of Moroccanoil Treatment' → Write: 'Apply a small amount of hair oil'
-Instead of: 'Use Mamaearth Onion Shampoo' → Write: 'Apply shampoo to your scalp'
-Instead of: 'Apply Minimalist Hair Growth Serum' → Write: 'Apply scalp serum to areas of concern'
-Generic category names to use: shampoo → 'shampoo', conditioner → 'conditioner', hair oil → 'hair oil', hair serum → 'hair serum', scalp serum → 'scalp serum', hair mask → 'hair mask', leave-in conditioner → 'leave-in conditioner'
-The steps describe technique and timing only — not products. The Products tab handles product discovery.
-CRITICAL: routine step product fields must also use generic names only. Use 'Shampoo' not 'Anti-dandruff Shampoo'. Use 'Hair oil' not 'Argan Oil Treatment'. Use 'Hair serum' not 'Hydrating Shine Serum'.
+styles_detailed: Must be an empty array.
+routine: Exactly 4 steps tailored for scalp care. Every step MUST have step_id and cadence. Use generic product category names only.
+CRITICAL: routine step product fields must use generic names only. Use 'Shampoo' not 'Anti-dandruff Shampoo'. Use 'Hair oil' not 'Argan Oil Treatment'. Use 'Hair serum' not 'Hydrating Shine Serum'.
+Generic category names: shampoo → 'Shampoo', conditioner → 'Conditioner', hair oil → 'Hair oil', hair serum → 'Hair serum', scalp serum → 'Scalp serum', hair mask → 'Hair mask', leave-in conditioner → 'Leave-in conditioner'
 products: One entry per matched product provided above. Use the exact category, name, and brand as given. 90-100: directly addresses scalp concern. 75-89: secondary benefit. 60-74: general maintenance. For every product reason, end with exactly one sentence starting with 'Key ingredient:' Name the single hero ingredient most relevant to this user's scalp concern and explain what it does in 8 words or fewer. Good: 'Key ingredient: Salicylic acid — dissolves the flakes causing your dandruff.' 'Key ingredient: Tea tree oil — fights fungal buildup on your scalp.' Maximum 2 sentences total per reason.`;
   }
 
@@ -695,44 +746,59 @@ Never return men's styles for a woman user.
 Never return women's styles for a man user.
 Never mix men and women styles. Never invent style names not in the list.
 
+EDITORIAL RULES — apply to every field:
+- Never begin a field with "Your", "With your", "For your", or any phrase that names a user trait (face shape, texture, length, scalp type, concern). The app already knows these.
+- Use imperative voice for actionable fields (advice, why, condition_explanation). "Do X" — not "You should do X" or "X is recommended."
+- Return only what to do. Do NOT return "avoid" or "not_recommended" styles. Absence communicates negative recommendation.
+- Every field is a single idea. If two reasons exist, pick the stronger one.
+- advice: max 2 sentences. The FIRST SENTENCE must stand alone as a 1-line preview — it is rendered without the second sentence on the recommendations card.
+- why (on styles_detailed): max 18 words, one sentence, imperative.
+    Good: "Keep length around the jaw to lengthen a round face."
+    Bad:  "With your round face, keeping length around the jaw will balance it."
+- condition_explanation: max 2 sentences. State why this hair needs this care — no trait-naming openings.
+- step_id values must match the documented format EXACTLY. The app uses them as stable keys across scans.
+
+step_id FORMAT — required on every routine step:
+  hair_<category> where <category> is one of:
+    shampoo, condition, mask, oil, serum, scalp_treatment
+
+cadence — required on every routine step, one of:
+  "every_wash" | "weekly" | "monthly"
+
 Return ONLY a valid JSON object with no markdown, no code fences, no explanation, matching this exact structure:
 {
-  "summary": "one sentence summary of hair recommendation",
-  "advice": "specific advice phrased as exact words to say to stylist in quotes",
+  "advice": "max 2 sentences, first sentence stands alone as preview, imperative",
   "styles": ["Exact Style Name 1", "Exact Style Name 2", "Exact Style Name 3"],
   "styles_detailed": [
-    { "name": "Curtain haircut", "why_face_shape": "...", "why_texture": "...", "maintenance": "low",  "climate_note": "...", "avoid": false },
-    { "name": "Buzz cut",        "why_face_shape": "...", "why_texture": "...", "maintenance": "low",  "climate_note": null,  "avoid": true, "avoid_reason": "..." }
+    { "name": "Curtain haircut", "why": "Soften a sharp jaw with face-framing length.", "maintenance": "low",  "climate_note": "Works well in Mumbai humidity with low product." },
+    { "name": "Textured crop",   "why": "Lift volume to balance a long forehead.",       "maintenance": "low",  "climate_note": null }
   ],
-  "wash_frequency": "recommended wash frequency in plain English (e.g. 'Every 2–3 days')",
-  "condition_explanation": "2–3 sentences explaining why their scalp and hair behave the way they do, based on their profile",
-  "wash_steps": ["step 1", "step 2", "step 3", "step 4", "step 5"],
-  "weekly_treatment": "one paragraph describing a weekly treatment routine tailored to their profile",
+  "condition_explanation": "max 2 sentences explaining why this hair needs this care",
   "routine": [
-    { "label": "Cleanse",   "product": "Shampoo",     "level": "simple",   "order": 1 },
-    { "label": "Condition", "product": "Conditioner", "level": "simple",   "order": 2 },
-    { "label": "Nourish",   "product": "Hair oil",    "level": "balanced", "order": 3 },
-    { "label": "Smooth",    "product": "Hair serum",  "level": "full",     "order": 4 }
+    { "step_id": "hair_shampoo",   "label": "Cleanse",   "product": "Shampoo",     "cadence": "every_wash", "level": "simple",   "order": 1 },
+    { "step_id": "hair_condition", "label": "Condition", "product": "Conditioner", "cadence": "every_wash", "level": "simple",   "order": 2 },
+    { "step_id": "hair_oil",       "label": "Nourish",   "product": "Hair oil",    "cadence": "weekly",     "level": "balanced", "order": 3 },
+    { "step_id": "hair_serum",     "label": "Smooth",    "product": "Hair serum",  "cadence": "every_wash", "level": "full",     "order": 4 }
   ],
   "products": [
     {
       "category": "shampoo",
       "name": "exact product name as provided above",
       "brand": "exact brand as provided above",
-      "reason": "personalised one sentence for this user referencing their scalp type, concern, or texture",
+      "reason": "personalised one sentence referencing scalp type, concern, or texture",
       "match_score": <integer 60-100>
     }
-  ],
+  ]
 }
 
-routine: Exactly 4 steps. simple=Cleanse+Condition (order 1-2), balanced=Nourish (order 3), full=Smooth (order 4). Use generic product category names only in every product field — see rule below.
-CRITICAL: wash_steps and weekly_treatment must NEVER mention specific product names or brand names. Use only generic category descriptions.
-Instead of: 'Apply 1-2 pumps of Moroccanoil Treatment' → Write: 'Apply a small amount of hair oil'
-Instead of: 'Use Mamaearth Onion Shampoo' → Write: 'Apply shampoo to your scalp'
-Instead of: 'Apply Minimalist Hair Growth Serum' → Write: 'Apply scalp serum to areas of concern'
-Generic category names to use: shampoo → 'shampoo', conditioner → 'conditioner', hair oil → 'hair oil', hair serum → 'hair serum', scalp serum → 'scalp serum', hair mask → 'hair mask', leave-in conditioner → 'leave-in conditioner'
-The steps describe technique and timing only — not products. The Products tab handles product discovery.
-CRITICAL: routine step product fields must also use generic names only. Use 'Shampoo' not 'Anti-dandruff Shampoo'. Use 'Hair oil' not 'Argan Oil Treatment'. Use 'Hair serum' not 'Hydrating Shine Serum'.
+routine: Exactly 4 steps. Every step MUST have step_id and cadence. simple=Cleanse+Condition (order 1-2), balanced=Nourish (order 3), full=Smooth (order 4). Use generic product category names only.
+CRITICAL: routine step product fields must use generic names only. Use 'Shampoo' not 'Anti-dandruff Shampoo'. Use 'Hair oil' not 'Argan Oil Treatment'. Use 'Hair serum' not 'Hydrating Shine Serum'.
+Generic category names: shampoo → 'Shampoo', conditioner → 'Conditioner', hair oil → 'Hair oil', hair serum → 'Hair serum', scalp serum → 'Scalp serum', hair mask → 'Hair mask', leave-in conditioner → 'Leave-in conditioner'
+
+cadence GUIDANCE:
+  hair_shampoo, hair_condition, hair_serum → "every_wash"
+  hair_oil, hair_mask, hair_scalp_treatment → "weekly" (rarely "monthly")
+
 HAIR PRODUCTS — two-layer framework:
 
 FOUNDATION (always):
@@ -778,9 +844,7 @@ TREATMENT (only if concern exists):
     follicles — 1x per week is enough.'
 
   No concerns:
-    2 products only (shampoo + conditioner)
-    Summary: 'Your hair is healthy. Shampoo
-    and conditioner is all you need.'
+    2 products only (shampoo + conditioner).
 
 MAX 3 hair products total.
 
@@ -790,25 +854,14 @@ Return styles_detailed array using:
   face_shape, hair_length, texture,
   primary_concern, gender, city
 
-Return 2-3 recommended styles:
-{
-  "name": "specific named haircut",
-  "why_face_shape": "...",
-  "why_texture": "...",
-  "maintenance": "low" | "medium" | "high",
-  "climate_note": "..." or null,
-  "avoid": false
-}
+Return ONLY 2-3 RECOMMENDED styles. Do NOT return avoid or not_recommended entries — omitting a style is how you communicate "don't do this".
 
-Return 1 not-recommended style:
+Each entry:
 {
   "name": "specific named haircut",
-  "why_face_shape": "...",
-  "why_texture": "...",
+  "why": "max 18 words, one sentence, imperative, no trait-naming openings",
   "maintenance": "low" | "medium" | "high",
-  "climate_note": "..." or null,
-  "avoid": true,
-  "avoid_reason": "..."
+  "climate_note": "..." or null
 }
 
 Examples of climate_note:
