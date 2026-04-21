@@ -29,7 +29,8 @@ export interface RoutineCheckinRow {
 
 // What the routine UI needs for a single day.
 export interface RoutineDayStep {
-  step_id:      string;
+  step_id:      string;       // routine_checkins.step_id — slot-suffixed for skin steps
+  base_step_id: string;       // step_id with `_am`/`_pm` suffix stripped — used for grouping cards + picker/kit linking
   time_of_day:  'am' | 'pm' | 'weekly' | 'monthly' | 'daily';
   completed:    boolean;
   completed_at: string | null;
@@ -42,6 +43,11 @@ export interface RoutineDayStep {
   label:        string;
   product:      string;
   order:        number;       // sort key within a category bucket; 999 if unknown
+  // Phase D fields (new prescription schema). Optional for back-compat with legacy scans.
+  category?:           string;            // canonical category id (face_cleanser, serum_niacinamide, …)
+  target_concern?:     string;            // populated only for Treat steps (e.g. 'acne')
+  clinical_reasoning?: string;            // 1–2 sentences tying step to user's scan
+  time_of_day_array?:  ('am' | 'pm')[];   // original slots from scan recommendations (skin only); used by UI to render AM/PM checkboxes per card
 }
 
 // ─── Date helper ─────────────────────────────────────────────────────────────
@@ -250,12 +256,24 @@ export async function fetchDailyAdherence(
 // ─── Fetch today's (or a past day's) routine ─────────────────────────────────
 
 // Stable sort buckets so the list never re-shuffles between fetches.
+// Buckets: skin → beard → hair. Within skin we no longer split AM/PM at the
+// data layer (combined cards group both slots into one row).
 function categoryBucket(stepId: string): number {
-  if (stepId.startsWith('skin_am_')) return 1;
-  if (stepId.startsWith('skin_pm_')) return 2;
-  if (stepId.startsWith('beard_'))   return 3;
-  if (stepId.startsWith('hair_'))    return 4;
-  return 5;
+  if (stepId.startsWith('skin_'))  return 1;
+  if (stepId.startsWith('beard_')) return 2;
+  if (stepId.startsWith('hair_'))  return 3;
+  return 4;
+}
+
+// Strip the `_am` / `_pm` slot suffix added by lib/habit.ts to skin step rows.
+// Returns the input unchanged for any step_id that doesn't end with one of
+// these suffixes (beard, hair, legacy skin_am_*/skin_pm_* prefixes).
+function baseSkinStepId(stepId: string): string {
+  if (!stepId.startsWith('skin_')) return stepId;
+  if (stepId.endsWith('_am') || stepId.endsWith('_pm')) {
+    return stepId.slice(0, -3);
+  }
+  return stepId;
 }
 
 // Beard steps aren't in scan.recommendations.beard (BeardRecommendation has no
@@ -304,14 +322,37 @@ async function fetchRoutineForDate(userId: string, date: string): Promise<Routin
 
   // (scan_id|step_id) -> meta, for skin/beard rows. Beard step_ids are absent
   // from scan recommendations; we'll fall back per-row below.
-  const byScanStep = new Map<string, { label: string; product: string; order: number }>();
+  type StepMeta = {
+    label:               string;
+    product:             string;
+    order:               number;
+    category?:           string;
+    target_concern?:     string;
+    clinical_reasoning?: string;
+    time_of_day_array?:  ('am' | 'pm')[];
+  };
+  const byScanStep = new Map<string, StepMeta>();
   for (const s of (scansRes.data ?? []) as Array<{ id: string; recommendations: Recommendations | null }>) {
     const rec = s.recommendations;
-    const allSkin: RoutineStep[] = [
-      ...(rec?.skin?.routine?.morning ?? []),
-      ...(rec?.skin?.routine?.evening ?? []),
-    ];
-    for (const step of allSkin) {
+    // Phase D — new schema: skin.steps[] (one entry per base step, with time_of_day array).
+    for (const step of rec?.skin?.steps ?? []) {
+      if (!step.step_id) continue;
+      byScanStep.set(`${s.id}|${step.step_id}`, {
+        label:               step.label,
+        product:             step.product,
+        order:               step.order ?? 999,
+        category:            step.category,
+        target_concern:      step.target_concern,
+        clinical_reasoning:  step.clinical_reasoning,
+        time_of_day_array:   step.time_of_day,
+      });
+    }
+    // Legacy schema: skin.routine.morning + skin.routine.evening. These rows
+    // are keyed by their original (slot-prefixed) step_id, so we register them
+    // under that same key.
+    const legacyMorning = rec?.skin?.routine?.morning ?? [];
+    const legacyEvening = rec?.skin?.routine?.evening ?? [];
+    for (const step of [...legacyMorning, ...legacyEvening]) {
       if (!step.step_id) continue;
       byScanStep.set(`${s.id}|${step.step_id}`, {
         label:   step.label,
@@ -319,18 +360,37 @@ async function fetchRoutineForDate(userId: string, date: string): Promise<Routin
         order:   step.order ?? 999,
       });
     }
+    // Beard steps may now be embedded in scan.recommendations.beard.steps.
+    const beardRecs = rec?.beard as { steps?: RoutineStep[] } | null | undefined;
+    for (const step of beardRecs?.steps ?? []) {
+      if (!step.step_id) continue;
+      byScanStep.set(`${s.id}|${step.step_id}`, {
+        label:               step.label,
+        product:             step.product,
+        order:               step.order ?? 999,
+        category:            step.category,
+        clinical_reasoning:  step.clinical_reasoning,
+      });
+    }
   }
 
   // Hair steps live on the user, not on individual scans.
   const hairRecs = (userRes.data as { hair_recommendations?: HairRecommendations | null } | null)?.hair_recommendations ?? null;
-  const hairByStep = new Map<string, { label: string; product: string; order: number }>();
+  const hairByStep = new Map<string, StepMeta>();
   for (const h of hairRecs?.routine ?? []) {
     if (!h.step_id) continue;
-    hairByStep.set(h.step_id, { label: h.label, product: h.product, order: h.order ?? 999 });
+    hairByStep.set(h.step_id, {
+      label:               h.label,
+      product:             h.product,
+      order:               h.order ?? 999,
+      category:            h.category,
+      clinical_reasoning:  h.clinical_reasoning,
+    });
   }
 
   const enriched: RoutineDayStep[] = rawRows.map((r) => {
-    let meta: { label: string; product: string; order: number } | undefined;
+    const baseId = baseSkinStepId(r.step_id);
+    let meta: StepMeta | undefined;
     if (r.step_id.startsWith('hair_')) {
       meta = hairByStep.get(r.step_id);
     } else if (r.step_id.startsWith('beard_')) {
@@ -338,19 +398,27 @@ async function fetchRoutineForDate(userId: string, date: string): Promise<Routin
           ?? beardFallbackMeta(r.step_id)
           ?? undefined;
     } else {
-      meta = byScanStep.get(`${r.scan_id}|${r.step_id}`);
+      // Skin: try the base id first (new schema), fall back to the raw stored
+      // id (legacy skin_am_*/skin_pm_* schema).
+      meta = byScanStep.get(`${r.scan_id}|${baseId}`)
+          ?? byScanStep.get(`${r.scan_id}|${r.step_id}`);
     }
     return {
-      row_id:       r.id,
-      scan_id:      r.scan_id,
-      step_id:      r.step_id,
-      time_of_day:  r.time_of_day as RoutineDayStep['time_of_day'],
-      completed:    r.completed_at !== null,
-      completed_at: r.completed_at,
-      kit_item_id:  r.kit_item_id,
-      label:        meta?.label   ?? humanizeStepId(r.step_id),
-      product:      meta?.product ?? '',
-      order:        meta?.order   ?? 999,
+      row_id:              r.id,
+      scan_id:             r.scan_id,
+      step_id:             r.step_id,
+      base_step_id:        baseId,
+      time_of_day:         r.time_of_day as RoutineDayStep['time_of_day'],
+      completed:           r.completed_at !== null,
+      completed_at:        r.completed_at,
+      kit_item_id:         r.kit_item_id,
+      label:               meta?.label   ?? humanizeStepId(baseId),
+      product:             meta?.product ?? '',
+      order:               meta?.order   ?? 999,
+      category:            meta?.category,
+      target_concern:      meta?.target_concern,
+      clinical_reasoning:  meta?.clinical_reasoning,
+      time_of_day_array:   meta?.time_of_day_array,
     };
   });
 
@@ -376,16 +444,24 @@ export async function fetchPastDayRoutine(userId: string, date: string): Promise
 // ─── Backfill kit_item_id for a step ─────────────────────────────────────────
 // When a user adds a product to their kit, link all future + today's rows for
 // that step to the kit item. We never rewrite history — only forward-looking rows.
+//
+// Phase D: skin step_ids in routine_checkins are slot-suffixed (skin_cleanse_am,
+// skin_cleanse_pm) while user_kit / picker uses the base id (skin_cleanse). We
+// match all variants here so a single picker selection links both AM + PM rows.
 export async function backfillKitItemIdForStep(
   userId: string,
   stepId: string,
   kitItemId: string,
 ): Promise<number> {
+  const candidates = stepId.startsWith('skin_')
+    ? [stepId, `${stepId}_am`, `${stepId}_pm`]
+    : [stepId];
+
   const { data, error } = await supabase
     .from('routine_checkins')
     .update({ kit_item_id: kitItemId })
     .eq('user_id', userId)
-    .eq('step_id', stepId)
+    .in('step_id', candidates)
     .eq('superseded', false)
     .gte('date', todayISO())
     .select('id');

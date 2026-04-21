@@ -155,8 +155,16 @@ export default function SkinDetailScreen() {
   const concerns   = (scan?.skin_concerns ?? []).filter(c => c in CONCERN_SEVERITY);
   const topConcern = concerns.sort((a, b) => (CONCERN_SEVERITY[b] ?? 0) - (CONCERN_SEVERITY[a] ?? 0))[0];
 
-  const morningSteps: RoutineStep[] = rec?.skin?.routine?.morning ?? [];
-  const eveningSteps: RoutineStep[] = rec?.skin?.routine?.evening ?? [];
+  // Phase D — prefer the new `steps` array. Each step's time_of_day decides
+  // whether it appears under MORNING, EVENING, or both. Fall back to the legacy
+  // morning/evening shape for scans that pre-date the schema change.
+  const allSteps: RoutineStep[] = rec?.skin?.steps ?? [];
+  const morningSteps: RoutineStep[] = allSteps.length > 0
+    ? allSteps.filter(s => (s.time_of_day ?? ['am']).includes('am'))
+    : (rec?.skin?.routine?.morning ?? []);
+  const eveningSteps: RoutineStep[] = allSteps.length > 0
+    ? allSteps.filter(s => (s.time_of_day ?? ['pm']).includes('pm'))
+    : (rec?.skin?.routine?.evening ?? []);
 
   return (
     <View style={s.screen}>
@@ -248,45 +256,49 @@ export default function SkinDetailScreen() {
 
             {morningSteps.length > 0 && (
               <InfoCard title="MORNING ROUTINE">
-                {morningSteps.map((step, i) => (
-                  <StepRow
-                    key={i}
-                    n={i + 1}
-                    label={step.label}
-                    product={step.product}
-                    productCount={(productMap[getCategoryForStep(step.label)] ?? []).length}
-                    onPress={() => {
-                      const cat = getCategoryForStep(step.label);
-                      setPickerCategory(cat);
-                      setPickerStep(step.label);
-                      setPickerStepId(step.step_id ?? '');
-                      setPickerReason(step.product ?? '');
-                      setPickerVisible(true);
-                    }}
-                  />
-                ))}
+                {morningSteps.map((step, i) => {
+                  const cat = step.category ?? getCategoryForStep(step.label);
+                  return (
+                    <StepRow
+                      key={i}
+                      n={i + 1}
+                      label={step.label}
+                      product={step.product}
+                      productCount={(productMap[cat] ?? []).length}
+                      onPress={() => {
+                        setPickerCategory(cat);
+                        setPickerStep(step.label);
+                        setPickerStepId(step.step_id ?? '');
+                        setPickerReason(step.clinical_reasoning ?? step.product ?? '');
+                        setPickerVisible(true);
+                      }}
+                    />
+                  );
+                })}
               </InfoCard>
             )}
 
             {eveningSteps.length > 0 && (
               <InfoCard title="EVENING ROUTINE">
-                {eveningSteps.map((step, i) => (
-                  <StepRow
-                    key={i}
-                    n={i + 1}
-                    label={step.label}
-                    product={step.product}
-                    productCount={(productMap[getCategoryForStep(step.label)] ?? []).length}
-                    onPress={() => {
-                      const cat = getCategoryForStep(step.label);
-                      setPickerCategory(cat);
-                      setPickerStep(step.label);
-                      setPickerStepId(step.step_id ?? '');
-                      setPickerReason(step.product ?? '');
-                      setPickerVisible(true);
-                    }}
-                  />
-                ))}
+                {eveningSteps.map((step, i) => {
+                  const cat = step.category ?? getCategoryForStep(step.label);
+                  return (
+                    <StepRow
+                      key={i}
+                      n={i + 1}
+                      label={step.label}
+                      product={step.product}
+                      productCount={(productMap[cat] ?? []).length}
+                      onPress={() => {
+                        setPickerCategory(cat);
+                        setPickerStep(step.label);
+                        setPickerStepId(step.step_id ?? '');
+                        setPickerReason(step.clinical_reasoning ?? step.product ?? '');
+                        setPickerVisible(true);
+                      }}
+                    />
+                  );
+                })}
               </InfoCard>
             )}
 

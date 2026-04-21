@@ -147,7 +147,7 @@ import {
 } from '../lib/gemini';
 import type { GeminiAnalysis } from '../lib/gemini';
 import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
-import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier } from '../types';
+import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier, BeardGoal } from '../types';
 import { isBaldProfile } from '../types';
 import { resolveTraits, buildTraitsToSave, fetchUserTraits, saveUserTraits } from '../lib/traits';
 
@@ -252,6 +252,34 @@ export async function computeAndStoreScanDelta(params: {
 
 // Callback so the UI can show which step is running.
 export type ProgressCallback = (step: string) => void;
+
+// Poll users.beard_goal for up to `timeoutMs`, giving the user time to tap
+// the DeadTimeQuestionCard on ObservationScreen. Returns the stored value
+// (or null if the user didn't answer in time). Only called for men with a
+// detected beard — callers are expected to short-circuit otherwise.
+async function pollBeardGoal(
+  userId:    string,
+  timeoutMs: number = 30_000,
+  intervalMs: number = 1_500,
+): Promise<BeardGoal | null> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { data } = await supabase
+      .from('users')
+      .select('beard_goal')
+      .eq('id', userId)
+      .single();
+    const row = data as { beard_goal?: BeardGoal | null } | null;
+    if (row?.beard_goal) return row.beard_goal;
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  const { data: finalRow } = await supabase
+    .from('users')
+    .select('beard_goal')
+    .eq('id', userId)
+    .single();
+  return (finalRow as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
+}
 
 // Compress the photo to 512×512 JPEG and return base64 string.
 // Done on-device before anything is sent anywhere.
@@ -596,9 +624,22 @@ export async function runScanPhase2(
   });
   const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
 
+  // Beard-goal gating — for men with a detected beard, give the user up to
+  // 30s to tap the DeadTimeQuestionCard on ObservationScreen. The result
+  // informs which beard steps Gemini prescribes and which actives score higher.
+  let beardGoal: BeardGoal | null = null;
+  const beardApplicable =
+    (gender === 'man' || gender === 'other') &&
+    !!analysis.beard_density && analysis.beard_density !== 'none';
+  if (beardApplicable) {
+    onProgress?.('Personalising your beard plan…');
+    beardGoal = await pollBeardGoal(userId, 30_000, 1_500);
+    console.log('[scanService] beard_goal resolved to:', beardGoal ?? '(none — Gemini will default to clean_simple)');
+  }
+
   onProgress?.('Generating recommendations…');
   console.log('[scanService] Calling getRecommendationsFromGemini');
-  const recommendations = await getRecommendationsFromGemini(gender, analysis, matchedProducts, userProfile.ageRange);
+  const recommendations = await getRecommendationsFromGemini(gender, analysis, matchedProducts, userProfile.ageRange, beardGoal);
   console.log('[scanService] Gemini recommendations received');
 
   onProgress?.('Calculating your score…');
@@ -855,7 +896,7 @@ export async function refreshRecommendations(
 
     const { data: userRow } = await supabase
       .from('users')
-      .select('gender, city, preferred_brands_v2, hair_profile, age_range')
+      .select('gender, city, preferred_brands_v2, hair_profile, age_range, beard_goal')
       .eq('id', userId)
       .single();
 
@@ -866,6 +907,7 @@ export async function refreshRecommendations(
       ?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] };
     const inferredBudget     = inferBudgetFromBrands(preferredBrandsRaw);
     const ageRange           = (userRow as { age_range?: string } | null)?.age_range ?? null;
+    const beardGoal          = (userRow as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
 
     const { data: scans } = await supabase
       .from('scans')
@@ -920,7 +962,7 @@ export async function refreshRecommendations(
 
     console.log('[refreshRecommendations] step: generating recs');
     onProgress?.('Generating recommendations…');
-    const recommendations = await getRecommendationsFromGemini(gender, analysis, matchedProducts, ageRange);
+    const recommendations = await getRecommendationsFromGemini(gender, analysis, matchedProducts, ageRange, beardGoal);
 
     console.log('[refreshRecommendations] step: saving');
     onProgress?.('Saving…');

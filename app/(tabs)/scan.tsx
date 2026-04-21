@@ -13,6 +13,7 @@ import Svg, { Ellipse, Circle, Path } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import { useScan } from '../../hooks/useScan';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { DeadTimeQuestionCard } from '../../components/DeadTimeQuestionCard';
 import type { Scan } from '../../types';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -187,12 +188,14 @@ function ProcessingScreen({ step }: { step: string }) {
 function ObservationScreen({
   scan,
   gender,
+  userId,
   onContinue,
   recsLoading,
   recsError,
 }: {
   scan:        Scan;
   gender:      string;
+  userId:      string;
   onContinue:  () => void;
   recsLoading: boolean;
   recsError:   boolean;
@@ -371,6 +374,15 @@ function ObservationScreen({
           </View>
         )}
 
+        {/* Dead-time question — asks beard_goal while phase 2 runs in bg */}
+        {recsLoading && userId ? (
+          <DeadTimeQuestionCard
+            userId={userId}
+            beardDensity={scan.beard_density ?? null}
+            gender={gender}
+          />
+        ) : null}
+
         {/* CTA */}
         {recsLoading ? (
           <View style={rs.ctaLoading}>
@@ -439,7 +451,7 @@ export default function ScanScreen() {
 
   if (phase === 'camera')     return <CameraScreen onCapture={handleCapture} onCancel={reset} error={error} />;
   if (phase === 'processing') return <ProcessingScreen step={processingStep} />;
-  if (phase === 'result' && result) return <ObservationScreen scan={result} gender={gender} onContinue={navigateToRecs} recsLoading={recsLoading} recsError={recsError} />;
+  if (phase === 'result' && result) return <ObservationScreen scan={result} gender={gender} userId={userId} onContinue={navigateToRecs} recsLoading={recsLoading} recsError={recsError} />;
   return <HomeScreen onStart={openCamera} />;
 }
 

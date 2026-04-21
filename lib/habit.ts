@@ -382,10 +382,14 @@ export function generateScheduledRows(input: GenerateScheduleInput): ScheduledRo
     const dayOffset = i;                                    // 0-based offset from startDate
     const isWashDay = dayOffset % washFreqDays === 0;       // wash days anchored to startDate
 
-    // Skin — one row per (step, time_of_day) per day
+    // Skin — one row per (step, time_of_day) per day. The unique constraint on
+    // routine_checkins is (user_id, step_id, date), so multi-slot steps need
+    // distinct step_ids per slot. We suffix `_am`/`_pm` here; the routine UI
+    // strips the suffix when grouping into a single card per base step.
     for (const s of effectiveSkin) {
       for (const slot of s.time_of_day) {
-        rows.push({ user_id: userId, scan_id: scanId, step_id: s.step_id, time_of_day: slot, date });
+        const slottedStepId = `${s.step_id}_${slot}`;
+        rows.push({ user_id: userId, scan_id: scanId, step_id: slottedStepId, time_of_day: slot, date });
       }
     }
 

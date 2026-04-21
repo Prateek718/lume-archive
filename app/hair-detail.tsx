@@ -326,7 +326,7 @@ export default function HairDetailScreen() {
                         setPickerCategory(cat);
                         setPickerStep(step.label);
                         setPickerStepId(step.step_id ?? '');
-                        setPickerReason(step.product);
+                        setPickerReason(step.clinical_reasoning ?? step.product);
                         setPickerVisible(true);
                       } : undefined}
                     />

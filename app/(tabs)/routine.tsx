@@ -1,5 +1,7 @@
 // Routine tab — week strip, streak + adherence, today's checklist, past-day view.
-// Drives all state from the habit engine (routine_checkins table).
+// Drives all state from the habit engine (routine_checkins table). Phase D
+// switched skin to combined cards: one card per base step with AM/PM checkboxes
+// inline. The AM/PM toggle dims (does not filter) non-applicable cards.
 
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -27,11 +29,17 @@ import ProductPickerSheet from '../../components/ProductPickerSheet';
 import { PRODUCTS } from '../../constants/productConstants';
 import type { MatchedProduct } from '../../types';
 
-// ─── Step-id helpers ─────────────────────────────────────────────────────────
+// ─── Step-id → category helpers ──────────────────────────────────────────────
 
-// Map known step ids → PRODUCTS catalogue categories. The routine engine's step ids
-// come from Gemini (skin_am_*, skin_pm_*, beard_*) plus hair_* from user hair recs.
+// Known base step ids → catalogue categories. Covers both the new schema
+// (skin_cleanse, skin_protect, …) and legacy step ids (skin_am_*, skin_pm_*).
+// Beard / hair entries unchanged from earlier behaviour.
 const STEP_CATEGORY_STATIC: Record<string, string> = {
+  // New schema
+  skin_cleanse:       'face_cleanser',
+  skin_moisturize:    'moisturiser',
+  skin_protect:       'spf_sunscreen',
+  // Legacy schema
   skin_am_cleanse:    'face_cleanser',
   skin_pm_cleanse:    'face_cleanser',
   skin_am_spf:        'spf_sunscreen',
@@ -41,13 +49,14 @@ const STEP_CATEGORY_STATIC: Record<string, string> = {
   skin_pm_toner:      'toner',
   skin_am_eye:        'eye_cream',
   skin_pm_eye:        'eye_cream',
+  // Beard
   beard_wash:         'beard_wash',
   beard_oil:          'beard_oil',
   beard_balm:         'beard_balm',
 };
 
-// Derive category from the human-readable product description — used when the
-// step id alone isn't enough (e.g. skin_am_serum → vitamin C vs niacinamide vs HA).
+// Derive category from the product description as a final fallback for Treat
+// steps (skin_treat_1/2) and any legacy free-text step.
 function categoryFromProduct(product: string): string | undefined {
   const p = product.toLowerCase();
   if (p.includes('vitamin c') || p.includes('vitc'))     return 'serum_vitamin_c';
@@ -72,24 +81,22 @@ function categoryFromProduct(product: string): string | undefined {
   return undefined;
 }
 
-function deriveCategory(stepId: string, product: string | undefined): string | undefined {
+function deriveCategory(stepId: string, recCategory: string | undefined, product: string | undefined): string | undefined {
+  if (recCategory)                  return recCategory;       // new schema — Gemini provides canonical id
   if (STEP_CATEGORY_STATIC[stepId]) return STEP_CATEGORY_STATIC[stepId];
   if (product) {
     const fromProduct = categoryFromProduct(product);
     if (fromProduct) return fromProduct;
   }
-  // Hair step ids look like "hair_<category>".
   if (stepId.startsWith('hair_')) {
     const tail = stepId.slice(5);
-    if (tail) return tail === 'shampoo' || tail === 'conditioner' || tail === 'mask'
-      ? (tail === 'mask' ? 'hair_mask' : tail)
-      : `hair_${tail}`;
+    if (tail) return tail === 'mask' ? 'hair_mask' : tail;
   }
   return undefined;
 }
 
 function fallbackLabel(stepId: string): string {
-  const short = stepId.replace(/^(skin_am_|skin_pm_|beard_|hair_)/, '').replace(/_/g, ' ');
+  const short = stepId.replace(/^(skin_am_|skin_pm_|beard_|hair_|skin_)/, '').replace(/_/g, ' ');
   return short.charAt(0).toUpperCase() + short.slice(1);
 }
 
@@ -108,6 +115,49 @@ function yesterdayISO(): string {
 function formatShortDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+// ─── Skin card grouping ──────────────────────────────────────────────────────
+// Collapses per-slot RoutineDayStep rows back into a single card per base step.
+interface SkinCard {
+  base_step_id:        string;
+  label:               string;
+  product:             string;
+  clinical_reasoning?: string;
+  category?:           string;
+  order:               number;
+  am?:                 RoutineDayStep;     // present iff this step is scheduled in AM
+  pm?:                 RoutineDayStep;     // present iff this step is scheduled in PM
+}
+
+function groupSkinSteps(rows: RoutineDayStep[]): SkinCard[] {
+  const map = new Map<string, SkinCard>();
+  for (const r of rows) {
+    if (!r.step_id.startsWith('skin_')) continue;
+    const key = r.base_step_id;
+    let card = map.get(key);
+    if (!card) {
+      card = {
+        base_step_id:       key,
+        label:              r.label,
+        product:            r.product,
+        clinical_reasoning: r.clinical_reasoning,
+        category:           r.category,
+        order:              r.order,
+      };
+      map.set(key, card);
+    }
+    if (r.time_of_day === 'am') card.am = r;
+    else if (r.time_of_day === 'pm') card.pm = r;
+    // Prefer non-empty meta if any slot has it (label/product/reasoning all derive from same source step).
+    if (!card.clinical_reasoning && r.clinical_reasoning) card.clinical_reasoning = r.clinical_reasoning;
+    if (!card.category && r.category)                     card.category = r.category;
+    if (!card.product && r.product)                       card.product = r.product;
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    return a.base_step_id.localeCompare(b.base_step_id);
+  });
 }
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
@@ -149,7 +199,6 @@ export default function RoutineScreen() {
       if (!user) { setLoading(false); setRefreshing(false); return; }
       setUserId(user.id);
 
-      // Latest scan id — needed for productMap (picker catalogue).
       const { data: scansData } = await supabase
         .from('scans')
         .select('id')
@@ -159,7 +208,6 @@ export default function RoutineScreen() {
       const scanId = (scansData?.[0] as { id: string } | undefined)?.id ?? null;
       setHasScan(!!scanId);
 
-      // Today + yesterday + adherence + product catalogue + active kit, all in parallel.
       const [today, yesterday, adherence, pm, kitRows] = await Promise.all([
         fetchTodayRoutine(user.id),
         fetchPastDayRoutine(user.id, yesterdayISO()),
@@ -172,7 +220,6 @@ export default function RoutineScreen() {
       setDailyAdherence(adherence);
       setProductMap(pm);
 
-      // Build kit lookup: kit_item_id -> { name, brand } via PRODUCTS catalogue.
       const km: Record<string, { name: string; brand: string }> = {};
       for (const row of kitRows) {
         const p = PRODUCTS.find((q) => q.id === row.product_id);
@@ -212,45 +259,37 @@ export default function RoutineScreen() {
 
   const activeSteps = viewingToday ? todaySteps : pastDaySteps;
 
-  // Display sections — beard and hair are shown in both AM and PM today views.
-  const skinAmSteps  = activeSteps.filter(s => s.step_id.startsWith('skin_am_'));
-  const skinPmSteps  = activeSteps.filter(s => s.step_id.startsWith('skin_pm_'));
-  const beardSteps   = activeSteps.filter(s => s.step_id.startsWith('beard_'));
-  const hairSteps    = activeSteps.filter(s => s.step_id.startsWith('hair_'));
+  const skinCards   = useMemo(() => groupSkinSteps(activeSteps), [activeSteps]);
+  const beardSteps  = useMemo(() => activeSteps.filter(s => s.step_id.startsWith('beard_')), [activeSteps]);
+  const hairSteps   = useMemo(() => activeSteps.filter(s => s.step_id.startsWith('hair_')),  [activeSteps]);
 
-  // Mark-all bucket — skin_am_* + beard with am bucket (or pm equivalents).
-  // Hair is excluded; cadence-driven steps shouldn't be bulk-toggled.
+  // Mark-all bucket — every uncompleted check for the focused period (skin AM/PM
+  // checkboxes + beard rows whose slot matches). Hair is excluded — cadence-driven.
   const currentPeriodSteps = useMemo<RoutineDayStep[]>(() => {
     if (!viewingToday) return [];
-    if (period === 'am') {
-      return [
-        ...skinAmSteps,
-        ...beardSteps.filter(b => b.time_of_day !== 'pm'),  // 'am' or 'daily'
-      ];
+    const skinSlot: RoutineDayStep[] = [];
+    for (const c of skinCards) {
+      const r = period === 'am' ? c.am : c.pm;
+      if (r) skinSlot.push(r);
     }
-    return [
-      ...skinPmSteps,
-      ...beardSteps.filter(b => b.time_of_day === 'pm'),
-    ];
-  }, [viewingToday, period, skinAmSteps, skinPmSteps, beardSteps]);
+    const beardSlot = period === 'am'
+      ? beardSteps.filter(b => b.time_of_day !== 'pm')
+      : beardSteps.filter(b => b.time_of_day === 'pm');
+    return [...skinSlot, ...beardSlot];
+  }, [viewingToday, period, skinCards, beardSteps]);
 
   const periodUnchecked = currentPeriodSteps.filter(s => !s.completed);
   const periodAllDone = currentPeriodSteps.length > 0 && periodUnchecked.length === 0;
 
-  // Today's completion ratio for the week-strip "today" dot.
   const todayPct = activeSteps.length === 0
     ? 0
     : Math.round((activeSteps.filter(x => x.completed).length / activeSteps.length) * 100);
 
   // ── Actions (optimistic) ──────────────────────────────────────────────────
-  // Each toggle / mark-all updates local state immediately, then fires the
-  // Supabase write in the background. On error we revert. We never re-fetch
-  // the routine on a tap — the list must not re-shuffle mid-interaction.
   const adjustAdherence = useCallback((delta: number, date: string) => {
     setDailyAdherence((prev) => {
       const idx = prev.findIndex((d) => d.date === date);
       if (idx === -1) {
-        // Today may not be in the window yet — append.
         return [...prev, { date, scheduled_count: 0, completed_count: Math.max(0, delta) }];
       }
       const next = [...prev];
@@ -311,7 +350,6 @@ export default function RoutineScreen() {
         if (willMark) {
           await recordBulkCheckin(userId, targets.map((t) => t.step_id), date);
         } else {
-          // habitService has no bulk un-record; fan out.
           await Promise.all(targets.map((t) => unrecordCheckin(userId, t.step_id, date)));
         }
       } catch (err) {
@@ -353,13 +391,23 @@ export default function RoutineScreen() {
     })();
   }, [userId, yesterdaySteps, adjustAdherence]);
 
-  const openPicker = useCallback((step: RoutineDayStep) => {
-    const category = deriveCategory(step.step_id, step.product);
+  const openPickerForSkin = useCallback((card: SkinCard) => {
+    const category = deriveCategory(card.base_step_id, card.category, card.product);
     if (!category) return;
-    setPickerStepId(step.step_id);
+    setPickerStepId(card.base_step_id);
     setPickerCategory(category);
-    setPickerStepLabel(step.label || fallbackLabel(step.step_id));
-    setPickerReason(step.product ?? '');
+    setPickerStepLabel(card.label || fallbackLabel(card.base_step_id));
+    setPickerReason(card.clinical_reasoning ?? card.product ?? '');
+    setPickerVisible(true);
+  }, []);
+
+  const openPickerForRow = useCallback((step: RoutineDayStep) => {
+    const category = deriveCategory(step.base_step_id, step.category, step.product);
+    if (!category) return;
+    setPickerStepId(step.base_step_id);
+    setPickerCategory(category);
+    setPickerStepLabel(step.label || fallbackLabel(step.base_step_id));
+    setPickerReason(step.clinical_reasoning ?? step.product ?? '');
     setPickerVisible(true);
   }, []);
 
@@ -378,14 +426,113 @@ export default function RoutineScreen() {
     }
   }, [userId]);
 
-  // ── Step row ───────────────────────────────────────────────────────────────
-  const renderStep = (step: RoutineDayStep) => {
-    const label = step.label || fallbackLabel(step.step_id);
-    const category = deriveCategory(step.step_id, step.product);
+  // ── Skin combined card ─────────────────────────────────────────────────────
+  const renderSkinCard = (card: SkinCard) => {
+    const label = card.label || fallbackLabel(card.base_step_id);
+    const category = deriveCategory(card.base_step_id, card.category, card.product);
+    const hasProducts = category ? (productMap[category]?.length ?? 0) > 0 : false;
+
+    // Show kit pill if either slot is linked to a kit item.
+    const linkedKitId = card.am?.kit_item_id ?? card.pm?.kit_item_id ?? null;
+    const linkedKit = linkedKitId ? kitMap[linkedKitId] ?? null : null;
+    const showPickerChip = viewingToday && !linkedKit && hasProducts;
+
+    // Focus dim: if the focused period's slot is missing on this card, dim it.
+    const matchesFocus = viewingToday
+      ? (period === 'am' ? !!card.am : !!card.pm)
+      : true;
+    const dimmed = viewingToday && !matchesFocus;
+
+    // Long-press to mark yesterday — if either slot was missed yesterday.
+    const onCardLongPress = () => {
+      if (!viewingToday) return;
+      const missedSlot =
+        (card.am && missedYesterdayIds.has(card.am.step_id) ? card.am : null) ??
+        (card.pm && missedYesterdayIds.has(card.pm.step_id) ? card.pm : null);
+      if (missedSlot) setYesterdaySheet({ visible: true, step: missedSlot });
+    };
+
+    return (
+      <TouchableOpacity
+        key={card.base_step_id}
+        style={[s.skinCard, dimmed && s.skinCardDimmed]}
+        activeOpacity={1}
+        onLongPress={onCardLongPress}
+        delayLongPress={500}
+      >
+        <View style={s.skinCardRow}>
+          <View style={s.skinCardLeft}>
+            <Text style={s.stepLabel}>{label}</Text>
+            {linkedKit ? (
+              <Text style={s.stepProductLinked} numberOfLines={1}>
+                {linkedKit.brand ? `${linkedKit.name} · ${linkedKit.brand}` : linkedKit.name}
+              </Text>
+            ) : card.product ? (
+              <Text style={s.stepProduct} numberOfLines={1}>{card.product}</Text>
+            ) : null}
+            {card.clinical_reasoning ? (
+              <Text style={s.stepReasoning} numberOfLines={2}>{card.clinical_reasoning}</Text>
+            ) : null}
+            {showPickerChip && (
+              <TouchableOpacity
+                onPress={() => openPickerForSkin(card)}
+                style={s.pickChip}
+                activeOpacity={0.75}
+              >
+                <Text style={s.pickChipText}>Pick product →</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={s.slotColumn}>
+            {card.am && renderSlotControl(card.am, 'AM')}
+            {card.pm && renderSlotControl(card.pm, 'PM')}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Single AM/PM checkbox (today) or dot (past day).
+  const renderSlotControl = (row: RoutineDayStep, label: 'AM' | 'PM') => {
+    if (!viewingToday) {
+      return (
+        <View key={label} style={s.slotPast}>
+          <Text style={s.slotPastLabel}>{label}</Text>
+          <View style={[s.slotDot, row.completed && s.slotDotDone]} />
+        </View>
+      );
+    }
+    return (
+      <TouchableOpacity
+        key={label}
+        style={[s.slotBtn, row.completed && s.slotBtnDone]}
+        activeOpacity={0.7}
+        onPress={() => toggleStep(row)}
+      >
+        <Text style={[s.slotBtnLabel, row.completed && s.slotBtnLabelDone]}>{label}</Text>
+        {row.completed && <Text style={s.slotBtnCheck}>✓</Text>}
+      </TouchableOpacity>
+    );
+  };
+
+  // ── Beard / Hair single-row card ──────────────────────────────────────────
+  const renderRow = (step: RoutineDayStep) => {
+    const label = step.label || fallbackLabel(step.base_step_id);
+    const category = deriveCategory(step.base_step_id, step.category, step.product);
     const hasProducts = category ? (productMap[category]?.length ?? 0) > 0 : false;
     const cadence = cadencePill(step);
     const linkedKit = step.kit_item_id ? kitMap[step.kit_item_id] ?? null : null;
     const showPickerChip = viewingToday && !linkedKit && hasProducts;
+
+    // Focus dim for beard rows: dim if its slot doesn't match focus period.
+    let dimmed = false;
+    if (viewingToday && step.step_id.startsWith('beard_')) {
+      const matchesFocus = period === 'am'
+        ? step.time_of_day !== 'pm'
+        : step.time_of_day === 'pm';
+      dimmed = !matchesFocus;
+    }
 
     const onRowLongPress = () => {
       if (!viewingToday) return;
@@ -397,7 +544,7 @@ export default function RoutineScreen() {
     return (
       <TouchableOpacity
         key={step.row_id}
-        style={[s.stepRow, step.completed && s.stepRowDone]}
+        style={[s.stepRow, step.completed && s.stepRowDone, dimmed && s.skinCardDimmed]}
         activeOpacity={viewingToday ? 0.75 : 1}
         onPress={viewingToday ? () => toggleStep(step) : undefined}
         onLongPress={onRowLongPress}
@@ -419,9 +566,12 @@ export default function RoutineScreen() {
           ) : (
             <>
               {step.product ? <Text style={s.stepProduct}>{step.product}</Text> : null}
+              {step.clinical_reasoning ? (
+                <Text style={s.stepReasoning} numberOfLines={2}>{step.clinical_reasoning}</Text>
+              ) : null}
               {showPickerChip && (
                 <TouchableOpacity
-                  onPress={(e) => { e.stopPropagation(); openPicker(step); }}
+                  onPress={(e) => { e.stopPropagation(); openPickerForRow(step); }}
                   style={s.pickChip}
                   activeOpacity={0.75}
                 >
@@ -560,7 +710,7 @@ export default function RoutineScreen() {
         {/* TODAY VIEW */}
         {viewingToday && (
           <>
-            {/* AM/PM toggle */}
+            {/* AM/PM focus toggle — dims non-applicable cards rather than filtering */}
             <View style={s.toggleRow}>
               <TouchableOpacity
                 style={[s.toggleBtn, period === 'am' && s.toggleBtnActive]}
@@ -578,7 +728,7 @@ export default function RoutineScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Mark all done */}
+            {/* Mark all done — operates on the focused period's checkboxes */}
             {currentPeriodSteps.length > 0 && (
               <TouchableOpacity
                 style={[s.markAllBtn, periodAllDone && s.markAllBtnUndo]}
@@ -586,38 +736,38 @@ export default function RoutineScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={[s.markAllText, periodAllDone && s.markAllTextUndo]}>
-                  {periodAllDone ? 'Unmark all' : 'Mark all done'}
+                  {periodAllDone
+                    ? `Unmark all ${period.toUpperCase()}`
+                    : `Mark all ${period.toUpperCase()} done`}
                 </Text>
               </TouchableOpacity>
             )}
 
-            {/* Skin section — AM or PM depending on toggle */}
-            {(period === 'am' ? skinAmSteps : skinPmSteps).length > 0 && (
+            {/* Skin section — combined cards always visible (focus dims) */}
+            {skinCards.length > 0 && (
               <>
                 <Text style={s.sectionLabel}>SKIN</Text>
-                {(period === 'am' ? skinAmSteps : skinPmSteps).map(renderStep)}
+                {skinCards.map(renderSkinCard)}
               </>
             )}
 
-            {/* Beard section — always full beard, ignores AM/PM toggle */}
+            {/* Beard section */}
             {beardSteps.length > 0 && (
               <>
                 <Text style={s.sectionLabel}>BEARD</Text>
-                {beardSteps.map(renderStep)}
+                {beardSteps.map(renderRow)}
               </>
             )}
 
-            {/* Hair section — full hair routine, ignores AM/PM toggle */}
+            {/* Hair section — full hair routine, no focus dimming */}
             {hairSteps.length > 0 && (
               <>
                 <Text style={s.sectionLabel}>HAIR</Text>
-                {hairSteps.map(renderStep)}
+                {hairSteps.map(renderRow)}
               </>
             )}
 
-            {/* Empty fallback when nothing is scheduled at all today */}
-            {skinAmSteps.length === 0 && skinPmSteps.length === 0
-             && beardSteps.length === 0 && hairSteps.length === 0 && (
+            {skinCards.length === 0 && beardSteps.length === 0 && hairSteps.length === 0 && (
               <View style={s.emptySection}>
                 <Text style={s.emptySectionText}>No routine scheduled today</Text>
               </View>
@@ -625,31 +775,25 @@ export default function RoutineScreen() {
           </>
         )}
 
-        {/* PAST DAY VIEW */}
+        {/* PAST DAY VIEW — same combined cards, AM/PM as dots, no toggle */}
         {!viewingToday && (
           <>
-            {skinAmSteps.length > 0 && (
+            {skinCards.length > 0 && (
               <>
-                <Text style={s.sectionLabel}>AM</Text>
-                {skinAmSteps.map(renderStep)}
-              </>
-            )}
-            {skinPmSteps.length > 0 && (
-              <>
-                <Text style={s.sectionLabel}>PM</Text>
-                {skinPmSteps.map(renderStep)}
+                <Text style={s.sectionLabel}>SKIN</Text>
+                {skinCards.map(renderSkinCard)}
               </>
             )}
             {beardSteps.length > 0 && (
               <>
                 <Text style={s.sectionLabel}>BEARD</Text>
-                {beardSteps.map(renderStep)}
+                {beardSteps.map(renderRow)}
               </>
             )}
             {hairSteps.length > 0 && (
               <>
                 <Text style={s.sectionLabel}>HAIR</Text>
-                {hairSteps.map(renderStep)}
+                {hairSteps.map(renderRow)}
               </>
             )}
             {activeSteps.length === 0 && (
@@ -663,7 +807,6 @@ export default function RoutineScreen() {
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
 
-      {/* ── Product picker ── */}
       <ProductPickerSheet
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
@@ -676,7 +819,6 @@ export default function RoutineScreen() {
         onBought={() => { loadAll(); }}
       />
 
-      {/* ── Yesterday-missed action sheet ── */}
       <Modal
         visible={yesterdaySheet.visible}
         transparent
@@ -690,7 +832,7 @@ export default function RoutineScreen() {
         >
           <View style={s.actionSheet}>
             <Text style={s.sheetTitle}>
-              {yesterdaySheet.step ? (yesterdaySheet.step.label || fallbackLabel(yesterdaySheet.step.step_id)) : ''}
+              {yesterdaySheet.step ? (yesterdaySheet.step.label || fallbackLabel(yesterdaySheet.step.base_step_id)) : ''}
             </Text>
             <TouchableOpacity
               style={s.sheetAction}
@@ -722,14 +864,12 @@ const s = StyleSheet.create({
   headerTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text },
   content:     { paddingHorizontal: Spacing.lg },
 
-  // Empty state
   emptyBox:     { alignItems: 'center', paddingHorizontal: Spacing.lg, paddingTop: Spacing.xxxl },
   emptyTitle:   { fontFamily: Typography.serif, fontSize: 20, color: Colors.text, marginBottom: Spacing.sm, textAlign: 'center' },
   emptyBody:    { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.lg },
   emptyBtn:     { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingHorizontal: 28, paddingVertical: 12 },
   emptyBtnText: { fontSize: 13, color: Colors.textOnAccent, fontWeight: '600' },
 
-  // Week strip
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm, marginBottom: Spacing.md },
   dotCell:   { alignItems: 'center', width: 36 },
   dotCircle: {
@@ -748,7 +888,6 @@ const s = StyleSheet.create({
   dotLabelSelected:  { color: Colors.text, fontWeight: '600' },
   dotUnderline:      { width: 18, height: 1.5, backgroundColor: Colors.accent, marginTop: 2, borderRadius: 1 },
 
-  // Stats row
   statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
   statCard: {
     flex: 1,
@@ -765,27 +904,61 @@ const s = StyleSheet.create({
   statCaption:   { fontSize: 11, color: Colors.text2, marginTop: 2, textAlign: 'center' },
   longestCaption:{ fontSize: 10, color: Colors.text3, marginTop: 2 },
 
-  // Past-day chip
   pastChip:     { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 8, alignSelf: 'center', marginBottom: Spacing.md },
   pastChipText: { fontSize: 12, color: Colors.text },
 
-  // AM/PM toggle
   toggleRow:          { flexDirection: 'row', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.input, padding: 3, marginBottom: Spacing.md, gap: 3 },
   toggleBtn:          { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   toggleBtnActive:    { backgroundColor: Colors.accent },
   toggleBtnText:      { fontSize: 12, fontWeight: '500', color: Colors.text2 },
   toggleBtnTextActive:{ color: Colors.textOnAccent },
 
-  // Mark all
   markAllBtn:     { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingVertical: 10, alignItems: 'center', marginBottom: Spacing.md },
   markAllBtnUndo: { backgroundColor: Colors.surface2 },
   markAllText:    { fontSize: 13, color: Colors.textOnAccent, fontWeight: '600' },
   markAllTextUndo:{ color: Colors.text },
 
-  // Section labels
   sectionLabel: { fontSize: 10, color: Colors.accent, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: Spacing.md, marginBottom: Spacing.xs },
 
-  // Step rows
+  // Skin combined cards
+  skinCard: {
+    backgroundColor: Colors.surface,
+    borderRadius:    Radius.card,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    padding:         Spacing.md,
+    marginBottom:    Spacing.xs,
+  },
+  skinCardDimmed: { opacity: 0.45 },
+  skinCardRow:    { flexDirection: 'row', alignItems: 'flex-start' },
+  skinCardLeft:   { flex: 1, marginRight: Spacing.md },
+
+  slotColumn: { flexDirection: 'column', gap: 6, alignItems: 'flex-end' },
+  slotBtn: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    paddingHorizontal: 10,
+    paddingVertical:   6,
+    borderRadius:    8,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    backgroundColor: Colors.background,
+    minWidth:        54,
+    justifyContent:  'center',
+    gap:             4,
+  },
+  slotBtnDone:      { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  slotBtnLabel:     { fontSize: 11, color: Colors.text2, fontWeight: '600', letterSpacing: 0.5 },
+  slotBtnLabelDone: { color: Colors.textOnAccent },
+  slotBtnCheck:     { fontSize: 10, color: Colors.textOnAccent, fontWeight: '700' },
+
+  // Past-day skin slot dots
+  slotPast:      { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  slotPastLabel: { fontSize: 10, color: Colors.text2, fontWeight: '600' },
+  slotDot:       { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: Colors.border },
+  slotDotDone:   { backgroundColor: Colors.accent, borderColor: Colors.accent },
+
+  // Generic step row (beard / hair)
   stepRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.xs },
   stepRowDone:   { borderColor: Colors.accentTintBorderStrong },
   checkbox:      { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
@@ -797,7 +970,8 @@ const s = StyleSheet.create({
   stepLabelDone: { color: Colors.text2 },
   stepProduct:   { fontSize: 11, color: Colors.text2, marginTop: 1 },
   stepProductLinked: { fontSize: 12, color: Colors.text, marginTop: 2, fontWeight: '500' },
-  pickChip:      { alignSelf: 'flex-start', marginTop: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.accent },
+  stepReasoning: { fontSize: 11, color: Colors.text2, marginTop: 4, lineHeight: 16, fontStyle: 'italic' },
+  pickChip:      { alignSelf: 'flex-start', marginTop: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.accent },
   pickChipText:  { fontSize: 10, color: Colors.accent, fontWeight: '600' },
 
   cadencePill:      { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2, marginLeft: Spacing.sm },
@@ -806,7 +980,6 @@ const s = StyleSheet.create({
   emptySection:     { paddingVertical: Spacing.lg, alignItems: 'center' },
   emptySectionText: { fontSize: 13, color: Colors.text2 },
 
-  // Action sheet / modal
   sheetOverlay: { flex: 1, backgroundColor: Colors.overlaySheet, justifyContent: 'flex-end' },
   actionSheet:  { backgroundColor: Colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.lg, paddingBottom: Spacing.xl },
   sheetTitle:   { fontFamily: Typography.serif, fontSize: 16, color: Colors.text, marginBottom: Spacing.md },
