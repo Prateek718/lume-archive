@@ -139,6 +139,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { scheduleRescanNudge, cancelRescanNudge } from './notificationService';
+import { scheduleRoutineForScan, supersedePreviousScanRows } from './habitService';
 import { analyseWithGemini } from '../lib/gemini';
 import {
   getRecommendationsFromGemini,
@@ -708,6 +709,42 @@ export async function runScanPhase2(
       await cancelRescanNudge();
       await scheduleRescanNudge(new Date());
     } catch { }
+
+    // Habit engine: supersede the prior scan's future rows, then schedule the
+    // new scan. Failure here must not break the scan flow.
+    try {
+      console.log('[habit-schedule] starting for scan', data.id, 'user', userId);
+      console.log('[habit-schedule] scan.recommendations present:', !!(data as Scan).recommendations);
+      const { data: prevScanRows } = await supabase
+        .from('scans')
+        .select('id')
+        .eq('user_id', userId)
+        .neq('id', data.id as string)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const prevScanId = prevScanRows?.[0]?.id as string | undefined;
+      if (prevScanId) {
+        await supersedePreviousScanRows(userId, prevScanId);
+        console.log('[habit-schedule] superseded previous scan rows');
+      }
+
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('hair_profile, hair_recommendations')
+        .eq('id', userId)
+        .single();
+
+      await scheduleRoutineForScan({
+        scanId:          data.id as string,
+        userId,
+        scan:            data as Scan,
+        userHairProfile: (userRow?.hair_profile as HairProfile | null) ?? null,
+        userHairRoutine: (userRow?.hair_recommendations as HairRecommendations | null)?.routine ?? null,
+      });
+      console.log('[habit-schedule] scheduled routine for scan');
+    } catch (err) {
+      console.error('[habit-schedule] FAILED', err);
+    }
   }
 
   return data as Scan;
