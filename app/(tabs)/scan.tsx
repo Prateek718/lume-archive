@@ -15,6 +15,7 @@ import { useScan } from '../../hooks/useScan';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { DeadTimeQuestionCard } from '../../components/DeadTimeQuestionCard';
 import { HairProfileDuringVision } from '../../components/HairProfileDuringVision';
+import { RescanFeedbackFlow, type RescanFeedback } from '../../components/RescanFeedbackFlow';
 import type { Scan, HairProfile } from '../../types';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -193,13 +194,15 @@ function ObservationScreen({
   onContinue,
   recsLoading,
   recsError,
+  onRescanFeedback,
 }: {
-  scan:        Scan;
-  gender:      string;
-  userId:      string;
-  onContinue:  () => void;
-  recsLoading: boolean;
-  recsError:   boolean;
+  scan:             Scan;
+  gender:           string;
+  userId:           string;
+  onContinue:       () => void;
+  recsLoading:      boolean;
+  recsError:        boolean;
+  onRescanFeedback: (feedback: RescanFeedback) => void;
 }) {
   const insets   = useSafeAreaInsets();
   const concerns = (scan.skin_concerns ?? []) as string[];
@@ -211,6 +214,10 @@ function ObservationScreen({
   const hasDryness           = concerns.includes('dryness') || concerns.includes('dehydration');
 
   const [hasPreviousDelta, setHasPreviousDelta] = useState(false);
+  // Rescan feedback inputs — populated once we know this is a 2nd+ scan.
+  const [isRescan,       setIsRescan]       = useState(false);
+  const [primaryConcern, setPrimaryConcern] = useState<string | null>(null);
+  const [adherencePct,   setAdherencePct]   = useState<number | null>(null);
 
   useEffect(() => {
     if (!scan.id || scan.id.startsWith('local_')) return;
@@ -218,10 +225,52 @@ function ObservationScreen({
       const { count } = await supabase
         .from('scan_deltas')
         .select('id', { count: 'exact', head: true })
-        .eq('scan_id', scan.id!);
+        .eq('to_scan_id', scan.id!);
       setHasPreviousDelta((count ?? 0) > 0);
     })();
   }, [scan.id]);
+
+  // Detect rescan + gather inputs for RescanFeedbackFlow.
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      // Previous scan's first concern (primary) for Q1.
+      const { data: prevScans } = await supabase
+        .from('scans')
+        .select('id, skin_concerns, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(2);
+
+      if (cancelled) return;
+      const prev = (prevScans ?? []).find(r => r.id !== scan.id);
+      if (!prev) return;
+      setIsRescan(true);
+      const concernsArr = (prev.skin_concerns as string[] | null) ?? [];
+      setPrimaryConcern(concernsArr[0] ?? null);
+
+      // 30-day adherence % for Q2 gating.
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+      const fromISO = `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-${String(from.getDate()).padStart(2, '0')}`;
+      const { data: checkinRows } = await supabase
+        .from('routine_checkins')
+        .select('completed_at, superseded')
+        .eq('user_id', userId)
+        .eq('superseded', false)
+        .gte('date', fromISO);
+      if (cancelled) return;
+      const rows = (checkinRows ?? []) as Array<{ completed_at: string | null }>;
+      if (rows.length === 0) {
+        setAdherencePct(null);
+      } else {
+        const done = rows.filter(r => r.completed_at !== null).length;
+        setAdherencePct(Math.round((done / rows.length) * 100));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId, scan.id]);
 
   const concernPills = concerns.map(c => ({ label: c.replace(/_/g, ' ') }));
 
@@ -384,6 +433,16 @@ function ObservationScreen({
           />
         ) : null}
 
+        {/* Rescan feedback — only on 2nd+ scans, only while phase 2 runs */}
+        {recsLoading && userId && isRescan ? (
+          <RescanFeedbackFlow
+            userId={userId}
+            primaryConcern={primaryConcern}
+            adherencePct={adherencePct}
+            onComplete={onRescanFeedback}
+          />
+        ) : null}
+
         {/* CTA */}
         {recsLoading ? (
           <View style={rs.ctaLoading}>
@@ -413,6 +472,7 @@ export default function ScanScreen() {
   const {
     phase, processingStep, result, error, recsLoading, recsError,
     showHairProfile, submitHairProfile,
+    isRescanResult, submitRescanFeedback,
     openCamera, reset, processPhoto, hydratePendingObservation,
   } = useScan();
   const router = useRouter();
@@ -448,9 +508,14 @@ export default function ScanScreen() {
     if (!result) return;
     if (result.id?.startsWith('local_')) {
       router.push({ pathname: '/recommendations', params: { scanJson: JSON.stringify(result) } });
-    } else {
-      router.push({ pathname: '/recommendations-view', params: { scanId: result.id } });
+      return;
     }
+    // Rescan (2nd+ scan): route to the delta view instead of the prescription.
+    if (isRescanResult) {
+      router.push({ pathname: '/scan-delta' as never, params: { to_scan_id: result.id } });
+      return;
+    }
+    router.push({ pathname: '/recommendations-view', params: { scanId: result.id } });
   };
 
   const handleCapture = useCallback(
@@ -480,7 +545,7 @@ export default function ScanScreen() {
     }
     return <ProcessingScreen step={processingStep} />;
   }
-  if (phase === 'result' && result) return <ObservationScreen scan={result} gender={gender} userId={userId} onContinue={navigateToRecs} recsLoading={recsLoading} recsError={recsError} />;
+  if (phase === 'result' && result) return <ObservationScreen scan={result} gender={gender} userId={userId} onContinue={navigateToRecs} recsLoading={recsLoading} recsError={recsError} onRescanFeedback={submitRescanFeedback} />;
   return <HomeScreen onStart={openCamera} />;
 }
 

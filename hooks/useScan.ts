@@ -9,6 +9,7 @@ import {
   runScanPhase1, runScanPhase2, generateAndSaveHairProfile,
 } from '../services/scanService';
 import type { Scan, HairProfile } from '../types';
+import type { RescanFeedback } from '../components/RescanFeedbackFlow';
 
 export type ScanPhase = 'home' | 'camera' | 'processing' | 'result';
 
@@ -44,6 +45,17 @@ export function useScan() {
     resolver?.(profile);
   }, []);
 
+  // Rescan feedback — collected during phase 2 while the delta row is being
+  // computed. Stored as a ref so the latest answers are picked up when delta
+  // computation runs, no matter when the user finishes the flow.
+  const rescanFeedbackRef = useRef<RescanFeedback | undefined>(undefined);
+  const submitRescanFeedback = useCallback((feedback: RescanFeedback) => {
+    rescanFeedbackRef.current = feedback;
+  }, []);
+  // True once runScanPhase2 completes for a 2nd+ scan — scan.tsx uses this
+  // to route to /scan-delta instead of /recommendations-view.
+  const [isRescanResult, setIsRescanResult] = useState(false);
+
   const openCamera = useCallback(() => {
     setError(null);
     setPhase('camera');
@@ -57,6 +69,8 @@ export function useScan() {
     setRecsLoading(false);
     setRecsError(false);
     setShowHairProfile(false);
+    setIsRescanResult(false);
+    rescanFeedbackRef.current = undefined;
     // If a hair profile wait is in flight, release it so processPhoto can
     // finish its cleanup path.
     if (hairProfileResolverRef.current) {
@@ -209,6 +223,22 @@ export function useScan() {
       setPhase('result');
       setRecsLoading(true);
 
+      // Detect rescan BEFORE phase 2 writes the new row. Any existing scan
+      // for this user means the in-flight one is a 2nd+ scan.
+      let isRescan = false;
+      try {
+        const { count } = await supabase
+          .from('scans')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        isRescan = (count ?? 0) >= 1;
+      } catch {
+        // Non-critical — default to false (treat as first scan).
+      }
+      setIsRescanResult(isRescan);
+      // Reset any stale feedback from a previous scan session.
+      rescanFeedbackRef.current = undefined;
+
       // PHASE 2 — recommendations in background (~32s)
       try {
         const completeScan = await runScanPhase2(
@@ -221,6 +251,7 @@ export function useScan() {
           user.id,
           undefined,
           partialScan,
+          () => rescanFeedbackRef.current,
         );
         setResult(completeScan);
       } catch (phase2Error: unknown) {
@@ -254,6 +285,8 @@ export function useScan() {
     recsError,
     showHairProfile,
     submitHairProfile,
+    isRescanResult,
+    submitRescanFeedback,
     openCamera,
     reset,
     processPhoto,

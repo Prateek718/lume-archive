@@ -140,6 +140,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { scheduleRescanNudge, cancelRescanNudge } from './notificationService';
 import { scheduleRoutineForScan, supersedePreviousScanRows } from './habitService';
+import { computeAndStoreScanDelta } from './deltaService';
 import { checkMilestonesForScan } from '../lib/milestones';
 import { analyseWithGemini } from '../lib/gemini';
 import {
@@ -147,6 +148,7 @@ import {
   getHairRecommendationsFromGemini,
 } from '../lib/gemini';
 import type { GeminiAnalysis } from '../lib/gemini';
+import type { RescanFeedback } from '../components/RescanFeedbackFlow';
 import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
 import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier, BeardGoal } from '../types';
 import { isBaldProfile } from '../types';
@@ -185,69 +187,6 @@ export async function logRoutineStep(params: {
     });
   } catch (err) {
     console.warn('[scanService] logRoutineStep failed:', err);
-  }
-}
-
-// ── Compute and persist scan delta after a new scan is saved ──────────────────
-export async function computeAndStoreScanDelta(params: {
-  userId:      string;
-  newScanId:   string;
-  newScore:    number;
-  newConcerns: string[];
-}): Promise<void> {
-  try {
-    const { data: prevScans } = await supabase
-      .from('scans')
-      .select('id, score_overall, created_at')
-      .eq('user_id', params.userId)
-      .neq('id', params.newScanId)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (!prevScans || prevScans.length === 0) return;
-    const prev = prevScans[0];
-
-    const { data: prevScanData } = await supabase
-      .from('scans')
-      .select('recommendations')
-      .eq('id', prev.id)
-      .single();
-
-    const prevConcerns: string[] =
-      (prevScanData?.recommendations as Record<string, any> | null)?.skin?.concerns ?? [];
-
-    const daysBetween = Math.floor(
-      (Date.now() - new Date(prev.created_at as string).getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const scoreDelta       = params.newScore - ((prev.score_overall as number) ?? 0);
-    const concernsImproved = prevConcerns.filter(c => !params.newConcerns.includes(c));
-    const concernsWorsened = params.newConcerns.filter(c => !prevConcerns.includes(c));
-    const concernsResolved = prevConcerns.filter(c => !params.newConcerns.includes(c));
-
-    const { count: totalSteps } = await supabase
-      .from('routine_logs')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', params.userId)
-      .gte('completed_at', prev.created_at as string);
-
-    const expectedSteps  = daysBetween * 3;
-    const complianceRate = expectedSteps > 0
-      ? Math.min((totalSteps ?? 0) / expectedSteps, 1.0)
-      : 0;
-
-    await supabase.from('scan_deltas').insert({
-      user_id:           params.userId,
-      scan_id:           params.newScanId,
-      previous_scan_id:  prev.id,
-      days_between:      daysBetween,
-      score_delta:       scoreDelta,
-      concerns_improved: concernsImproved,
-      concerns_worsened: concernsWorsened,
-      concerns_resolved: concernsResolved,
-      compliance_rate:   complianceRate,
-    });
-  } catch (err) {
-    console.warn('[scanService] computeAndStoreScanDelta failed:', err);
   }
 }
 
@@ -592,6 +531,7 @@ export async function runScanPhase2(
   userId:          string,
   onProgress?:     ProgressCallback,
   partialScan?:    PartialScan,
+  getUserFeedback?: () => RescanFeedback | undefined,
 ): Promise<Scan> {
   // Guard: recommendations must be based on confirmed traits. If the caller
   // hands us a scan that still has pending decisions, that's a wiring bug —
@@ -745,9 +685,8 @@ export async function runScanPhase2(
 
     await computeAndStoreScanDelta({
       userId,
-      newScanId:   data.id as string,
-      newScore:    scoreOverall,
-      newConcerns: analysis.skin_concerns ?? [],
+      newScanId:    data.id as string,
+      userFeedback: getUserFeedback?.(),
     });
 
     try {

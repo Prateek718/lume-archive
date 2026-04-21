@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../../lib/supabase';
+import { fetchDeltaToScanIds } from '../../services/deltaService';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import type { Scan } from '../../types';
 
@@ -30,18 +31,23 @@ export default function ScanHistoryScreen() {
 
   const [scans,   setScans]   = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deltaScanIds, setDeltaScanIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const load = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data } = await supabase
-          .from('scans')
-          .select('id, created_at, face_shape, skin_type, tier_label, score_overall')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+        const [{ data }, deltaIds] = await Promise.all([
+          supabase
+            .from('scans')
+            .select('id, created_at, face_shape, skin_type, tier_label, score_overall')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          fetchDeltaToScanIds(user.id),
+        ]);
         if (data) setScans(data as HistoryRow[]);
+        setDeltaScanIds(deltaIds);
       } catch (err) {
         console.error('[scan-history] load failed', err);
       } finally {
@@ -53,6 +59,10 @@ export default function ScanHistoryScreen() {
 
   const openScan = (scanId: string) => {
     router.push({ pathname: '/recommendations-view', params: { scanId } });
+  };
+
+  const openDelta = (scanId: string) => {
+    router.push({ pathname: '/scan-delta' as never, params: { to_scan_id: scanId } });
   };
 
   return (
@@ -88,6 +98,7 @@ export default function ScanHistoryScreen() {
               scan.face_shape && `${scan.face_shape} face`,
               scan.skin_type  && `${scan.skin_type} skin`,
             ].filter(Boolean) as string[];
+            const hasDelta = deltaScanIds.has(scan.id!);
             return (
               <TouchableOpacity
                 key={scan.id}
@@ -112,7 +123,17 @@ export default function ScanHistoryScreen() {
                     ))}
                   </View>
                 )}
-                <Text style={s.viewLink}>View prescription →</Text>
+                <View style={s.linkRow}>
+                  <Text style={s.viewLink}>View prescription →</Text>
+                  {hasDelta && (
+                    <TouchableOpacity
+                      onPress={() => openDelta(scan.id!)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Text style={s.viewLink}>View progress →</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -162,4 +183,10 @@ const s = StyleSheet.create({
   pillText: { fontSize: 10, color: Colors.accent, textTransform: 'capitalize' },
 
   viewLink: { fontSize: 12, color: Colors.accent, marginTop: 4 },
+  linkRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    gap:            Spacing.md,
+  },
 });

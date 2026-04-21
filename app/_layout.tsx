@@ -136,6 +136,7 @@ export default function RootLayout() {
         <Stack.Screen name="skin-detail" />
         <Stack.Screen name="beard-detail" />
         <Stack.Screen name="makeup-detail" />
+        <Stack.Screen name="scan-delta" />
       </Stack>
       {currentCelebration && (
         <MilestoneCelebration
