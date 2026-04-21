@@ -1,409 +1,464 @@
-// Routine tab — daily grooming checklist with skin, hair, beard/makeup categories
+// Routine tab — week strip, streak + adherence, today's checklist, past-day view.
+// Drives all state from the habit engine (routine_checkins table).
 
-import { useState, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Switch, RefreshControl,
+  RefreshControl, Modal, ActivityIndicator,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { logRoutineStep } from '../../services/scanService';
+import {
+  fetchTodayRoutine, fetchPastDayRoutine, fetchDailyAdherence,
+  recordCheckin, unrecordCheckin, recordBulkCheckin,
+  todayISO,
+  type RoutineDayStep,
+} from '../../services/habitService';
+import { getProductMap } from '../../services/scanService';
+import {
+  computeStreak, buildWeekStrip, computeRollingAdherence,
+  type DayAdherence, type StreakInfo, type WeekDay,
+} from '../../lib/habit';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import type { HairProfile, HairRecommendations } from '../../types';
-import { isBaldProfile } from '../../types';
+import ProductPickerSheet from '../../components/ProductPickerSheet';
+import type {
+  Scan, RoutineStep, HairRecommendations, HairRoutineStep, MatchedProduct,
+} from '../../types';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-type RoutineStep = {
-  id:       string;
-  label:    string;
-  product?: string;
-  time:     'Morning' | 'Evening' | 'Hair' | 'Beard' | 'Makeup';
-  level?:   'simple' | 'balanced' | 'full';
-  order?:   number;
-  washDay?: boolean;
+// ─── Types ───────────────────────────────────────────────────────────────────
+type StepMeta = { label: string; product: string; category?: string };
+type StepMetaMap = Record<string, StepMeta>;
+
+// ─── Step-id helpers ─────────────────────────────────────────────────────────
+
+// Map known step ids → PRODUCTS catalogue categories. The routine engine's step ids
+// come from Gemini (skin_am_*, skin_pm_*, beard_*) plus hair_* from user hair recs.
+const STEP_CATEGORY_STATIC: Record<string, string> = {
+  skin_am_cleanse:    'face_cleanser',
+  skin_pm_cleanse:    'face_cleanser',
+  skin_am_spf:        'spf_sunscreen',
+  skin_am_moisturize: 'moisturiser',
+  skin_pm_moisturize: 'moisturiser',
+  skin_am_toner:      'toner',
+  skin_pm_toner:      'toner',
+  skin_am_eye:        'eye_cream',
+  skin_pm_eye:        'eye_cream',
+  beard_wash:         'beard_wash',
+  beard_oil:          'beard_oil',
+  beard_balm:         'beard_balm',
 };
-type StreakData = { current: number; best: number; lastDate: string };
-type Category  = 'skin' | 'hair' | 'scalp' | 'beard' | 'makeup';
 
-// ── AsyncStorage keys ─────────────────────────────────────────────────────────
-const ROUTINE_LOG_KEY    = '@lume/routine_log';
-const ROUTINE_STREAK_KEY = '@lume/routine_streak';
-const WASH_HISTORY_KEY   = '@lume/wash_history';
-
-// ── Level ordering ────────────────────────────────────────────────────────────
-const LEVEL_RANK: Record<string, number> = { simple: 1, balanced: 2, full: 3 };
-
-// ── Defaults ──────────────────────────────────────────────────────────────────
-const SKIN_DEFAULT: RoutineStep[] = [
-  { id: 'morning_0', label: 'Cleanse',  product: 'Gel cleanser',          time: 'Morning', level: 'simple',   order: 1 },
-  { id: 'morning_1', label: 'Tone',     product: 'Toner',                 time: 'Morning', level: 'balanced', order: 2 },
-  { id: 'morning_2', label: 'Eye care', product: 'Eye cream',             time: 'Morning', level: 'full',     order: 3 },
-  { id: 'morning_3', label: 'Brighten', product: 'Vitamin C serum',       time: 'Morning', level: 'balanced', order: 4 },
-  { id: 'morning_4', label: 'Nourish',  product: 'Moisturiser',           time: 'Morning', level: 'simple',   order: 5 },
-  { id: 'morning_5', label: 'Protect',  product: 'Sunscreen SPF 50',      time: 'Morning', level: 'simple',   order: 6 },
-  { id: 'evening_0', label: 'Cleanse',  product: 'Gel cleanser',          time: 'Evening', level: 'simple',   order: 1 },
-  { id: 'evening_1', label: 'Tone',     product: 'Toner',                 time: 'Evening', level: 'balanced', order: 2 },
-  { id: 'evening_2', label: 'Eye care', product: 'Eye cream',             time: 'Evening', level: 'full',     order: 3 },
-  { id: 'evening_3', label: 'Balance',  product: 'Niacinamide serum',     time: 'Evening', level: 'simple',   order: 4 },
-  { id: 'evening_4', label: 'Nourish',  product: 'Moisturiser',           time: 'Evening', level: 'simple',   order: 5 },
-  { id: 'evening_5', label: 'Renew',    product: 'Retinol · 2–3x/week',  time: 'Evening', level: 'full',     order: 6 },
-];
-
-const HAIR_DEFAULT: RoutineStep[] = [
-  { id: 'hair_wash_0', label: 'Cleanse',   product: 'Shampoo',     time: 'Hair', level: 'simple',   order: 1, washDay: true  },
-  { id: 'hair_wash_1', label: 'Condition', product: 'Conditioner', time: 'Hair', level: 'simple',   order: 2, washDay: true  },
-  { id: 'hair_wash_2', label: 'Restore',   product: 'Hair mask',   time: 'Hair', level: 'full',     order: 3, washDay: true  },
-  { id: 'hair_care_0', label: 'Nourish',   product: 'Hair oil',    time: 'Hair', level: 'balanced', order: 4, washDay: false },
-  { id: 'hair_care_1', label: 'Smooth',    product: 'Hair serum',  time: 'Hair', level: 'full',     order: 5, washDay: false },
-];
-
-const SCALP_DEFAULT: RoutineStep[] = [
-  { id: 'scalp_0', label: 'Cleanse',  product: 'Gentle scalp shampoo', time: 'Hair', level: 'simple',   order: 1 },
-  { id: 'scalp_1', label: 'Hydrate',  product: 'Scalp moisturiser',    time: 'Hair', level: 'simple',   order: 2 },
-  { id: 'scalp_2', label: 'Protect',  product: 'SPF 50 sunscreen',     time: 'Hair', level: 'balanced', order: 3 },
-  { id: 'scalp_3', label: 'Treat',    product: 'Scalp serum',          time: 'Hair', level: 'full',     order: 4 },
-];
-
-const BEARD_DEFAULT: RoutineStep[] = [
-  { id: 'beard_0', label: 'Cleanse', product: 'Beard wash', time: 'Beard', level: 'simple', order: 1 },
-  { id: 'beard_1', label: 'Nourish', product: 'Beard oil',  time: 'Beard', level: 'simple', order: 2 },
-  { id: 'beard_2', label: 'Shape',   product: 'Beard balm', time: 'Beard', level: 'simple', order: 3 },
-];
-
-const MAKEUP_DEFAULT: RoutineStep[] = [
-  { id: 'makeup_0', label: 'Prep',    product: 'Primer',      time: 'Makeup', level: 'simple',   order: 1 },
-  { id: 'makeup_1', label: 'Even',    product: 'Foundation',  time: 'Makeup', level: 'simple',   order: 2 },
-  { id: 'makeup_2', label: 'Define',  product: 'Brow pencil', time: 'Makeup', level: 'balanced', order: 3 },
-  { id: 'makeup_3', label: 'Enhance', product: 'Concealer',   time: 'Makeup', level: 'balanced', order: 4 },
-  { id: 'makeup_4', label: 'Colour',  product: 'Lip colour',  time: 'Makeup', level: 'full',     order: 5 },
-];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-async function getLatestScanId(userId: string): Promise<string | null> {
-  const { data } = await supabase
-    .from('scans')
-    .select('id')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-  return (data?.id as string | null) ?? null;
+// Derive category from the human-readable product description — used when the
+// step id alone isn't enough (e.g. skin_am_serum → vitamin C vs niacinamide vs HA).
+function categoryFromProduct(product: string): string | undefined {
+  const p = product.toLowerCase();
+  if (p.includes('vitamin c') || p.includes('vitc'))     return 'serum_vitamin_c';
+  if (p.includes('niacinamide'))                         return 'serum_niacinamide';
+  if (p.includes('hyaluronic') || p.includes('ha serum'))return 'serum_hyaluronic_acid';
+  if (p.includes('retinol'))                             return 'retinol';
+  if (p.includes('aha') || p.includes('bha') || p.includes('exfolia')) return 'aha_exfoliant';
+  if (p.includes('sunscreen') || p.includes('spf'))      return 'spf_sunscreen';
+  if (p.includes('cleanser') || p.includes('face wash')) return 'face_cleanser';
+  if (p.includes('moisturis') || p.includes('moisturiz'))return 'moisturiser';
+  if (p.includes('eye'))                                 return 'eye_cream';
+  if (p.includes('toner'))                               return 'toner';
+  if (p.includes('shampoo'))                             return 'shampoo';
+  if (p.includes('conditioner'))                         return 'conditioner';
+  if (p.includes('hair mask'))                           return 'hair_mask';
+  if (p.includes('hair oil'))                            return 'hair_oil';
+  if (p.includes('hair serum') || p.includes('serum'))   return 'hair_serum';
+  if (p.includes('scalp'))                               return 'scalp_serum';
+  if (p.includes('beard wash'))                          return 'beard_wash';
+  if (p.includes('beard oil'))                           return 'beard_oil';
+  if (p.includes('beard balm'))                          return 'beard_balm';
+  return undefined;
 }
 
-function isYesterday(dateStr: string): boolean {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  return dateStr === yesterday.toISOString().slice(0, 10);
+function deriveCategory(stepId: string, product: string | undefined): string | undefined {
+  if (STEP_CATEGORY_STATIC[stepId]) return STEP_CATEGORY_STATIC[stepId];
+  if (product) {
+    const fromProduct = categoryFromProduct(product);
+    if (fromProduct) return fromProduct;
+  }
+  // Hair step ids look like "hair_<category>".
+  if (stepId.startsWith('hair_')) {
+    const tail = stepId.slice(5);
+    if (tail) return tail === 'shampoo' || tail === 'conditioner' || tail === 'mask'
+      ? (tail === 'mask' ? 'hair_mask' : tail)
+      : `hair_${tail}`;
+  }
+  return undefined;
 }
 
-function daysSince(dateStr: string): number {
-  const then = new Date(dateStr);
-  const now  = new Date();
-  return Math.floor((now.getTime() - then.getTime()) / (1000 * 60 * 60 * 24));
+function fallbackLabel(stepId: string): string {
+  const short = stepId.replace(/^(skin_am_|skin_pm_|beard_|hair_)/, '').replace(/_/g, ' ');
+  return short.charAt(0).toUpperCase() + short.slice(1);
 }
 
-type StepItem = { label: string; product?: string; level?: string; order?: number };
-
-function buildStepsFromScan(
-  items: StepItem[] | undefined,
-  prefix: string,
-  time: RoutineStep['time'],
-  defaults: RoutineStep[],
-): RoutineStep[] {
-  if (!items || items.length === 0) return defaults;
-  // Only accept structured objects — filter out any legacy flat strings
-  const valid = items.filter(
-    (item): item is StepItem =>
-      typeof item === 'object' && item !== null && typeof item.label === 'string',
-  );
-  if (valid.length === 0) return defaults;
-  return valid.map((item, i) => {
-    const def = defaults[i];
-    return {
-      id:      `${prefix}_${i}`,
-      label:   item.label,
-      product: item.product,
-      time,
-      level:   (item.level ?? def?.level ?? 'simple') as RoutineStep['level'],
-      order:   item.order ?? def?.order ?? i + 1,
-    };
-  });
+function sectionForStep(step: RoutineDayStep): 'am' | 'pm' | 'hair' | 'beard' | 'other' {
+  if (step.step_id.startsWith('skin_am_')) return 'am';
+  if (step.step_id.startsWith('skin_pm_')) return 'pm';
+  if (step.step_id.startsWith('hair_'))    return 'hair';
+  if (step.step_id.startsWith('beard_')) {
+    return step.time_of_day === 'pm' ? 'pm' : 'am';  // beard_oil=pm, beard_balm=am, beard_wash=daily
+  }
+  return step.time_of_day === 'pm' ? 'pm' : 'am';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+function cadencePill(step: RoutineDayStep): string | null {
+  if (step.time_of_day === 'weekly')  return 'Weekly';
+  if (step.time_of_day === 'monthly') return 'Monthly';
+  return null;
+}
+
+function yesterdayISO(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
+
 export default function RoutineScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [gender,       setGender]       = useState('man');
-  const [category,     setCategory]     = useState<Category>('skin');
-  const [routineLevel, setRoutineLevel] = useState<'simple' | 'balanced' | 'full'>('simple');
-  const [scanCount,    setScanCount]    = useState(0);
-  const [period,       setPeriod]       = useState<'AM' | 'PM'>(() =>
-    new Date().getHours() < 14 ? 'AM' : 'PM'
+  const [userId, setUserId] = useState<string | null>(null);
+  const [hasScan, setHasScan] = useState<boolean>(false);
+  const [latestScanId, setLatestScanId] = useState<string | null>(null);
+  const [stepMeta, setStepMeta] = useState<StepMetaMap>({});
+  const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
+
+  const [todaySteps,    setTodaySteps]    = useState<RoutineDayStep[]>([]);
+  const [yesterdaySteps, setYesterdaySteps] = useState<RoutineDayStep[]>([]);
+  const [pastDaySteps,  setPastDaySteps]  = useState<RoutineDayStep[]>([]);
+  const [dailyAdherence, setDailyAdherence] = useState<DayAdherence[]>([]);
+
+  const [selectedDate, setSelectedDate] = useState<string>(todayISO());
+  const [period, setPeriod] = useState<'am' | 'pm'>(() =>
+    new Date().getHours() < 16 ? 'am' : 'pm'
   );
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [skinSteps,   setSkinSteps]   = useState<RoutineStep[]>(SKIN_DEFAULT);
-  const [hairSteps,   setHairSteps]   = useState<RoutineStep[]>(HAIR_DEFAULT);
-  const [scalpSteps,  setScalpSteps]  = useState<RoutineStep[]>(SCALP_DEFAULT);
-  const [beardSteps,  setBeardSteps]  = useState<RoutineStep[]>(BEARD_DEFAULT);
-  const [makeupSteps, setMakeupSteps] = useState<RoutineStep[]>(MAKEUP_DEFAULT);
-  const [hairProfile, setHairProfile] = useState<HairProfile | null>(null);
-  const [hairRecs,    setHairRecs]    = useState<HairRecommendations | null>(null);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [pickerStepId, setPickerStepId] = useState<string>('');
+  const [pickerCategory, setPickerCategory] = useState<string>('');
+  const [pickerStepLabel, setPickerStepLabel] = useState<string>('');
+  const [pickerReason, setPickerReason] = useState<string>('');
 
-  const [routineLog,  setRoutineLog]  = useState<Record<string, string[]>>({});
-  const [streakData,  setStreakData]  = useState<StreakData>({ current: 0, best: 0, lastDate: '' });
-  const [washHistory, setWashHistory] = useState<string[]>([]);
-  const [isWashDay,   setIsWashDay]   = useState(false);
-  const [refreshing,  setRefreshing]  = useState(false);
+  const [yesterdaySheet, setYesterdaySheet] = useState<{ visible: boolean; step?: RoutineDayStep }>({ visible: false });
 
-  // ── Data loading ────────────────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('gender, routine_level, hair_profile, hair_recommendations')
-      .eq('id', user.id)
-      .single();
-
-    if (profile) {
-      const g = profile.gender ?? 'man';
-      setGender(g);
-      setRoutineLevel((profile as { routine_level?: string }).routine_level as 'simple' | 'balanced' | 'full' ?? 'simple');
-      const hp = (profile as { hair_profile?: HairProfile | null }).hair_profile ?? null;
-      const hr = (profile as { hair_recommendations?: HairRecommendations | null }).hair_recommendations ?? null;
-      setHairProfile(hp);
-      setHairRecs(hr);
-      if (hr?.routine && hr.routine.length > 0) {
-        const hrSteps: RoutineStep[] = hr.routine.map((s, i) => ({
-          id:      `hair_${i}`,
-          label:   s.label,
-          product: s.product,
-          time:    'Hair' as const,
-          level:   s.level,
-          order:   s.order,
-          // orders 1-3 are wash-day steps; orders 4+ are everyday steps
-          washDay: s.order != null ? s.order <= 3 : undefined,
-        }));
-        if (isBaldProfile(hp)) {
-          setScalpSteps(hrSteps);
-        } else {
-          setHairSteps(hrSteps);
-        }
-      }
-    }
-
-    const { data: scansData, count } = await supabase
-      .from('scans')
-      .select('recommendations', { count: 'exact' })
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    setScanCount(count ?? 0);
-
-    const latestRecs = scansData?.[0]?.recommendations as Record<string, any> | null;
-    if (latestRecs) {
-      const skin = latestRecs.skin ?? {};
-      let morningItems: StepItem[] | undefined;
-      let eveningItems: StepItem[] | undefined;
-
-      morningItems = skin.routine?.morning as StepItem[] | undefined;
-      eveningItems = skin.routine?.evening as StepItem[] | undefined;
-
-      const newSkin = [
-        ...buildStepsFromScan(morningItems, 'morning', 'Morning', SKIN_DEFAULT.filter(s => s.time === 'Morning')),
-        ...buildStepsFromScan(eveningItems, 'evening', 'Evening', SKIN_DEFAULT.filter(s => s.time === 'Evening')),
-      ];
-      if (newSkin.length > 0) setSkinSteps(newSkin);
-
-      // Hair steps come from hair_recommendations (user profile), not scan recommendations
-      // They will be set separately after hairRecs state is loaded above
-
-      if (latestRecs.beard?.routine) {
-        const newBeard = buildStepsFromScan(latestRecs.beard.routine, 'beard', 'Beard', BEARD_DEFAULT);
-        if (newBeard.length > 0) setBeardSteps(newBeard);
-      }
-
-      if (latestRecs.makeup?.routine) {
-        const newMakeup = buildStepsFromScan(latestRecs.makeup.routine, 'makeup', 'Makeup', MAKEUP_DEFAULT);
-        if (newMakeup.length > 0) setMakeupSteps(newMakeup);
-      }
-    }
-
-    const logRaw = await AsyncStorage.getItem(ROUTINE_LOG_KEY);
-    setRoutineLog(logRaw ? JSON.parse(logRaw) as Record<string, string[]> : {});
-
-    const streakRaw = await AsyncStorage.getItem(ROUTINE_STREAK_KEY);
-    setStreakData(streakRaw ? JSON.parse(streakRaw) as StreakData : { current: 0, best: 0, lastDate: '' });
-
-    const washRaw = await AsyncStorage.getItem(WASH_HISTORY_KEY);
-    const wh: string[] = washRaw ? JSON.parse(washRaw) as string[] : [];
-    setWashHistory(wh);
-    setIsWashDay(wh.includes(new Date().toISOString().slice(0, 10)));
-  }, []);
-
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData().finally(() => setRefreshing(false));
-  };
-
-  // ── Toggle step ─────────────────────────────────────────────────────────────
-  const toggleStep = async (step: RoutineStep) => {
-    const todayKey  = new Date().toISOString().slice(0, 10);
-    const todayDone = [...(routineLog[todayKey] ?? [])];
-    const idx       = todayDone.indexOf(step.id);
-    const adding    = idx < 0;
-
-    if (adding) todayDone.push(step.id);
-    else todayDone.splice(idx, 1);
-
-    const newLog = { ...routineLog, [todayKey]: todayDone };
-    setRoutineLog(newLog);
-    await AsyncStorage.setItem(ROUTINE_LOG_KEY, JSON.stringify(newLog));
-
-    if (adding) {
-      // Log to Supabase
+  // ── Load everything ────────────────────────────────────────────────────────
+  const loadAll = useCallback(async (signalRefreshing = false) => {
+    if (signalRefreshing) setRefreshing(true); else setLoading(true);
+    try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const latestScanId = await getLatestScanId(user.id);
-        const cat: 'skin_am' | 'skin_pm' | 'hair' | 'beard' | 'makeup' =
-          category === 'skin' && period === 'AM' ? 'skin_am' :
-          category === 'skin' && period === 'PM' ? 'skin_pm' :
-          category === 'hair'  || category === 'scalp' ? 'hair' :
-          category === 'beard' ? 'beard' :
-          'makeup';
+      if (!user) { setLoading(false); setRefreshing(false); return; }
+      setUserId(user.id);
 
-        await logRoutineStep({
-          userId:      user.id,
-          scanId:      latestScanId,
-          stepLabel:   step.label,
-          stepProduct: step.product,
-          category:    cat,
-        });
+      // Latest scan + stepMeta from recs
+      const { data: scansData } = await supabase
+        .from('scans')
+        .select('id, recommendations, beard_density, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const latestScan = (scansData?.[0] as Scan | undefined) ?? null;
+      const scanId = latestScan?.id ?? null;
+      setLatestScanId(scanId);
+      setHasScan(!!latestScan);
+
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('hair_recommendations')
+        .eq('id', user.id)
+        .single();
+
+      const meta: StepMetaMap = {};
+      const morning: RoutineStep[] = latestScan?.recommendations?.skin?.routine?.morning ?? [];
+      const evening: RoutineStep[] = latestScan?.recommendations?.skin?.routine?.evening ?? [];
+      for (const s of morning) {
+        if (s.step_id) meta[s.step_id] = { label: s.label, product: s.product, category: deriveCategory(s.step_id, s.product) };
+      }
+      for (const s of evening) {
+        if (s.step_id) meta[s.step_id] = { label: s.label, product: s.product, category: deriveCategory(s.step_id, s.product) };
       }
 
-      if (streakData.lastDate !== todayKey) {
-        const next: StreakData = { ...streakData };
-        if (isYesterday(next.lastDate)) {
-          next.current += 1;
-          next.best = Math.max(next.current, next.best);
-        } else {
-          next.current = 1;
-          next.best = Math.max(1, next.best);
+      // Beard defaults — habitService doesn't persist labels for beard_wash/oil/balm so hard-wire.
+      meta['beard_wash'] = meta['beard_wash'] ?? { label: 'Cleanse', product: 'Beard wash', category: 'beard_wash' };
+      meta['beard_oil']  = meta['beard_oil']  ?? { label: 'Nourish', product: 'Beard oil',  category: 'beard_oil' };
+      meta['beard_balm'] = meta['beard_balm'] ?? { label: 'Shape',   product: 'Beard balm', category: 'beard_balm' };
+
+      // Hair steps from the user's saved hair_recommendations
+      const hairRec = (userRow as { hair_recommendations?: HairRecommendations | null } | null)?.hair_recommendations ?? null;
+      const hairRoutine: HairRoutineStep[] = hairRec?.routine ?? [];
+      for (const h of hairRoutine) {
+        if (h.step_id) meta[h.step_id] = { label: h.label, product: h.product, category: deriveCategory(h.step_id, h.product) };
+      }
+      setStepMeta(meta);
+
+      // Products for pickers
+      if (scanId) {
+        const pm = await getProductMap(scanId);
+        setProductMap(pm);
+      } else {
+        setProductMap({});
+      }
+
+      // Today + yesterday + past-day (if selected) + 30-day adherence
+      const [today, yesterday, adherence] = await Promise.all([
+        fetchTodayRoutine(user.id),
+        fetchPastDayRoutine(user.id, yesterdayISO()),
+        fetchDailyAdherence(user.id, 30),
+      ]);
+      setTodaySteps(today);
+      setYesterdaySteps(yesterday);
+      setDailyAdherence(adherence);
+
+      if (selectedDate !== todayISO()) {
+        const past = await fetchPastDayRoutine(user.id, selectedDate);
+        setPastDaySteps(past);
+      }
+    } catch (err) {
+      console.error('[routine] loadAll failed', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [selectedDate]);
+
+  useFocusEffect(useCallback(() => { loadAll(); }, [loadAll]));
+
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const viewingToday = selectedDate === todayISO();
+
+  const streak: StreakInfo = useMemo(() => computeStreak(dailyAdherence), [dailyAdherence]);
+  const adherencePct = useMemo(() => computeRollingAdherence(dailyAdherence), [dailyAdherence]);
+  const weekStrip: WeekDay[] = useMemo(() => buildWeekStrip(dailyAdherence, todayISO()), [dailyAdherence]);
+
+  const missedYesterdayIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of yesterdaySteps) {
+      if (!r.completed) set.add(r.step_id);
+    }
+    return set;
+  }, [yesterdaySteps]);
+
+  const activeSteps = viewingToday ? todaySteps : pastDaySteps;
+
+  const amSteps    = activeSteps.filter(s => sectionForStep(s) === 'am');
+  const pmSteps    = activeSteps.filter(s => sectionForStep(s) === 'pm');
+  const hairSteps  = activeSteps.filter(s => sectionForStep(s) === 'hair');
+
+  const currentPeriodSteps = viewingToday
+    ? (period === 'am' ? amSteps : pmSteps)
+    : [];  // past view shows both
+
+  const periodUnchecked = currentPeriodSteps.filter(s => !s.completed);
+  const periodAllDone = currentPeriodSteps.length > 0 && periodUnchecked.length === 0;
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+  const toggleStep = useCallback(async (step: RoutineDayStep) => {
+    if (!userId) return;
+    if (!viewingToday) return; // past is read-only
+    try {
+      if (step.completed) {
+        await unrecordCheckin(userId, step.step_id, selectedDate);
+      } else {
+        await recordCheckin(userId, step.step_id, selectedDate, step.kit_item_id ?? undefined);
+      }
+      await loadAll();
+    } catch (err) {
+      console.error('[routine] toggleStep failed', err);
+    }
+  }, [userId, viewingToday, selectedDate, loadAll]);
+
+  const handleMarkAll = useCallback(async () => {
+    if (!userId || !viewingToday) return;
+    try {
+      if (periodAllDone) {
+        // unmark all current-period steps
+        for (const s of currentPeriodSteps) {
+          if (s.completed) await unrecordCheckin(userId, s.step_id, selectedDate);
         }
-        next.lastDate = todayKey;
-        setStreakData(next);
-        await AsyncStorage.setItem(ROUTINE_STREAK_KEY, JSON.stringify(next));
+      } else {
+        const ids = periodUnchecked.map(s => s.step_id);
+        if (ids.length > 0) await recordBulkCheckin(userId, ids, selectedDate);
       }
+      await loadAll();
+    } catch (err) {
+      console.error('[routine] markAll failed', err);
     }
-  };
+  }, [userId, viewingToday, periodAllDone, currentPeriodSteps, periodUnchecked, selectedDate, loadAll]);
 
-  // ── Toggle wash day ─────────────────────────────────────────────────────────
-  const toggleWashDay = async (value: boolean) => {
-    setIsWashDay(value);
-    const todayKey = new Date().toISOString().slice(0, 10);
-    let wh = [...washHistory];
-    if (value && !wh.includes(todayKey)) wh.push(todayKey);
-    else if (!value) wh = wh.filter(d => d !== todayKey);
-    setWashHistory(wh);
-    await AsyncStorage.setItem(WASH_HISTORY_KEY, JSON.stringify(wh));
-  };
-
-  // ── Computed ────────────────────────────────────────────────────────────────
-  const todayKey  = new Date().toISOString().slice(0, 10);
-  const todayDone = new Set<string>(routineLog[todayKey] ?? []);
-  const levelRank = LEVEL_RANK[routineLevel] ?? 1;
-
-  const filterSteps = (steps: RoutineStep[]) =>
-    steps
-      .filter(s => LEVEL_RANK[s.level ?? 'simple'] <= levelRank)
-      .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
-
-  const skinFiltered   = filterSteps(skinSteps.filter(s => s.time === (period === 'AM' ? 'Morning' : 'Evening')));
-  const hairFiltered   = filterSteps(hairSteps).filter(s =>
-    s.washDay === undefined ||
-    (s.washDay === true  && isWashDay) ||
-    (s.washDay === false && !isWashDay)
-  );
-  const scalpFiltered  = filterSteps(scalpSteps);
-  const beardFiltered  = filterSteps(beardSteps);
-  const makeupFiltered = filterSteps(makeupSteps);
-
-  const bald = isBaldProfile(hairProfile);
-
-  const sectionSteps: RoutineStep[] =
-    category === 'skin'   ? skinFiltered   :
-    category === 'hair'   ? hairFiltered   :
-    category === 'scalp'  ? scalpFiltered  :
-    category === 'beard'  ? beardFiltered  :
-                            makeupFiltered;
-  const sectionDone = sectionSteps.filter(s => todayDone.has(s.id)).length;
-  const sectionPct  = sectionSteps.length > 0
-    ? Math.round((sectionDone / sectionSteps.length) * 100)
-    : 0;
-
-  // Wash stats
-  const monthStart      = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
-  const washesThisMonth = washHistory.filter(d => d >= monthStart).length;
-  const sortedWash      = [...washHistory].sort();
-  let avgDaysBetween    = 0;
-  if (sortedWash.length > 1) {
-    const gaps: number[] = [];
-    for (let i = 1; i < sortedWash.length; i++) {
-      gaps.push(daysSince(sortedWash[i - 1]) - daysSince(sortedWash[i]));
+  const markYesterdayDone = useCallback(async (stepId: string) => {
+    if (!userId) return;
+    try {
+      await recordCheckin(userId, stepId, yesterdayISO());
+      setYesterdaySheet({ visible: false });
+      await loadAll();
+    } catch (err) {
+      console.error('[routine] markYesterdayDone failed', err);
     }
-    avgDaysBetween = Math.round(Math.abs(gaps.reduce((a, b) => a + b, 0) / gaps.length));
-  }
-  const lastWash      = sortedWash[sortedWash.length - 1];
-  const daysSinceWash = lastWash ? daysSince(lastWash) : null;
+  }, [userId, loadAll]);
 
-  const isWoman        = gender === 'woman';
-  const hairProfileSet = hairProfile != null && Object.keys(hairProfile).length > 0;
-  const categories: { key: Category; label: string }[] = isWoman
-    ? [
-        { key: 'skin',   label: 'Skin'   },
-        { key: bald ? 'scalp' : 'hair', label: bald ? 'Scalp' : 'Hair' },
-        { key: 'makeup', label: 'Makeup' },
-      ]
-    : [
-        { key: 'skin',   label: 'Skin'  },
-        { key: bald ? 'scalp' : 'hair', label: bald ? 'Scalp' : 'Hair' },
-        { key: 'beard',  label: 'Beard' },
-      ];
+  const openPicker = useCallback((step: RoutineDayStep) => {
+    const meta = stepMeta[step.step_id];
+    const category = meta?.category ?? deriveCategory(step.step_id, meta?.product);
+    if (!category) return;
+    setPickerStepId(step.step_id);
+    setPickerCategory(category);
+    setPickerStepLabel(meta?.label ?? fallbackLabel(step.step_id));
+    setPickerReason(meta?.product ?? '');
+    setPickerVisible(true);
+  }, [stepMeta]);
 
-  // ── Step row ────────────────────────────────────────────────────────────────
-  const renderStep = (step: RoutineStep) => {
-    const done      = todayDone.has(step.id);
-    const isEvening = step.time === 'Evening';
+  const onSelectDay = useCallback(async (w: WeekDay) => {
+    if (w.is_today) {
+      setSelectedDate(todayISO());
+      return;
+    }
+    if (!userId) return;
+    setSelectedDate(w.date);
+    try {
+      const past = await fetchPastDayRoutine(userId, w.date);
+      setPastDaySteps(past);
+    } catch (err) {
+      console.error('[routine] fetch past day failed', err);
+    }
+  }, [userId]);
+
+  // ── Step row ───────────────────────────────────────────────────────────────
+  const renderStep = (step: RoutineDayStep) => {
+    const meta = stepMeta[step.step_id];
+    const label = meta?.label ?? fallbackLabel(step.step_id);
+    const category = meta?.category ?? deriveCategory(step.step_id, meta?.product);
+    const hasProducts = category ? (productMap[category]?.length ?? 0) > 0 : false;
+    const cadence = cadencePill(step);
+    const showPickerChip = viewingToday && !step.kit_item_id && !meta?.product && hasProducts;
+    const productText = meta?.product ?? '';
+
+    const onRowLongPress = () => {
+      if (!viewingToday) return;
+      if (missedYesterdayIds.has(step.step_id)) {
+        setYesterdaySheet({ visible: true, step });
+      }
+    };
+
     return (
       <TouchableOpacity
-        key={step.id}
-        style={[s.stepRow, done && s.stepRowDone]}
-        onPress={() => toggleStep(step)}
-        activeOpacity={0.75}
+        key={step.row_id}
+        style={[s.stepRow, step.completed && s.stepRowDone]}
+        activeOpacity={viewingToday ? 0.75 : 1}
+        onPress={viewingToday ? () => toggleStep(step) : undefined}
+        onLongPress={onRowLongPress}
+        delayLongPress={500}
       >
-        <View style={[s.checkbox, done && s.checkboxDone]}>
-          {done && <Text style={s.checkmark}>✓</Text>}
-        </View>
+        {viewingToday ? (
+          <View style={[s.checkbox, step.completed && s.checkboxDone]}>
+            {step.completed && <Text style={s.checkmark}>✓</Text>}
+          </View>
+        ) : (
+          <View style={[s.dot, step.completed && s.dotDone]} />
+        )}
         <View style={{ flex: 1 }}>
-          <Text style={[s.stepLabel, done && s.stepLabelDone, isEvening && !done && s.stepLabelPM]}>
-            {step.label}
-          </Text>
-          {step.product ? <Text style={s.stepProduct}>{step.product}</Text> : null}
+          <Text style={[s.stepLabel, step.completed && s.stepLabelDone]}>{label}</Text>
+          {hasProducts && !meta?.product && showPickerChip ? (
+            <TouchableOpacity
+              onPress={(e) => { e.stopPropagation(); openPicker(step); }}
+              style={s.pickChip}
+              activeOpacity={0.75}
+            >
+              <Text style={s.pickChipText}>Pick product →</Text>
+            </TouchableOpacity>
+          ) : productText ? (
+            <Text style={s.stepProduct}>{productText}</Text>
+          ) : null}
         </View>
+        {cadence && (
+          <View style={s.cadencePill}>
+            <Text style={s.cadencePillText}>{cadence}</Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Week strip dot ─────────────────────────────────────────────────────────
+  const WeekDot = ({ w }: { w: WeekDay }) => {
+    const isSelected = selectedDate === w.date;
+    const styles: any[] = [s.dotCircle];
+    let inner: React.ReactNode = null;
+
+    if (w.is_today) {
+      const pct = (amSteps.length + pmSteps.length + hairSteps.length) === 0
+        ? 0
+        : Math.round(
+            (activeSteps.filter(x => x.completed).length / activeSteps.length) * 100
+          );
+      inner = <Text style={s.dotToday}>{pct}</Text>;
+      styles.push(s.dotCircleToday);
+    } else if (w.status === 'adherent') {
+      styles.push(s.dotCircleAdherent);
+    } else if (w.status === 'missed' || w.status === 'pending') {
+      styles.push(s.dotCircleMissed);
+    } else if (w.status === 'freeze_used') {
+      styles.push(s.dotCircleFreeze);
+    } else {
+      styles.push(s.dotCircleEmpty);
+    }
+
+    return (
+      <TouchableOpacity style={s.dotCell} onPress={() => onSelectDay(w)} activeOpacity={0.7}>
+        <View style={styles}>{inner}</View>
+        <Text style={[s.dotLabel, isSelected && s.dotLabelSelected]}>{w.label}</Text>
+        {isSelected && <View style={s.dotUnderline} />}
+      </TouchableOpacity>
+    );
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <View style={[s.screen, { paddingTop: insets.top, justifyContent: 'center' }]}>
+        <StatusBar style="dark" />
+        <ActivityIndicator color={Colors.accent} />
+      </View>
+    );
+  }
+
+  if (!hasScan) {
+    return (
+      <View style={[s.screen, { paddingTop: insets.top }]}>
+        <StatusBar style="dark" />
+        <View style={s.header}>
+          <Text style={s.headerTitle}>Routine</Text>
+        </View>
+        <View style={s.emptyBox}>
+          <Text style={s.emptyTitle}>Scan your face to build your routine</Text>
+          <Text style={s.emptyBody}>
+            Your personalised routine appears here after your first scan.
+          </Text>
+          <TouchableOpacity
+            style={s.emptyBtn}
+            onPress={() => router.replace('/(tabs)/scan')}
+            activeOpacity={0.8}
+          >
+            <Text style={s.emptyBtnText}>Take a scan</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
@@ -412,247 +467,288 @@ export default function RoutineScreen() {
         <Text style={s.headerTitle}>Routine</Text>
       </View>
 
-      {/* Category pills */}
-      <View style={s.pillsRow}>
-        {categories.map(({ key, label }) => (
-          <TouchableOpacity
-            key={key}
-            style={[s.pill, category === key && s.pillActive]}
-            onPress={() => setCategory(key)}
-            activeOpacity={0.8}
-          >
-            <Text style={[s.pillText, category === key && s.pillTextActive]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <ScrollView
         contentContainerStyle={s.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAll(true)} tintColor={Colors.accent} />}
       >
-        {/* Empty state */}
-        {scanCount === 0 ? (
-          <View style={s.emptyBox}>
-            <Text style={s.emptyTitle}>No routine yet</Text>
-            <Text style={s.emptyBody}>
-              Take your first scan to get a personalised routine tailored to your face.
-            </Text>
-            <TouchableOpacity
-              style={s.emptyBtn}
-              onPress={() => router.replace('/(tabs)/scan')}
-              activeOpacity={0.8}
-            >
-              <Text style={s.emptyBtnText}>Take a scan</Text>
-            </TouchableOpacity>
+        {/* Week strip */}
+        <View style={s.weekStrip}>
+          {weekStrip.map(w => <WeekDot key={w.date} w={w} />)}
+        </View>
+
+        {/* Stats row */}
+        <View style={s.statsRow}>
+          <View style={s.statCard}>
+            <View style={s.streakTop}>
+              <Text style={s.streakFlame}>🔥</Text>
+              <Text style={s.statBigNum}>{streak.current_streak}</Text>
+              {streak.freezes_banked > 0 && (
+                <Text style={s.freezeBadge}>+{streak.freezes_banked}</Text>
+              )}
+            </View>
+            <Text style={s.statCaption}>day streak</Text>
+            {streak.longest_streak > streak.current_streak && (
+              <Text style={s.longestCaption}>longest {streak.longest_streak}</Text>
+            )}
           </View>
-        ) : (
+          <View style={s.statCard}>
+            <View style={s.streakTop}>
+              <Text style={s.statBigNum}>{adherencePct}</Text>
+              <Text style={s.statPct}>%</Text>
+            </View>
+            <Text style={s.statCaption}>last 30 days</Text>
+          </View>
+        </View>
+
+        {/* Past-day chip */}
+        {!viewingToday && (
+          <TouchableOpacity
+            style={s.pastChip}
+            activeOpacity={0.8}
+            onPress={() => setSelectedDate(todayISO())}
+          >
+            <Text style={s.pastChipText}>
+              Viewing {formatShortDate(selectedDate)} — Back to today
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* TODAY VIEW */}
+        {viewingToday && (
           <>
-            {/* Streak card */}
-            <View style={s.streakCard}>
-              <View style={s.streakLeft}>
-                <Text style={s.streakEmoji}>🔥</Text>
-                <Text style={s.streakNum}>{streakData.current}</Text>
-                <Text style={s.streakLabel}>day streak</Text>
-              </View>
-              <View style={s.streakRight}>
-                <Text style={s.streakBest}>Best: {streakData.best} days</Text>
-                <Text style={s.streakToday}>{sectionDone}/{sectionSteps.length} today</Text>
-                <View style={s.streakBar}>
-                  <View style={[s.streakFill, { width: `${sectionPct}%` as any }]} />
-                </View>
-              </View>
+            {/* AM/PM toggle */}
+            <View style={s.toggleRow}>
+              <TouchableOpacity
+                style={[s.toggleBtn, period === 'am' && s.toggleBtnActive]}
+                onPress={() => setPeriod('am')}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.toggleBtnText, period === 'am' && s.toggleBtnTextActive]}>☀ AM</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.toggleBtn, period === 'pm' && s.toggleBtnActive]}
+                onPress={() => setPeriod('pm')}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.toggleBtnText, period === 'pm' && s.toggleBtnTextActive]}>☽ PM</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* SKIN */}
-            {category === 'skin' && (
-              <>
-                <View style={s.toggleRow}>
-                  <TouchableOpacity
-                    style={[s.toggleBtn, period === 'AM' && s.toggleBtnAM]}
-                    onPress={() => setPeriod('AM')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[s.toggleBtnText, period === 'AM' && s.toggleBtnTextAM]}>☀ AM</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[s.toggleBtn, period === 'PM' && s.toggleBtnPM]}
-                    onPress={() => setPeriod('PM')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[s.toggleBtnText, period === 'PM' && s.toggleBtnTextPM]}>☽ PM</Text>
-                  </TouchableOpacity>
-                </View>
-                {skinFiltered.map(renderStep)}
-              </>
+            {/* Mark all done */}
+            {currentPeriodSteps.length > 0 && (
+              <TouchableOpacity
+                style={[s.markAllBtn, periodAllDone && s.markAllBtnUndo]}
+                onPress={handleMarkAll}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.markAllText, periodAllDone && s.markAllTextUndo]}>
+                  {periodAllDone ? 'Unmark all' : 'Mark all done'}
+                </Text>
+              </TouchableOpacity>
             )}
 
-            {/* HAIR */}
-            {category === 'hair' && (
-              <>
-                {!hairProfileSet ? (
-                  <TouchableOpacity
-                    style={s.hairSetupBox}
-                    onPress={() => router.push({ pathname: '/hair-profile' as any, params: { returnTo: 'routine' } })}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={s.hairSetupTitle}>Set up your hair profile</Text>
-                    <Text style={s.hairSetupBody}>
-                      Answer a few quick questions about your hair. We'll generate a personalised wash routine and product picks.
-                    </Text>
-                    <Text style={s.hairSetupBtn}>Get started →</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <>
-                    <View style={s.washCard}>
-                      <View style={s.washRow}>
-                        <View>
-                          <Text style={s.washTitle}>Wash day</Text>
-                          {daysSinceWash !== null && (
-                            <Text style={s.washSub}>
-                              {daysSinceWash === 0 ? 'Last washed today' : `${daysSinceWash}d since last wash`}
-                            </Text>
-                          )}
-                        </View>
-                        <Switch
-                          value={isWashDay}
-                          onValueChange={toggleWashDay}
-                          trackColor={{ false: Colors.border, true: Colors.accent }}
-                          thumbColor={Colors.text}
-                        />
-                      </View>
-                      <View style={s.washStats}>
-                        <View style={s.washStat}>
-                          <Text style={s.washStatNum}>{washesThisMonth}</Text>
-                          <Text style={s.washStatLabel}>THIS MONTH</Text>
-                        </View>
-                        <View style={s.washStatDivider} />
-                        <View style={s.washStat}>
-                          <Text style={s.washStatNum}>{avgDaysBetween > 0 ? `${avgDaysBetween}d` : '—'}</Text>
-                          <Text style={s.washStatLabel}>AVG INTERVAL</Text>
-                        </View>
-                      </View>
-                    </View>
-                    {hairFiltered.map(renderStep)}
-                  </>
-                )}
-              </>
+            {/* Step list — current period */}
+            {currentPeriodSteps.length === 0 ? (
+              <View style={s.emptySection}>
+                <Text style={s.emptySectionText}>
+                  No {period.toUpperCase()} steps scheduled today
+                </Text>
+              </View>
+            ) : (
+              currentPeriodSteps.map(renderStep)
             )}
 
-            {/* SCALP (bald users) */}
-            {category === 'scalp' && (
+            {/* Hair section */}
+            {hairSteps.length > 0 && (
               <>
-                {!hairProfileSet ? (
-                  <TouchableOpacity
-                    style={s.hairSetupBox}
-                    onPress={() => router.push({ pathname: '/hair-profile' as any, params: { returnTo: 'routine' } })}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={s.hairSetupTitle}>Set up your scalp profile</Text>
-                    <Text style={s.hairSetupBody}>
-                      Answer 3 quick questions about your scalp. We'll generate a personalised daily scalp care and sun protection routine.
-                    </Text>
-                    <Text style={s.hairSetupBtn}>Get started →</Text>
-                  </TouchableOpacity>
-                ) : (
-                  scalpFiltered.map(renderStep)
-                )}
+                <Text style={s.sectionLabel}>HAIR</Text>
+                {hairSteps.map(renderStep)}
               </>
             )}
+          </>
+        )}
 
-            {/* BEARD */}
-            {category === 'beard' && beardFiltered.map(renderStep)}
-
-            {/* MAKEUP */}
-            {category === 'makeup' && makeupFiltered.map(renderStep)}
-
-            <TouchableOpacity
-              onPress={() => router.push('/profile/routine-level' as never)}
-              style={s.changeLevelLink}
-              activeOpacity={0.8}
-            >
-              <Text style={s.changeLevelLinkText}>Change routine level →</Text>
-            </TouchableOpacity>
+        {/* PAST DAY VIEW */}
+        {!viewingToday && (
+          <>
+            {amSteps.length > 0 && (
+              <>
+                <Text style={s.sectionLabel}>AM</Text>
+                {amSteps.map(renderStep)}
+              </>
+            )}
+            {pmSteps.length > 0 && (
+              <>
+                <Text style={s.sectionLabel}>PM</Text>
+                {pmSteps.map(renderStep)}
+              </>
+            )}
+            {hairSteps.length > 0 && (
+              <>
+                <Text style={s.sectionLabel}>HAIR</Text>
+                {hairSteps.map(renderStep)}
+              </>
+            )}
+            {activeSteps.length === 0 && (
+              <View style={s.emptySection}>
+                <Text style={s.emptySectionText}>No routine was tracked on this day</Text>
+              </View>
+            )}
           </>
         )}
 
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
+
+      {/* ── Product picker ── */}
+      <ProductPickerSheet
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        stepName={pickerStepLabel}
+        categoryName={pickerCategory}
+        reason={pickerReason}
+        products={productMap[pickerCategory] ?? []}
+        userId={userId ?? undefined}
+        stepId={pickerStepId || undefined}
+        onBought={() => { loadAll(); }}
+      />
+
+      {/* ── Yesterday-missed action sheet ── */}
+      <Modal
+        visible={yesterdaySheet.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setYesterdaySheet({ visible: false })}
+      >
+        <TouchableOpacity
+          style={s.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setYesterdaySheet({ visible: false })}
+        >
+          <View style={s.actionSheet}>
+            <Text style={s.sheetTitle}>
+              {yesterdaySheet.step ? (stepMeta[yesterdaySheet.step.step_id]?.label ?? fallbackLabel(yesterdaySheet.step.step_id)) : ''}
+            </Text>
+            <TouchableOpacity
+              style={s.sheetAction}
+              onPress={() => yesterdaySheet.step && markYesterdayDone(yesterdaySheet.step.step_id)}
+              activeOpacity={0.75}
+            >
+              <Text style={s.sheetActionText}>Mark as done yesterday</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.sheetCancel}
+              onPress={() => setYesterdaySheet({ visible: false })}
+              activeOpacity={0.75}
+            >
+              <Text style={s.sheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </View>
   );
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
+
 const s = StyleSheet.create({
   screen:      { flex: 1, backgroundColor: Colors.background },
   header:      { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
   headerTitle: { fontFamily: Typography.serif, fontSize: 22, color: Colors.text },
   content:     { paddingHorizontal: Spacing.lg },
 
-  // Category pills
-  pillsRow:       { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
-  pill:           { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.pill, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
-  pillActive:     { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  pillText:       { fontSize: 9, color: Colors.text, fontWeight: '600' },
-  pillTextActive: { color: Colors.textOnAccent },
-
   // Empty state
-  emptyBox:     { alignItems: 'center', paddingTop: Spacing.xxxl },
-  emptyTitle:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: Spacing.sm },
-  emptyBody:    { fontSize: 13, color: Colors.text, textAlign: 'center', lineHeight: 22, marginBottom: Spacing.lg },
+  emptyBox:     { alignItems: 'center', paddingHorizontal: Spacing.lg, paddingTop: Spacing.xxxl },
+  emptyTitle:   { fontFamily: Typography.serif, fontSize: 20, color: Colors.text, marginBottom: Spacing.sm, textAlign: 'center' },
+  emptyBody:    { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.lg },
   emptyBtn:     { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingHorizontal: 28, paddingVertical: 12 },
   emptyBtnText: { fontSize: 13, color: Colors.textOnAccent, fontWeight: '600' },
 
-  // Streak
-  streakCard:  { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.lg, marginBottom: Spacing.lg, alignItems: 'center' },
-  streakLeft:  { marginRight: Spacing.xl, alignItems: 'center' },
-  streakEmoji: { fontSize: 22, marginBottom: 2 },
-  streakNum:   { fontFamily: Typography.serif, fontSize: 32, color: Colors.accent, lineHeight: 36 },
-  streakLabel: { fontSize: 13, color: Colors.text2 },
-  streakRight: { flex: 1 },
-  streakBest:  { fontSize: 13, color: Colors.text2, marginBottom: Spacing.xs },
-  streakToday: { fontSize: 13, color: Colors.text, marginBottom: Spacing.xs },
-  streakBar:   { height: 4, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
-  streakFill:  { height: 4, backgroundColor: Colors.accent, borderRadius: 2 },
+  // Week strip
+  weekStrip: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm, marginBottom: Spacing.md },
+  dotCell:   { alignItems: 'center', width: 36 },
+  dotCircle: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  dotCircleAdherent: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  dotCircleMissed:   { backgroundColor: Colors.border, borderColor: Colors.border },
+  dotCircleFreeze:   { backgroundColor: 'transparent', borderColor: Colors.green, borderStyle: 'dashed' },
+  dotCircleToday:    { borderColor: Colors.accent, borderWidth: 2, backgroundColor: Colors.card },
+  dotCircleEmpty:    { backgroundColor: Colors.surface, borderColor: Colors.border2 },
+  dotToday:          { fontSize: 10, color: Colors.accent, fontWeight: '600' },
+  dotLabel:          { fontSize: 10, color: Colors.text2, marginTop: 4 },
+  dotLabelSelected:  { color: Colors.text, fontWeight: '600' },
+  dotUnderline:      { width: 18, height: 1.5, backgroundColor: Colors.accent, marginTop: 2, borderRadius: 1 },
+
+  // Stats row
+  statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
+  statCard: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.card,
+    borderWidth: 1, borderColor: Colors.border,
+    padding: Spacing.md, alignItems: 'center',
+  },
+  streakTop: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  streakFlame: { fontSize: 18 },
+  statBigNum:  { fontFamily: Typography.serif, fontSize: 28, color: Colors.text, lineHeight: 32 },
+  statPct:     { fontSize: 14, color: Colors.text2, marginLeft: 2 },
+  freezeBadge: { fontSize: 11, color: Colors.accent, marginLeft: 2 },
+  statCaption:   { fontSize: 11, color: Colors.text2, marginTop: 2, textAlign: 'center' },
+  longestCaption:{ fontSize: 10, color: Colors.text3, marginTop: 2 },
+
+  // Past-day chip
+  pastChip:     { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 8, alignSelf: 'center', marginBottom: Spacing.md },
+  pastChipText: { fontSize: 12, color: Colors.text },
 
   // AM/PM toggle
-  toggleRow:       { flexDirection: 'row', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 3, marginBottom: 14, gap: 3 },
-  toggleBtn:       { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  toggleBtnAM:     { backgroundColor: Colors.accent },
-  toggleBtnPM:     { backgroundColor: Colors.surface2 },
-  toggleBtnText:   { fontSize: 12, fontWeight: '500', color: Colors.text2 },
-  toggleBtnTextAM: { color: Colors.textOnAccent },
-  toggleBtnTextPM: { color: Colors.text },
+  toggleRow:          { flexDirection: 'row', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.input, padding: 3, marginBottom: Spacing.md, gap: 3 },
+  toggleBtn:          { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  toggleBtnActive:    { backgroundColor: Colors.accent },
+  toggleBtnText:      { fontSize: 12, fontWeight: '500', color: Colors.text2 },
+  toggleBtnTextActive:{ color: Colors.textOnAccent },
 
-  // Wash day card
-  washCard:        { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.md },
-  washRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm },
-  washTitle:       { fontSize: 15, color: Colors.text },
-  washSub:         { fontSize: 12, color: Colors.text2, marginTop: 2 },
-  washStats:       { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: Spacing.sm },
-  washStat:        { flex: 1, alignItems: 'center' },
-  washStatNum:     { fontFamily: Typography.serif, fontSize: 18, color: Colors.text },
-  washStatLabel:   { fontSize: 9, color: Colors.text2, letterSpacing: 1, marginTop: 2 },
-  washStatDivider: { width: 1, height: 30, backgroundColor: Colors.border },
+  // Mark all
+  markAllBtn:     { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingVertical: 10, alignItems: 'center', marginBottom: Spacing.md },
+  markAllBtnUndo: { backgroundColor: Colors.surface2 },
+  markAllText:    { fontSize: 13, color: Colors.textOnAccent, fontWeight: '600' },
+  markAllTextUndo:{ color: Colors.text },
+
+  // Section labels
+  sectionLabel: { fontSize: 10, color: Colors.accent, letterSpacing: 1.5, textTransform: 'uppercase', marginTop: Spacing.md, marginBottom: Spacing.xs },
 
   // Step rows
   stepRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginBottom: Spacing.xs },
-  stepRowDone:   { borderColor: Colors.accent + '66' },
+  stepRowDone:   { borderColor: Colors.accentTintBorderStrong },
   checkbox:      { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
   checkboxDone:  { backgroundColor: Colors.accent, borderColor: Colors.accent },
   checkmark:     { fontSize: 11, color: Colors.textOnAccent, fontWeight: '700' },
-  stepLabel:     { fontSize: 15, color: Colors.text },
+  dot:           { width: 12, height: 12, borderRadius: 6, borderWidth: 1.5, borderColor: Colors.border, marginRight: Spacing.md, marginLeft: 5 },
+  dotDone:       { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  stepLabel:     { fontSize: 15, color: Colors.text, fontWeight: '500' },
   stepLabelDone: { color: Colors.text2 },
-  stepLabelPM:   { color: Colors.text },
   stepProduct:   { fontSize: 11, color: Colors.text2, marginTop: 1 },
+  pickChip:      { alignSelf: 'flex-start', marginTop: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.accent },
+  pickChipText:  { fontSize: 10, color: Colors.accent, fontWeight: '600' },
 
-  // Change level
-  changeLevelLink:     { alignItems: 'center', paddingVertical: 12, marginTop: 8 },
-  changeLevelLinkText: { fontSize: 13, color: Colors.text },
+  cadencePill:      { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2, marginLeft: Spacing.sm },
+  cadencePillText:  { fontSize: 10, color: Colors.text2 },
 
-  // Hair profile setup box
-  hairSetupBox:  { backgroundColor: Colors.surface, borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.accentTintBorderStrong, padding: Spacing.lg, marginBottom: Spacing.md },
-  hairSetupTitle:{ fontFamily: Typography.serif, fontSize: 18, color: Colors.text, marginBottom: Spacing.xs },
-  hairSetupBody: { fontSize: 13, color: Colors.text2, lineHeight: 20, marginBottom: Spacing.md },
-  hairSetupBtn:  { fontSize: 13, color: Colors.accent },
+  emptySection:     { paddingVertical: Spacing.lg, alignItems: 'center' },
+  emptySectionText: { fontSize: 13, color: Colors.text2 },
+
+  // Action sheet / modal
+  sheetOverlay: { flex: 1, backgroundColor: Colors.overlaySheet, justifyContent: 'flex-end' },
+  actionSheet:  { backgroundColor: Colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.lg, paddingBottom: Spacing.xl },
+  sheetTitle:   { fontFamily: Typography.serif, fontSize: 16, color: Colors.text, marginBottom: Spacing.md },
+  sheetAction:  { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border2 },
+  sheetActionText: { fontSize: 15, color: Colors.accent, fontWeight: '500' },
+  sheetCancel:  { paddingVertical: 14, marginTop: 4, alignItems: 'center' },
+  sheetCancelText: { fontSize: 13, color: Colors.text2 },
 });

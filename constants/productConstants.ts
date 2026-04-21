@@ -9030,12 +9030,14 @@ export function getProductsForProfile(params: {
     });
     if (matched.length > 0) {
       results[category] = matched.map(p => ({
+        id:          p.id,
         category:    p.category,
         name:        p.name,
         brand:       p.brand,
         why_good:    p.why_good,
         attributes:  p.attributes || [],
         is_featured: p.is_featured ?? false,
+        nykaa_url:   p.nykaa_url,
       }));
     }
   }

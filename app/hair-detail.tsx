@@ -86,12 +86,15 @@ export default function HairDetailScreen() {
   const [pickerVisible,  setPickerVisible]  = useState(false);
   const [pickerCategory, setPickerCategory] = useState('');
   const [pickerStep,     setPickerStep]     = useState('');
+  const [pickerStepId,   setPickerStepId]   = useState('');
   const [pickerReason,   setPickerReason]   = useState('');
+  const [userId,         setUserId]         = useState<string | null>(null);
 
   useEffect(() => {
     const loadPrefs = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setBrandsLoaded(true); return; }
+      setUserId(user.id);
 
       const { data } = await supabase
         .from('users')
@@ -321,6 +324,7 @@ export default function HairDetailScreen() {
                       onPress={hasProducts ? () => {
                         setPickerCategory(cat);
                         setPickerStep(step.label);
+                        setPickerStepId(step.step_id ?? '');
                         setPickerReason(step.product);
                         setPickerVisible(true);
                       } : undefined}
@@ -435,6 +439,8 @@ export default function HairDetailScreen() {
         categoryName={formatCategoryName(pickerCategory)}
         reason={pickerReason}
         products={productMap[pickerCategory] ?? []}
+        userId={userId ?? undefined}
+        stepId={pickerStepId || undefined}
       />
     </View>
   );

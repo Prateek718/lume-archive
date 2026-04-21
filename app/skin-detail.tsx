@@ -127,7 +127,9 @@ export default function SkinDetailScreen() {
   const [pickerVisible,  setPickerVisible]  = useState(false);
   const [pickerCategory, setPickerCategory] = useState('');
   const [pickerStep,     setPickerStep]     = useState('');
+  const [pickerStepId,   setPickerStepId]   = useState('');
   const [pickerReason,   setPickerReason]   = useState('');
+  const [userId,         setUserId]         = useState<string | null>(null);
 
   const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
 
@@ -135,6 +137,7 @@ export default function SkinDetailScreen() {
     const loadUserPrefs = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
       const { data } = await supabase
         .from('users')
         .select('routine_level')
@@ -256,6 +259,7 @@ export default function SkinDetailScreen() {
                       const cat = getCategoryForStep(step.label);
                       setPickerCategory(cat);
                       setPickerStep(step.label);
+                      setPickerStepId(step.step_id ?? '');
                       setPickerReason(step.product ?? '');
                       setPickerVisible(true);
                     }}
@@ -277,6 +281,7 @@ export default function SkinDetailScreen() {
                       const cat = getCategoryForStep(step.label);
                       setPickerCategory(cat);
                       setPickerStep(step.label);
+                      setPickerStepId(step.step_id ?? '');
                       setPickerReason(step.product ?? '');
                       setPickerVisible(true);
                     }}
@@ -299,6 +304,8 @@ export default function SkinDetailScreen() {
         categoryName={pickerCategory}
         reason={pickerReason}
         products={productMap[pickerCategory] ?? []}
+        userId={userId ?? undefined}
+        stepId={pickerStepId || undefined}
       />
     </View>
   );

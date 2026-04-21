@@ -137,12 +137,14 @@ export interface HairStyleRecommendation {
 
 // A product already matched from the catalogue and passed to Claude for reasons.
 export interface MatchedProduct {
+  id?:         string;          // stable id from PRODUCTS catalogue; undefined for legacy matches
   category:    string;
   name:        string;
   brand:       string;
   why_good:    string;
   attributes:  string[];
   is_featured?: boolean;
+  nykaa_url?:  string;          // affiliate URL, when known
 }
 
 // One product recommendation stored inside Recommendations — contains the

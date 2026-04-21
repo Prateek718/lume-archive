@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Colors } from '../constants/theme';
 import type { MatchedProduct } from '../types';
+import { addProductToKitFromBuy } from '../services/kitService';
 
 interface ProductPickerSheetProps {
   visible:      boolean;
@@ -19,6 +20,11 @@ interface ProductPickerSheetProps {
   reason:       string;
   products:     MatchedProduct[];
   nykaaUrl?:    (product: MatchedProduct) => string;
+  // When userId + stepId are both provided, tapping "Buy" also inserts a
+  // user_kit row and wires it into today's routine_checkins.
+  userId?:      string;
+  stepId?:      string;
+  onBought?:    (product: MatchedProduct) => void;
 }
 
 const defaultNykaaUrl = (product: MatchedProduct): string =>
@@ -63,8 +69,30 @@ export default function ProductPickerSheet({
   reason,
   products,
   nykaaUrl,
+  userId,
+  stepId,
+  onBought,
 }: ProductPickerSheetProps) {
-  const getUrl = nykaaUrl ?? defaultNykaaUrl;
+  const getUrl = nykaaUrl ?? ((p: MatchedProduct) => p.nykaa_url ?? defaultNykaaUrl(p));
+
+  const handleBuy = async (product: MatchedProduct) => {
+    // Optimistically insert the kit row before opening the URL so the app state
+    // is correct even if the user never returns from the affiliate page.
+    if (userId && stepId) {
+      try {
+        await addProductToKitFromBuy({
+          userId,
+          product,
+          stepId,
+          acquiredVia: 'lume_affiliate',
+        });
+        onBought?.(product);
+      } catch (err) {
+        console.error('[picker] kit insert failed', err);
+      }
+    }
+    Linking.openURL(getUrl(product));
+  };
 
   return (
     <Modal
@@ -133,7 +161,7 @@ export default function ProductPickerSheet({
                     </View>
                     <TouchableOpacity
                       style={s.buyBtn}
-                      onPress={() => Linking.openURL(getUrl(product))}
+                      onPress={() => handleBuy(product)}
                       activeOpacity={0.75}
                     >
                       <Text style={s.buyBtnText}>Buy →</Text>

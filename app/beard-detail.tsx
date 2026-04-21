@@ -110,12 +110,15 @@ export default function BeardDetailScreen() {
   const [pickerVisible,  setPickerVisible]  = useState(false);
   const [pickerCategory, setPickerCategory] = useState('');
   const [pickerStep,     setPickerStep]     = useState('');
+  const [pickerStepId,   setPickerStepId]   = useState('');
   const [pickerReason,   setPickerReason]   = useState('');
+  const [userId,         setUserId]         = useState<string | null>(null);
 
   useEffect(() => {
     const loadUserPrefs = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setBrandsLoaded(true); return; }
+      setUserId(user.id);
       const { data } = await supabase
         .from('users')
         .select('preferred_brands_v2')
@@ -325,6 +328,7 @@ export default function BeardDetailScreen() {
                     onPress={hasProducts ? () => {
                       setPickerCategory(cat);
                       setPickerStep(`Step ${i + 1}`);
+                      setPickerStepId(cat);
                       setPickerReason(step);
                       setPickerVisible(true);
                     } : undefined}
@@ -346,6 +350,7 @@ export default function BeardDetailScreen() {
                     onPress={hasProducts ? () => {
                       setPickerCategory(cat);
                       setPickerStep(`Step ${i + 1}`);
+                      setPickerStepId(cat);
                       setPickerReason(step);
                       setPickerVisible(true);
                     } : undefined}
@@ -457,6 +462,8 @@ export default function BeardDetailScreen() {
         categoryName={formatCategoryName(pickerCategory)}
         reason={pickerReason}
         products={productMap[pickerCategory] ?? []}
+        userId={userId ?? undefined}
+        stepId={pickerStepId || undefined}
       />
     </View>
   );

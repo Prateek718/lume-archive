@@ -28,6 +28,7 @@ export default function ProfileScreen() {
   const [preferredBrandsV2, setPreferredBrandsV2] = useState<PreferredBrands | null>(null);
   const [hairProfile,       setHairProfile]       = useState<HairProfile | null>(null);
   const [scans,             setScans]             = useState<Scan[]>([]);
+  const [kitCount,          setKitCount]          = useState<number>(0);
   const [reminderEnabled,   setReminderEnabled]   = useState(false);
   const [morningTime,       setMorningTime]       = useState(new Date(new Date().setHours(8, 0, 0, 0)));
   const [eveningTime,       setEveningTime]       = useState(new Date(new Date().setHours(21, 0, 0, 0)));
@@ -71,6 +72,13 @@ export default function ProfileScreen() {
       .limit(1);
 
     if (scansData) setScans(scansData as Scan[]);
+
+    const { count: kitActiveCount } = await supabase
+      .from('user_kit')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+    setKitCount(kitActiveCount ?? 0);
 
     const reminderRaw = await AsyncStorage.getItem('@lume/reminder_enabled');
     if (reminderRaw === 'true') {
@@ -406,6 +414,26 @@ export default function ProfileScreen() {
                     ? 'Bald / Shaved · Scalp care'
                     : `${hairProfile.texture ?? ''} · ${hairProfile.primary_concern ?? ''}`.replace(/^ · | · $/, '')
                   : 'Not set yet'}
+              </Text>
+            </View>
+            <Text style={s.rowArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── My Kit ── */}
+        <Text style={s.sectionLabel}>MY KIT</Text>
+        <View style={s.card}>
+          <TouchableOpacity
+            style={s.row}
+            onPress={() => router.push('/profile/my-kit' as any)}
+            activeOpacity={0.7}
+          >
+            <View>
+              <Text style={s.rowLabel}>My kit</Text>
+              <Text style={s.rowSub}>
+                {kitCount > 0
+                  ? `${kitCount} product${kitCount === 1 ? '' : 's'} you use · Track reorders`
+                  : 'No products yet · Add from your routine'}
               </Text>
             </View>
             <Text style={s.rowArrow}>›</Text>
