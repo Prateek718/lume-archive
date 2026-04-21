@@ -168,6 +168,7 @@ export default function RoutineScreen() {
 
   const [userId, setUserId] = useState<string | null>(null);
   const [hasScan, setHasScan] = useState<boolean>(false);
+  const [daysSinceScan, setDaysSinceScan] = useState<number | null>(null);
   const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
   const [kitMap, setKitMap] = useState<Record<string, { name: string; brand: string }>>({});
 
@@ -201,12 +202,20 @@ export default function RoutineScreen() {
 
       const { data: scansData } = await supabase
         .from('scans')
-        .select('id')
+        .select('id, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1);
-      const scanId = (scansData?.[0] as { id: string } | undefined)?.id ?? null;
+      const latestScan = scansData?.[0] as { id: string; created_at: string } | undefined;
+      const scanId = latestScan?.id ?? null;
       setHasScan(!!scanId);
+
+      if (latestScan?.created_at) {
+        const ageMs = Date.now() - new Date(latestScan.created_at).getTime();
+        setDaysSinceScan(Math.floor(ageMs / 86_400_000));
+      } else {
+        setDaysSinceScan(null);
+      }
 
       const [today, yesterday, adherence, pm, kitRows] = await Promise.all([
         fetchTodayRoutine(user.id),
@@ -244,6 +253,31 @@ export default function RoutineScreen() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const viewingToday = selectedDate === todayISO();
+
+  // Rescan banner — three tiers based on age of latest scan.
+  // 25+: gentle nudge. 28+: monthly cadence. 35+: routine likely stale.
+  const rescanBanner = useMemo(() => {
+    if (daysSinceScan == null || daysSinceScan < 25) return null;
+    if (daysSinceScan >= 35) {
+      return {
+        tier:  'urgent' as const,
+        title: 'Your routine may need updating',
+        body:  `It's been ${daysSinceScan} days since your last scan. A fresh scan keeps your plan accurate.`,
+      };
+    }
+    if (daysSinceScan >= 28) {
+      return {
+        tier:  'moderate' as const,
+        title: `${daysSinceScan} days in — let's see your progress`,
+        body:  'A new scan compares against your last one and updates your routine.',
+      };
+    }
+    return {
+      tier:  'gentle' as const,
+      title: 'Time for your next scan',
+      body:  `${daysSinceScan} days since your last scan. See how you've changed.`,
+    };
+  }, [daysSinceScan]);
 
   const streak: StreakInfo = useMemo(() => computeStreak(dailyAdherence), [dailyAdherence]);
   const adherencePct = useMemo(() => computeRollingAdherence(dailyAdherence), [dailyAdherence]);
@@ -642,7 +676,7 @@ export default function RoutineScreen() {
           </Text>
           <TouchableOpacity
             style={s.emptyBtn}
-            onPress={() => router.replace('/(tabs)/scan')}
+            onPress={() => router.push('/scan')}
             activeOpacity={0.8}
           >
             <Text style={s.emptyBtnText}>Take a scan</Text>
@@ -665,6 +699,25 @@ export default function RoutineScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadAll(true)} tintColor={Colors.accent} />}
       >
+        {/* Rescan banner — tiered nudge once the latest scan is 25+ days old */}
+        {rescanBanner && (
+          <TouchableOpacity
+            style={[
+              s.rescanBanner,
+              rescanBanner.tier === 'urgent'   && s.rescanBannerUrgent,
+              rescanBanner.tier === 'moderate' && s.rescanBannerModerate,
+            ]}
+            activeOpacity={0.85}
+            onPress={() => router.push('/scan')}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.rescanBannerTitle}>{rescanBanner.title}</Text>
+              <Text style={s.rescanBannerBody}>{rescanBanner.body}</Text>
+            </View>
+            <Text style={s.rescanBannerArrow}>›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Week strip */}
         <View style={s.weekStrip}>
           {weekStrip.map(w => <WeekDot key={w.date} w={w} />)}
@@ -869,6 +922,27 @@ const s = StyleSheet.create({
   emptyBody:    { fontSize: 13, color: Colors.text2, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.lg },
   emptyBtn:     { backgroundColor: Colors.accent, borderRadius: Radius.input, paddingHorizontal: 28, paddingVertical: 12 },
   emptyBtnText: { fontSize: 13, color: Colors.textOnAccent, fontWeight: '600' },
+
+  // Rescan banner — appears above the week strip once a scan is 25+ days old.
+  rescanBanner: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    backgroundColor: Colors.surface,
+    borderRadius:    Radius.card,
+    borderWidth:     1,
+    borderColor:     Colors.accentTintBorder,
+    paddingHorizontal: Spacing.md,
+    paddingVertical:   Spacing.md,
+    marginTop:    Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  rescanBannerModerate: { borderColor: Colors.accent },
+  rescanBannerUrgent:   { borderColor: Colors.accent, backgroundColor: Colors.accentTintLight },
+  rescanBannerTitle: {
+    fontFamily: Typography.serif, fontSize: 15, color: Colors.text, marginBottom: 2,
+  },
+  rescanBannerBody:  { fontSize: 12, color: Colors.text2, lineHeight: 17 },
+  rescanBannerArrow: { fontSize: 22, color: Colors.accent, marginLeft: Spacing.md },
 
   weekStrip: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm, marginBottom: Spacing.md },
   dotCell:   { alignItems: 'center', width: 36 },

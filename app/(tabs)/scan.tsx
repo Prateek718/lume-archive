@@ -14,7 +14,8 @@ import { supabase } from '../../lib/supabase';
 import { useScan } from '../../hooks/useScan';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { DeadTimeQuestionCard } from '../../components/DeadTimeQuestionCard';
-import type { Scan } from '../../types';
+import { HairProfileDuringVision } from '../../components/HairProfileDuringVision';
+import type { Scan, HairProfile } from '../../types';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -409,28 +410,36 @@ function ObservationScreen({
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function ScanScreen() {
-  const { phase, processingStep, result, error, recsLoading, recsError, openCamera, reset, processPhoto, hydratePendingObservation } = useScan();
+  const {
+    phase, processingStep, result, error, recsLoading, recsError,
+    showHairProfile, submitHairProfile,
+    openCamera, reset, processPhoto, hydratePendingObservation,
+  } = useScan();
   const router = useRouter();
-  const [gender, setGender] = useState<string>('man');
-  const [userId, setUserId] = useState<string>('');
+  const [gender,           setGender]           = useState<string>('man');
+  const [userId,           setUserId]           = useState<string>('');
+  // True when we should collect the hair profile during the next scan's
+  // phase-1 vision call — i.e., the user has never saved one yet.
+  const [needsHairProfile, setNeedsHairProfile] = useState(false);
 
-  // Load gender whenever the tab comes into focus. Also picks up a scan
-  // finalized by the confirm-traits flow so we land on ObservationScreen
-  // instead of the home screen.
+  // Load gender + hair-profile status whenever the tab comes into focus. Also
+  // picks up a scan finalized by the confirm-traits flow so we land on
+  // ObservationScreen instead of the home screen.
   useFocusEffect(
     useCallback(() => {
-      const loadGender = async () => {
+      const loadProfile = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         setUserId(user.id);
         const { data: profile } = await supabase
           .from('users')
-          .select('gender')
+          .select('gender, hair_profile')
           .eq('id', user.id)
           .single();
         if (profile?.gender) setGender(profile.gender as string);
+        setNeedsHairProfile(!profile?.hair_profile);
       };
-      loadGender();
+      loadProfile();
       hydratePendingObservation();
     }, [hydratePendingObservation]),
   );
@@ -440,17 +449,37 @@ export default function ScanScreen() {
     if (result.id?.startsWith('local_')) {
       router.push({ pathname: '/recommendations', params: { scanJson: JSON.stringify(result) } });
     } else {
-      router.push({ pathname: '/recommendations', params: { scanId: result.id } });
+      router.push({ pathname: '/recommendations-view', params: { scanId: result.id } });
     }
   };
 
   const handleCapture = useCallback(
-    (uri: string) => processPhoto(uri, gender, 'full_face'),
-    [processPhoto, gender],
+    (uri: string) => processPhoto(uri, gender, 'full_face', needsHairProfile),
+    [processPhoto, gender, needsHairProfile],
+  );
+
+  const handleHairProfileComplete = useCallback(
+    (profile: HairProfile) => {
+      submitHairProfile(profile);
+      // Optimistic — so the next scan doesn't re-prompt even before the DB write lands.
+      setNeedsHairProfile(false);
+    },
+    [submitHairProfile],
   );
 
   if (phase === 'camera')     return <CameraScreen onCapture={handleCapture} onCancel={reset} error={error} />;
-  if (phase === 'processing') return <ProcessingScreen step={processingStep} />;
+  if (phase === 'processing') {
+    if (showHairProfile) {
+      return (
+        <HairProfileDuringVision
+          gender={gender}
+          visionStep={processingStep || 'Analysing your skin…'}
+          onComplete={handleHairProfileComplete}
+        />
+      );
+    }
+    return <ProcessingScreen step={processingStep} />;
+  }
   if (phase === 'result' && result) return <ObservationScreen scan={result} gender={gender} userId={userId} onContinue={navigateToRecs} recsLoading={recsLoading} recsError={recsError} />;
   return <HomeScreen onStart={openCamera} />;
 }

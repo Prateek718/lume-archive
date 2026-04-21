@@ -1,17 +1,7 @@
-import { useEffect } from 'react';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../../lib/supabase';
 import { Colors } from '../../constants/theme';
-
-function ScanIcon({ color }: { color: string }) {
-  return (
-    <View style={[ic.iconOuter, { borderColor: color }]}>
-      <View style={[ic.iconDot, { backgroundColor: color }]} />
-    </View>
-  );
-}
 
 function RoutineIcon({ color }: { color: string }) {
   return (
@@ -48,22 +38,6 @@ function ProfileIcon({ color }: { color: string }) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-
-  useEffect(() => {
-    async function checkDefault() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { count } = await supabase
-        .from('scans')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-      if ((count ?? 0) === 0) {
-        router.replace('/(tabs)/scan');
-      }
-    }
-    checkDefault();
-  }, []);
 
   return (
     <Tabs
@@ -95,10 +69,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="scan"
-        options={{
-          title:      'Scan',
-          tabBarIcon: ({ color }) => <ScanIcon color={color} />,
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="discover"
@@ -119,10 +90,6 @@ export default function TabsLayout() {
 }
 
 const ic = StyleSheet.create({
-  // Scan
-  iconOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  iconDot:   { width: 6, height: 6, borderRadius: 3 },
-
   // Routine (checklist)
   checklist:     { gap: 4 },
   checklistRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },

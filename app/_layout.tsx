@@ -41,7 +41,7 @@ export default function RootLayout() {
         if (url.includes('auth/callback')) {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
-            router.replace('/(tabs)/scan');
+            router.replace('/scan');
           }
         }
       };
@@ -69,7 +69,7 @@ export default function RootLayout() {
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
       if (data?.type === 'rescan_nudge') {
-        router.replace('/(tabs)/scan');
+        router.replace('/scan');
       }
     });
     return () => subscription.remove();

@@ -62,7 +62,7 @@ export default function SignupScreen() {
       } else if (!profile.onboarding_complete) {
         router.replace('/(auth)/onboarding');
       } else {
-        router.replace('/(tabs)/scan');
+        router.replace('/(tabs)/routine');
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Google Sign In failed';

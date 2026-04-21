@@ -1,4 +1,4 @@
-// Hair detail screen — Style | Care | Products tabs.
+// Hair detail screen — Style | Care tabs.
 // Receives hairRecsJson (optional) and scanJson/gender as navigation params.
 // Falls back to loading hair_recommendations from users table if param absent.
 
@@ -11,17 +11,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
-import { PRODUCTS, getProductsForBrands, getProductNykaaUrl } from '../constants/productConstants';
-import type { Product } from '../constants/productConstants';
-import { logProductEvent, getProductMap } from '../services/scanService';
+import { getProductMap } from '../services/scanService';
 import { supabase } from '../lib/supabase';
 import type { Scan, HairRecommendations, HairProfile, MatchedProduct } from '../types';
 import ProductPickerSheet from '../components/ProductPickerSheet';
 
-type Tab = 'style' | 'care' | 'products';
+type Tab = 'style' | 'care';
 type RoutineLevel = 'simple' | 'balanced' | 'full';
-
-const CATEGORY_LIMIT: Record<RoutineLevel, number> = { simple: 2, balanced: 4, full: 99 };
 
 // Map routine step labels to product catalogue categories
 const HAIR_STEP_TO_CATEGORY: Record<string, string> = {
@@ -73,14 +69,11 @@ export default function HairDetailScreen() {
   const [hairRecs,       setHairRecs]       = useState<HairRecommendations | null>(
     hairRecsJson ? JSON.parse(hairRecsJson) as HairRecommendations : null,
   );
-  const [hairProfile,    setHairProfile]    = useState<HairProfile | null>(null);
+  const [, setHairProfile]                  = useState<HairProfile | null>(null);
   const [loading,        setLoading]        = useState(!hairRecsJson);
   const [tab,            setTab]            = useState<Tab>('style');
   const [selectedStyle,  setSelectedStyle]  = useState<string>('');
-  const [preferredBrands, setPreferredBrands] = useState<string[]>([]);
   const [routineLevel,   setRoutineLevel]   = useState<RoutineLevel>('simple');
-  const [brandsLoaded,   setBrandsLoaded]   = useState(false);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // Product picker state
   const [pickerVisible,  setPickerVisible]  = useState(false);
@@ -90,27 +83,27 @@ export default function HairDetailScreen() {
   const [pickerReason,   setPickerReason]   = useState('');
   const [userId,         setUserId]         = useState<string | null>(null);
 
+  // Product map for the picker — loaded from AsyncStorage (stored during scan)
+  const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
+
   useEffect(() => {
     const loadPrefs = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setBrandsLoaded(true); return; }
+      if (!user) return;
       setUserId(user.id);
 
       const { data } = await supabase
         .from('users')
-        .select('preferred_brands_v2, routine_level, hair_recommendations, hair_profile')
+        .select('routine_level, hair_recommendations, hair_profile')
         .eq('id', user.id)
         .single();
 
       const row = data as {
-        preferred_brands_v2?: { hair?: string[] };
         routine_level?: string;
         hair_recommendations?: HairRecommendations | null;
         hair_profile?: HairProfile | null;
       } | null;
 
-      const pb = row?.preferred_brands_v2 as { hair?: string[] } | null;
-      setPreferredBrands(pb?.hair ?? []);
       setRoutineLevel((row?.routine_level as RoutineLevel | undefined) ?? 'simple');
 
       if (!hairRecs && row?.hair_recommendations) {
@@ -123,7 +116,6 @@ export default function HairDetailScreen() {
         getProductMap(scan.id).then(setProductMap);
       }
       setLoading(false);
-      setBrandsLoaded(true);
     };
     loadPrefs();
   }, []);
@@ -134,16 +126,6 @@ export default function HairDetailScreen() {
     }
   }, [hairRecs]);
 
-  const productGender: 'all' | 'men' | 'women' =
-    gender === 'woman' ? 'women' : gender === 'man' ? 'men' : 'all';
-
-  const productRecs    = hairRecs?.products ?? [];
-  const categoryLimit  = CATEGORY_LIMIT[routineLevel];
-  const visibleCategories = [...new Set(productRecs.map(p => p.category))].slice(0, categoryLimit);
-
-  // Product map for the picker — loaded from AsyncStorage (stored during scan)
-  const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
-
   // Routine steps filtered by current routine level
   const visibleRoutineSteps = useMemo(() => {
     if (!hairRecs?.routine) return [];
@@ -153,23 +135,6 @@ export default function HairDetailScreen() {
       .filter(s => levelOrder[s.level as RoutineLevel] <= currentOrder)
       .sort((a, b) => a.order - b.order);
   }, [hairRecs?.routine, routineLevel]);
-
-  const handleBuyPress = async (product: Product, category: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && scan?.id && !scan.id.startsWith('local_')) {
-      await logProductEvent({
-        userId:      user.id,
-        scanId:      scan.id,
-        productId:   product.id,
-        productName: product.name,
-        brand:       product.brand,
-        category,
-        eventType:   'clicked_buy',
-      });
-    }
-    const url = getProductNykaaUrl(product);
-    if (url) Linking.openURL(url);
-  };
 
   if (loading) {
     return (
@@ -213,7 +178,7 @@ export default function HairDetailScreen() {
 
       {/* Tab pills */}
       <View style={s.tabBar}>
-        {(['style', 'care', 'products'] as Tab[]).map(t => (
+        {(['style', 'care'] as Tab[]).map(t => (
           <TouchableOpacity
             key={t}
             style={[s.tabPill, tab === t && s.tabPillActive]}
@@ -335,98 +300,6 @@ export default function HairDetailScreen() {
               </InfoCard>
             )}
 
-          </>
-        )}
-
-        {/* ── PRODUCTS ── */}
-        {tab === 'products' && (
-          <>
-            {brandsLoaded && preferredBrands.length === 0 && (
-              <TouchableOpacity
-                style={s.noBrandsBanner}
-                onPress={() => router.push('/profile/my-brands' as never)}
-                activeOpacity={0.8}
-              >
-                <Text style={s.noBrandsTitle}>Set your preferred brands</Text>
-                <Text style={s.noBrandsSub}>We'll show products from brands you already trust</Text>
-                <Text style={s.noBrandsBtnText}>Set brands →</Text>
-              </TouchableOpacity>
-            )}
-
-            {productRecs.length === 0 ? (
-              <Text style={s.openingLine}>
-                No product picks yet — update your hair profile to get personalised recommendations.
-              </Text>
-            ) : (
-              visibleCategories.map(cat => {
-                const catRec = productRecs.find(p => p.category === cat);
-                const product: Product | undefined =
-                  PRODUCTS.find(p => p.category === cat && p.name === catRec?.name && p.brand === catRec?.brand)
-                  ?? getProductsForBrands({ category: cat, preferredBrands, fallbackTier: 'budget', gender: productGender, limit: 1 })[0];
-                const isExpanded = expandedCategory === cat;
-                return (
-                  <View key={cat} style={s.catTile}>
-                    <TouchableOpacity
-                      style={s.catHeader}
-                      onPress={() => setExpandedCategory(isExpanded ? null : cat)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={s.catName}>{formatCategoryName(cat)}</Text>
-                      <Text style={s.chevron}>{isExpanded ? '∧' : '∨'}</Text>
-                    </TouchableOpacity>
-
-                    {isExpanded && (
-                      product == null ? (
-                        <Text style={s.noProductsText}>No matching products found.</Text>
-                      ) : (
-                        <View style={s.expandedProduct}>
-                          <View style={s.matchMeterWrap}>
-                            <View style={s.matchMeterHeader}>
-                              <Text style={s.matchLabel}>Match</Text>
-                              <Text style={s.matchScore}>{catRec?.match_score ?? 0}%</Text>
-                            </View>
-                            <View style={s.matchTrack}>
-                              <View style={[s.matchFill, { width: `${catRec?.match_score ?? 0}%` }]} />
-                            </View>
-                          </View>
-                          {product.isPreferredBrand && (
-                            <View style={s.preferredBadge}>
-                              <Text style={s.preferredBadgeText}>Your brand</Text>
-                            </View>
-                          )}
-                          <Text style={s.productName}>{product.name}</Text>
-                          <Text style={s.productMeta}>
-                            {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
-                          </Text>
-                          {catRec?.reason ? (
-                            <Text style={s.productReason}>{catRec.reason}</Text>
-                          ) : null}
-                          <TouchableOpacity
-                            style={s.buyBtn}
-                            onPress={() => handleBuyPress(product!, cat)}
-                            activeOpacity={0.8}
-                          >
-                            <Text style={s.buyBtnText}>Buy on Nykaa</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )
-                    )}
-                  </View>
-                );
-              })
-            )}
-
-            {routineLevel === 'simple' && productRecs.length > 0 && (
-              <TouchableOpacity
-                style={s.upsellCard}
-                onPress={() => router.push('/profile/routine-level' as never)}
-                activeOpacity={0.8}
-              >
-                <Text style={s.upsellTitle}>Want more targeted picks?</Text>
-                <Text style={s.upsellSub}>Switch to Balanced or Full routine to unlock more categories</Text>
-                <Text style={s.upsellLink}>Upgrade routine →</Text>
-              </TouchableOpacity>
-            )}
           </>
         )}
 
@@ -564,57 +437,4 @@ const s = StyleSheet.create({
   stepCadence:   { fontSize: 11, color: Colors.text3, marginTop: 2, letterSpacing: 0.5 },
   stepChevron:   { fontSize: 18, color: Colors.text3, lineHeight: 22 },
 
-  openingLine: { fontSize: 15, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },
-
-  // No brands banner
-  noBrandsBanner: {
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.accentTintBorder,
-    borderRadius: 12, padding: 14, marginBottom: 8,
-  },
-  noBrandsTitle:   { fontFamily: Typography.serif, fontSize: 18, color: Colors.text },
-  noBrandsSub:     { fontSize: 13, color: Colors.text2, lineHeight: 20 },
-  noBrandsBtnText: { fontSize: 13, color: Colors.accent, marginTop: 8 },
-
-  // Collapsible category tiles
-  catTile: {
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 12, marginBottom: 6, overflow: 'hidden',
-  },
-  catHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 12,
-  },
-  catName: { fontSize: 15, color: Colors.text, fontWeight: '600' },
-  chevron: { fontSize: 13, color: Colors.text2 },
-
-  noProductsText: { fontSize: 11, color: Colors.text3, padding: 14 },
-
-  expandedProduct: {
-    backgroundColor: Colors.accentTintLight, borderWidth: 1, borderTopWidth: 0,
-    borderColor: Colors.accentTintBorder, borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10, padding: 14, marginBottom: 5,
-  },
-  matchMeterWrap:   { marginBottom: 0 },
-  matchMeterHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  matchLabel:       { fontSize: 11, color: Colors.text2 },
-  matchScore:       { fontSize: 11, color: Colors.accent, fontWeight: '500' },
-  matchTrack:       { height: 3, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
-  matchFill:        { height: '100%', backgroundColor: Colors.accent, borderRadius: 2 },
-
-  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: Colors.accentTintStrong, borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
-  preferredBadgeText: { fontSize: 9, color: Colors.accent, fontWeight: '500' },
-  productName:        { fontSize: 15, color: Colors.text, fontWeight: '500', marginTop: 12, marginBottom: 3 },
-  productMeta:        { fontSize: 13, color: Colors.text2, marginBottom: 8 },
-  productReason:      { fontSize: 11, color: Colors.text3, lineHeight: 17, marginBottom: 12 },
-
-  buyBtn:     { backgroundColor: Colors.accent, borderRadius: 8, paddingVertical: 12, width: '100%', alignItems: 'center' },
-  buyBtnText: { fontSize: 14, color: Colors.textOnAccent, fontWeight: '600' },
-
-  upsellCard: {
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 12, padding: 14, marginTop: 4,
-  },
-  upsellTitle: { fontSize: 15, color: Colors.text, fontWeight: '600', marginBottom: 3 },
-  upsellSub:   { fontSize: 13, color: Colors.text3, lineHeight: 18 },
-  upsellLink:  { fontSize: 13, color: Colors.accent, marginTop: 8 },
 });

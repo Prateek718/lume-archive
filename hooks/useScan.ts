@@ -1,14 +1,21 @@
 // useScan — manages all state for the scan tab.
 // The scan screen imports this hook and drives its UI from these values.
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
-import { runScanPhase1, runScanPhase2 } from '../services/scanService';
-import type { Scan } from '../types';
+import {
+  runScanPhase1, runScanPhase2, generateAndSaveHairProfile,
+} from '../services/scanService';
+import type { Scan, HairProfile } from '../types';
 
 export type ScanPhase = 'home' | 'camera' | 'processing' | 'result';
+
+// Max total time to wait between starting phase 1 and proceeding to phase 2,
+// when the user is filling in their hair profile alongside the vision call.
+// Phase 1 is ~18s, so this leaves ~12s of extra space for the user to finish.
+const HAIR_PROFILE_TOTAL_TIMEOUT_MS = 30_000;
 
 // Shared with app/confirm-traits.tsx — when the confirmation flow finalizes
 // a scan, it drops the completed Scan here and routes back to the scan tab,
@@ -17,12 +24,25 @@ export const PENDING_OBSERVATION_KEY = '@lume/pending_observation_scan';
 
 export function useScan() {
   const router = useRouter();
-  const [phase,          setPhase]          = useState<ScanPhase>('home');
-  const [processingStep, setProcessingStep] = useState('');
-  const [result,         setResult]         = useState<Scan | null>(null);
-  const [error,          setError]          = useState<string | null>(null);
-  const [recsLoading,    setRecsLoading]    = useState(false);
-  const [recsError,      setRecsError]      = useState(false);
+  const [phase,            setPhase]            = useState<ScanPhase>('home');
+  const [processingStep,   setProcessingStep]   = useState('');
+  const [result,           setResult]           = useState<Scan | null>(null);
+  const [error,            setError]            = useState<string | null>(null);
+  const [recsLoading,      setRecsLoading]      = useState(false);
+  const [recsError,        setRecsError]        = useState(false);
+  // True while phase 1 is running AND the user has no saved hair profile yet —
+  // scan.tsx uses this to swap the spinner for the inline HairProfileDuringVision.
+  const [showHairProfile,  setShowHairProfile]  = useState(false);
+
+  // Set by processPhoto when it enters the hair-profile-waiting phase.
+  // Called by scan.tsx from HairProfileDuringVision.onComplete. Pass null to
+  // skip (e.g. user dismissed before completing).
+  const hairProfileResolverRef = useRef<((p: HairProfile | null) => void) | null>(null);
+  const submitHairProfile = useCallback((profile: HairProfile | null) => {
+    const resolver = hairProfileResolverRef.current;
+    hairProfileResolverRef.current = null;
+    resolver?.(profile);
+  }, []);
 
   const openCamera = useCallback(() => {
     setError(null);
@@ -36,6 +56,14 @@ export function useScan() {
     setProcessingStep('');
     setRecsLoading(false);
     setRecsError(false);
+    setShowHairProfile(false);
+    // If a hair profile wait is in flight, release it so processPhoto can
+    // finish its cleanup path.
+    if (hairProfileResolverRef.current) {
+      const resolver = hairProfileResolverRef.current;
+      hairProfileResolverRef.current = null;
+      resolver(null);
+    }
   }, []);
 
   // Called by scan.tsx on focus. Picks up a scan finalized by the
@@ -55,10 +83,18 @@ export function useScan() {
     }
   }, []);
 
-  const processPhoto = useCallback(async (photoUri: string, genderParam: string, scanType: string = 'full_face') => {
+  const processPhoto = useCallback(async (
+    photoUri: string,
+    genderParam: string,
+    scanType: string = 'full_face',
+    needsHairProfile: boolean = false,
+  ) => {
     setError(null);
     setRecsError(false);
     setPhase('processing');
+    setShowHairProfile(needsHairProfile);
+
+    const processingStart = Date.now();
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -66,6 +102,7 @@ export function useScan() {
       if (!user) {
         router.replace('/(auth)/splash');
         setPhase('home');
+        setShowHairProfile(false);
         return;
       }
 
@@ -82,10 +119,60 @@ export function useScan() {
           profileError instanceof Error ? profileError.message : String(profileError));
       }
 
-      // PHASE 1 — vision + trait resolution (~18s)
+      // PHASE 1 — vision + trait resolution (~18s). Runs in parallel with the
+      // user filling out their hair profile (if needsHairProfile is true).
       setProcessingStep('Analysing your skin…');
       const phase1 = await runScanPhase1(photoUri, resolvedGender, user.id, undefined, scanType);
       const { partialScan } = phase1;
+
+      // If a hair profile is being collected in parallel, wait for the user to
+      // finish — but cap the total processing time so we never stall the flow.
+      if (needsHairProfile) {
+        setProcessingStep('Almost there…');
+        const elapsed         = Date.now() - processingStart;
+        const remainingTimeout = Math.max(0, HAIR_PROFILE_TOTAL_TIMEOUT_MS - elapsed);
+
+        const collectedProfile = await new Promise<HairProfile | null>((resolve) => {
+          hairProfileResolverRef.current = resolve;
+          if (remainingTimeout <= 0) {
+            hairProfileResolverRef.current = null;
+            resolve(null);
+            return;
+          }
+          setTimeout(() => {
+            if (hairProfileResolverRef.current === resolve) {
+              hairProfileResolverRef.current = null;
+              resolve(null);
+            }
+          }, remainingTimeout);
+        });
+
+        setShowHairProfile(false);
+
+        if (collectedProfile) {
+          // Save the raw profile synchronously so phase 2 can pick it up.
+          try {
+            await supabase
+              .from('users')
+              .update({ hair_profile: collectedProfile })
+              .eq('id', user.id);
+          } catch (saveErr: unknown) {
+            console.error('[useScan] hair profile save failed:',
+              saveErr instanceof Error ? saveErr.message : String(saveErr));
+          }
+
+          // Generate hair recommendations in the background so the hair tab
+          // is ready when the user next opens it. Don't block phase 2 on this.
+          const faceShape = (partialScan.face_shape as string | null) ?? null;
+          generateAndSaveHairProfile(user.id, collectedProfile, faceShape, resolvedGender)
+            .catch((err: unknown) => {
+              console.error('[useScan] background hair recs gen failed:',
+                err instanceof Error ? err.message : String(err));
+            });
+        }
+      } else {
+        setShowHairProfile(false);
+      }
 
       // If any trait needs user input, hand off to confirm-traits. We skip
       // phase 2 until the user has resolved all decisions — recs must be
@@ -148,6 +235,12 @@ export function useScan() {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       console.error('[useScan] processPhoto crashed:', msg);
       setPhase('camera');
+      setShowHairProfile(false);
+      if (hairProfileResolverRef.current) {
+        const resolver = hairProfileResolverRef.current;
+        hairProfileResolverRef.current = null;
+        resolver(null);
+      }
       setError('Something went wrong. Please try again.');
     }
   }, [router]);
@@ -159,6 +252,8 @@ export function useScan() {
     error,
     recsLoading,
     recsError,
+    showHairProfile,
+    submitHairProfile,
     openCamera,
     reset,
     processPhoto,

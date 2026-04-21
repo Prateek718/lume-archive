@@ -75,7 +75,7 @@ export default function OnboardingScreen() {
     }
 
     await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
-    router.replace('/(tabs)/scan');
+    router.replace('/scan');
   };
 
   return (

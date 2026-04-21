@@ -1,4 +1,4 @@
-// Makeup detail screen — Features | Technique | Products tabs. Women only.
+// Makeup detail screen — Features | Technique tabs. Women only.
 // Receives scanJson and gender as navigation params.
 
 import { useState, useEffect } from 'react';
@@ -9,14 +9,12 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
-import { PRODUCTS, getProductsForBrands, getProductNykaaUrl } from '../constants/productConstants';
-import type { Product } from '../constants/productConstants';
-import { logProductEvent, getProductMap } from '../services/scanService';
+import { getProductMap } from '../services/scanService';
 import { supabase } from '../lib/supabase';
 import type { Scan, MatchedProduct } from '../types';
 import ProductPickerSheet from '../components/ProductPickerSheet';
 
-type Tab = 'features' | 'technique' | 'products';
+type Tab = 'features' | 'technique';
 
 function formatCategoryName(cat: string): string {
   return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -36,8 +34,6 @@ function getMakeupCategoryForStep(label: string): string {
   };
   return map[label] ?? 'kajal_eyeliner';
 }
-
-interface ProductItem { icon: string; name: string; why: string; tag: string; }
 
 // ── Data helpers ───────────────────────────────────────────────────────────────
 
@@ -69,42 +65,6 @@ const UNDEREYE_TECHNIQUE: Record<string, string> = {
   normal: 'Apply a light concealer only where needed. Setting with a small amount of translucent powder prevents creasing throughout the day.',
 };
 
-function getMakeupProducts(browShape: string | null, undereye: string | null): ProductItem[] {
-  const base: ProductItem = {
-    icon: '◯',
-    name: 'SPF-infused tinted moisturiser',
-    why: 'Provides light coverage, hydration, and sun protection in one step — the most efficient daily base product. SPF is critical for preventing the hyperpigmentation that\'s common in Indian skin.',
-    tag: 'Daily base',
-  };
-
-  if (browShape === 'sparse') {
-    return [
-      { icon: '◇', name: 'Brow serum with peptides', why: 'Peptide-based serums stimulate follicle activity to produce thicker, denser brow hairs over consistent use of 8–12 weeks.', tag: 'Growth' },
-      { icon: '◆', name: 'Micro-tip brow pencil', why: 'Ultra-fine tip creates individual hair-like strokes for natural fullness — the most realistic result for sparse brows vs. a standard angled pencil.', tag: 'Definition' },
-      base,
-    ];
-  }
-  if (undereye === 'dark') {
-    return [
-      { icon: '◎', name: 'Caffeine eye cream', why: 'Improves microcirculation under the eye, reducing the blood pooling that contributes to dark circles — use morning and night for best results.', tag: 'Eye care' },
-      { icon: '◆', name: 'Peach colour corrector', why: 'Cancels blue-grey and purple undertones before concealer — this is what makes concealer work on dark circles rather than just masking them in grey.', tag: 'Colour correction' },
-      base,
-    ];
-  }
-  if (undereye === 'puffy') {
-    return [
-      { icon: '≡', name: 'Cold jade roller', why: 'Constricts blood vessels and drains lymphatic fluid — 5 minutes of use before makeup reduces visible puffiness more effectively than any product.', tag: 'De-puff' },
-      { icon: '◎', name: 'Caffeine + niacinamide eye gel', why: 'Caffeine reduces puffiness while niacinamide strengthens the thin under-eye skin and reduces discolouration simultaneously.', tag: 'Eye care' },
-      base,
-    ];
-  }
-  return [
-    { icon: '◎', name: 'Lightweight concealer', why: 'Thin-coverage formula that blends naturally for a no-makeup finish — heavy formulas emphasise texture and settle into fine lines.', tag: 'Coverage' },
-    { icon: '◇', name: 'Translucent setting powder', why: 'Sets concealer and foundation without adding more coverage or colour — prevents creasing under eyes and extends wear time.', tag: 'Setting' },
-    base,
-  ];
-}
-
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 export default function MakeupDetailScreen() {
@@ -115,9 +75,6 @@ export default function MakeupDetailScreen() {
   const rec  = scan?.recommendations;
 
   const [tab,              setTab]             = useState<Tab>('features');
-  const [preferredBrands,  setPreferredBrands]  = useState<string[]>([]);
-  const [brandsLoaded,     setBrandsLoaded]     = useState(false);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // Product picker state
   const [pickerVisible,  setPickerVisible]  = useState(false);
@@ -125,57 +82,25 @@ export default function MakeupDetailScreen() {
   const [pickerStep,     setPickerStep]     = useState('');
   const [pickerReason,   setPickerReason]   = useState('');
 
+  // Product map for picker — loaded from AsyncStorage (stored during scan)
+  const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
+
   useEffect(() => {
     const loadUserPrefs = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setBrandsLoaded(true); return; }
-      const { data } = await supabase
-        .from('users')
-        .select('preferred_brands_v2')
-        .eq('id', user.id)
-        .single();
-      const row = data as { preferred_brands_v2?: { makeup?: string[] } } | null;
-      const pb = row?.preferred_brands_v2 as { makeup?: string[] } | null;
-      setPreferredBrands(pb?.makeup ?? []);
+      if (!user) return;
       if (scan?.id) {
         getProductMap(scan.id).then(setProductMap);
       }
-      setBrandsLoaded(true);
     };
     loadUserPrefs();
   }, []);
-
-  const MAKEUP_CATEGORIES = ['foundation_fair', 'foundation_medium', 'foundation_deep', 'kajal_eyeliner', 'eyebrow_pencil', 'lipstick_nude', 'lipstick_red', 'lipstick_berry', 'lip_balm'];
-  const productRecs = (rec?.products ?? []).filter(p => MAKEUP_CATEGORIES.includes(p.category));
-  const visibleCategories = [...new Set(productRecs.map(p => p.category))];
-
-  const handleBuyPress = async (product: Product, category: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && scan?.id && !scan.id.startsWith('local_')) {
-      await logProductEvent({
-        userId:      user.id,
-        scanId:      scan.id,
-        productId:   product.id,
-        productName: product.name,
-        brand:       product.brand,
-        category,
-        eventType:   'clicked_buy',
-      });
-    }
-    const url = getProductNykaaUrl(product);
-    if (url) Linking.openURL(url);
-  };
-
-  const makeupRecs = rec?.makeup ?? null;
 
   // Skin context for no-base card
   const skinConcerns         = scan?.skin_concerns ?? [];
   const hasHyperpigmentation = skinConcerns.includes('hyperpigmentation') ||
                                skinConcerns.includes('uneven_texture');
   const needsBase            = hasHyperpigmentation;
-
-  // Product map for picker — loaded from AsyncStorage (stored during scan)
-  const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
 
   // Routine steps for technique tab — tappable, open product picker
   const makeupRoutineSteps: { label: string; reason: string }[] = [
@@ -216,7 +141,7 @@ export default function MakeupDetailScreen() {
       </View>
 
       <View style={s.tabBar}>
-        {(['features', 'technique', 'products'] as Tab[]).map(t => (
+        {(['features', 'technique'] as Tab[]).map(t => (
           <TouchableOpacity
             key={t}
             style={[s.tabPill, tab === t && s.tabPillActive]}
@@ -384,86 +309,6 @@ export default function MakeupDetailScreen() {
           </>
         )}
 
-        {/* ── PRODUCTS ── */}
-        {tab === 'products' && (
-          <>
-            {brandsLoaded && preferredBrands.length === 0 && (
-              <TouchableOpacity
-                style={s.noBrandsBanner}
-                onPress={() => router.push('/profile/my-brands' as never)}
-                activeOpacity={0.8}
-              >
-                <Text style={s.noBrandsTitle}>Set your preferred brands</Text>
-                <Text style={s.noBrandsSub}>We'll show products from brands you already trust</Text>
-                <Text style={s.noBrandsBtnText}>Set brands →</Text>
-              </TouchableOpacity>
-            )}
-
-            {productRecs.length === 0 ? (
-              <Text style={s.openingLine}>
-                No product recommendations yet — rescan to get personalised picks.
-              </Text>
-            ) : (
-              visibleCategories.map(cat => {
-                const catRec = productRecs.find(p => p.category === cat);
-                const product: Product | undefined =
-                  PRODUCTS.find(p => p.category === cat && p.name === catRec?.name && p.brand === catRec?.brand)
-                  ?? getProductsForBrands({ category: cat, preferredBrands, fallbackTier: 'budget', gender: 'women', limit: 1 })[0];
-                const isExpanded = expandedCategory === cat;
-                return (
-                  <View key={cat} style={s.catTile}>
-                    <TouchableOpacity
-                      style={s.catHeader}
-                      onPress={() => setExpandedCategory(isExpanded ? null : cat)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={s.catName}>{formatCategoryName(cat)}</Text>
-                      <Text style={s.chevron}>{isExpanded ? '∧' : '∨'}</Text>
-                    </TouchableOpacity>
-
-                    {isExpanded && (
-                      product == null ? (
-                        <Text style={s.noProductsText}>No matching products found.</Text>
-                      ) : (
-                        <View style={s.expandedProduct}>
-                          <View style={s.matchMeterWrap}>
-                            <View style={s.matchMeterHeader}>
-                              <Text style={s.matchLabel}>Match</Text>
-                              <Text style={s.matchScore}>{catRec?.match_score ?? 0}%</Text>
-                            </View>
-                            <View style={s.matchTrack}>
-                              <View style={[s.matchFill, { width: `${catRec?.match_score ?? 0}%` as `${number}%` }]} />
-                            </View>
-                          </View>
-                          {product.isPreferredBrand && (
-                            <View style={s.preferredBadge}>
-                              <Text style={s.preferredBadgeText}>Your brand</Text>
-                            </View>
-                          )}
-                          <Text style={s.productName}>{product.name}</Text>
-                          <Text style={s.productMeta}>
-                            {product.brand} · ₹{product.price_inr.toLocaleString('en-IN')}
-                          </Text>
-                          {catRec?.reason ? (
-                            <Text style={s.productReason}>{catRec.reason}</Text>
-                          ) : null}
-                          <TouchableOpacity
-                            style={s.buyBtn}
-                            onPress={() => handleBuyPress(product!, cat)}
-                            activeOpacity={0.8}
-                          >
-                            <Text style={s.buyBtnText}>Buy on Nykaa</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )
-                    )}
-                  </View>
-                );
-              })
-            )}
-          </>
-        )}
-
         <View style={{ height: Spacing.xxxl }} />
       </ScrollView>
 
@@ -508,23 +353,6 @@ function StepRow({ n, text, onPress }: { n: number; text: string; onPress?: () =
     );
   }
   return <View style={s.stepRow}>{inner}</View>;
-}
-
-function ProductCard({ icon, name, why, tag, iconBg, iconColor }: ProductItem & { iconBg: string; iconColor: string }) {
-  return (
-    <View style={s.productCard}>
-      <View style={[s.productIcon, { backgroundColor: iconBg }]}>
-        <Text style={[s.productIconChar, { color: iconColor }]}>{icon}</Text>
-      </View>
-      <View style={s.productBody}>
-        <Text style={s.productName}>{name}</Text>
-        <Text style={s.productWhy}>{why}</Text>
-        <View style={s.productTagPill}>
-          <Text style={s.productTagText}>{tag}</Text>
-        </View>
-      </View>
-    </View>
-  );
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
@@ -583,62 +411,4 @@ const s = StyleSheet.create({
   noBaseCard:  { backgroundColor: Colors.successBg, borderRadius: 11, borderWidth: 1, borderColor: Colors.successBorder, padding: 12, marginBottom: 12 },
   noBaseLabel: { fontSize: 9, color: Colors.green, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
   noBaseBody:  { fontSize: 12, color: Colors.successText, lineHeight: 18 },
-
-  openingLine: { fontSize: 15, color: Colors.text, lineHeight: 22, marginBottom: Spacing.md },
-
-  // Collapsible category tiles
-  noBrandsBanner: {
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.accentTintBorder,
-    borderRadius: 12, padding: 14, marginBottom: 8,
-  },
-  noBrandsTitle:   { fontFamily: Typography.serif, fontSize: 22, color: Colors.text, marginBottom: 6 },
-  noBrandsSub:     { fontSize: 13, color: Colors.text2, lineHeight: 20 },
-  noBrandsBtnText: { fontSize: 13, color: Colors.accent, marginTop: 8 },
-
-  catTile: {
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 12, marginBottom: 6, overflow: 'hidden',
-  },
-  catHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 12,
-  },
-  catName:   { fontSize: 15, color: Colors.text, fontWeight: '600' },
-  catReason: { fontSize: 13, color: Colors.text3, lineHeight: 18 },
-  chevron:   { fontSize: 13, color: Colors.text2 },
-
-  noProductsText: { fontSize: 11, color: Colors.text3, padding: 14 },
-
-  expandedProduct: {
-    backgroundColor: Colors.accentTintLight, borderWidth: 1, borderTopWidth: 0,
-    borderColor: Colors.accentTintBorder, borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10, padding: 14, marginBottom: 5,
-  },
-  matchMeterWrap:   { marginBottom: 0 },
-  matchMeterHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  matchLabel:       { fontSize: 11, color: Colors.text2 },
-  matchScore:       { fontSize: 11, color: Colors.accent, fontWeight: '500' },
-  matchTrack:       { height: 3, backgroundColor: Colors.border, borderRadius: 2, overflow: 'hidden' },
-  matchFill:        { height: '100%', backgroundColor: Colors.accent, borderRadius: 2 },
-
-  preferredBadge:     { alignSelf: 'flex-start', backgroundColor: Colors.accentTintStrong, borderRadius: Radius.pill, paddingHorizontal: 6, paddingVertical: 2, marginTop: 12, marginBottom: 3 },
-  preferredBadgeText: { fontSize: 9, color: Colors.accent, fontWeight: '500' },
-  productName:        { fontSize: 15, color: Colors.text, fontWeight: '500', marginTop: 12, marginBottom: 3 },
-  productMeta:        { fontSize: 13, color: Colors.text2, marginBottom: 8 },
-  productReason:      { fontSize: 11, color: Colors.text3, lineHeight: 17, marginBottom: 12 },
-  buyBtn:     { backgroundColor: Colors.accent, borderRadius: 8, paddingVertical: 12, width: '100%', alignItems: 'center' },
-  buyBtnText: { fontSize: 14, color: Colors.textOnAccent, fontWeight: '600' },
-
-  productCard: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: Colors.surface, borderRadius: Radius.card,
-    borderWidth: 1, borderColor: Colors.border,
-    padding: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.md,
-  },
-  productIcon:     { width: 44, height: 44, borderRadius: Radius.icon, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  productIconChar: { fontSize: 18 },
-  productBody:     { flex: 1 },
-  productWhy:      { fontSize: 15, color: Colors.text2, lineHeight: 19, marginBottom: Spacing.sm },
-  productTagPill:  { alignSelf: 'flex-start', backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  productTagText:  { fontSize: Typography.size.xs, color: Colors.text2 },
 });

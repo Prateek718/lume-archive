@@ -14,7 +14,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../../lib/supabase';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { FIRST_LAUNCH_KEY } from '../_layout';
-import { getSavedRecommendations } from '../../services/scanService';
 import type { Scan, HairProfile, PreferredBrands } from '../../types';
 import { isBaldProfile } from '../../types';
 import { inferBudgetFromBrands } from '../../constants/productConstants';
@@ -252,14 +251,9 @@ export default function ProfileScreen() {
       ].filter(Boolean) as string[]
     : [];
 
-  async function openLatestRecommendation() {
-    if (!latestScan) return;
-    const cached = await getSavedRecommendations(latestScan.id ?? '');
-    if (cached) {
-      router.push({ pathname: '/recommendations', params: { scanJson: JSON.stringify(cached) } });
-    } else {
-      router.push({ pathname: '/recommendations', params: { scanId: latestScan.id } });
-    }
+  function openLatestRecommendation() {
+    if (!latestScan?.id) return;
+    router.push({ pathname: '/recommendations-view', params: { scanId: latestScan.id } });
   }
 
   return (
@@ -276,11 +270,15 @@ export default function ProfileScreen() {
           </View>
           <Text style={s.heroName}>{displayName}</Text>
           {city ? <Text style={s.heroCity}>{city}</Text> : null}
+        </View>
 
-          {latestScan && (
+        {/* ── Your analysis ── */}
+        <Text style={s.sectionLabel}>YOUR ANALYSIS</Text>
+        <View style={s.analysisWrap}>
+          {latestScan ? (
             <TouchableOpacity style={s.tierCard} onPress={openLatestRecommendation} activeOpacity={0.85}>
               <Text style={s.scanDateText}>
-                {new Date(latestScan.created_at).toLocaleDateString('en-GB', {
+                Latest scan · {new Date(latestScan.created_at).toLocaleDateString('en-GB', {
                   day: 'numeric', month: 'short', year: 'numeric',
                 })}
               </Text>
@@ -295,21 +293,41 @@ export default function ProfileScreen() {
               )}
               <Text style={s.viewRecsLink}>View recommendations →</Text>
             </TouchableOpacity>
-          )}
-
-          {!latestScan && (
+          ) : (
             <View style={s.noScanCard}>
               <Text style={s.noScanText}>Take your first scan to see your personalised plan.</Text>
             </View>
           )}
 
-          <TouchableOpacity
-            style={s.viewAllBtn}
-            onPress={() => router.push('/profile/recommendations' as any)}
-            activeOpacity={0.7}
-          >
-            <Text style={s.viewAllText}>View all recommendations →</Text>
-          </TouchableOpacity>
+          <View style={s.card}>
+            <TouchableOpacity
+              style={s.row}
+              onPress={() => router.push('/scan')}
+              activeOpacity={0.7}
+            >
+              <View>
+                <Text style={s.rowLabel}>New scan</Text>
+                <Text style={s.rowSub}>Update your plan with a fresh analysis</Text>
+              </View>
+              <Text style={s.rowArrow}>›</Text>
+            </TouchableOpacity>
+            {latestScan && (
+              <>
+                <View style={s.divider} />
+                <TouchableOpacity
+                  style={s.row}
+                  onPress={() => router.push('/profile/scan-history' as any)}
+                  activeOpacity={0.7}
+                >
+                  <View>
+                    <Text style={s.rowLabel}>View past analyses</Text>
+                    <Text style={s.rowSub}>See how your plan has evolved</Text>
+                  </View>
+                  <Text style={s.rowArrow}>›</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </View>
 
         {/* ── Notifications ── */}
@@ -499,16 +517,16 @@ const s = StyleSheet.create({
   heroName:   { fontFamily: Typography.serif, fontSize: 20, color: Colors.text, marginBottom: 4 },
   heroCity:   { fontSize: 13, color: Colors.text, marginBottom: Spacing.md },
 
-  // Tier card
+  // Your analysis section
+  analysisWrap: { gap: Spacing.sm },
+
   tierCard: {
-    width: '100%',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.accent,
-    padding: Spacing.md,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+    backgroundColor:  Colors.surface,
+    borderRadius:     Radius.card,
+    borderWidth:      1,
+    borderColor:      Colors.accent,
+    padding:          Spacing.md,
+    marginHorizontal: Spacing.lg,
   },
   scanDateText: { fontSize: 12, color: Colors.text2, marginBottom: Spacing.xs },
   viewRecsLink: { fontSize: 12, color: Colors.accent, marginTop: Spacing.xs },
@@ -516,22 +534,16 @@ const s = StyleSheet.create({
   tierPill:     { backgroundColor: Colors.surface2, borderRadius: Radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
   tierPillText: { fontSize: 10, color: Colors.accent, textTransform: 'capitalize' },
 
-  // No scan state
   noScanCard: {
-    width: '100%',
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
-    alignItems: 'center',
+    backgroundColor:  Colors.surface,
+    borderRadius:     Radius.card,
+    borderWidth:      1,
+    borderColor:      Colors.border,
+    padding:          Spacing.md,
+    alignItems:       'center',
+    marginHorizontal: Spacing.lg,
   },
   noScanText: { fontSize: 13, color: Colors.text2, textAlign: 'center' },
-
-  viewAllBtn:  { paddingVertical: 8, marginTop: 4 },
-  viewAllText: { fontSize: 13, color: Colors.text },
 
   // ── Section label ──
   sectionLabel: {

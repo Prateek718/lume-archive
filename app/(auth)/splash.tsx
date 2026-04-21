@@ -32,7 +32,7 @@ export default function SplashScreen() {
         if (!profile?.onboarding_complete) {
           router.replace('/(auth)/onboarding');
         } else {
-          router.replace('/(tabs)/scan');
+          router.replace('/(tabs)/routine');
         }
         return;
       }
@@ -42,7 +42,7 @@ export default function SplashScreen() {
       if (!firstLaunchDone) {
         router.replace('/(auth)/signup');
       } else {
-        router.replace('/(tabs)/scan');
+        router.replace('/(auth)/login');
       }
     };
 

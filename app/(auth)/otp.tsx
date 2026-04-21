@@ -25,7 +25,7 @@ export default function OtpScreen() {
     if (token && type === 'recovery') {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
-          router.replace('/(tabs)/scan');
+          router.replace('/(tabs)/routine');
         }
       });
     }

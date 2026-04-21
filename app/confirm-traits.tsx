@@ -146,7 +146,7 @@ export default function ConfirmTraitsScreen() {
         PENDING_OBSERVATION_KEY,
         JSON.stringify(completedScan),
       );
-      router.replace('/(tabs)/scan');
+      router.replace('/scan');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error('[confirm-traits] finalize failed:', msg);
