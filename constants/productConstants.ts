@@ -237,10 +237,16 @@ const ALIAS_LOOKUP = (() => {
   return map;
 })();
 
-// Normalise free-text category descriptors to canonical IDs. Falls back to a
-// snake_cased version of the input with a console.warn so we can find gaps.
+const CANONICAL_CATEGORY_SET = new Set<string>(CANONICAL_CATEGORIES);
+
+// Normalise free-text category descriptors to canonical IDs. Canonical IDs
+// pass through silently. Free text falls through to fuzzy alias matching, and
+// only unmatched inputs emit a warning — so Sprint 2+ prompts that already emit
+// canonical IDs don't spam the logs.
 export function normalizeCategory(input: string | null | undefined): string {
   if (!input) return '';
+  if (CANONICAL_CATEGORY_SET.has(input)) return input;
+
   const key = input.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
   const hit = ALIAS_LOOKUP.get(key);
   if (hit) return hit;
@@ -250,7 +256,9 @@ export function normalizeCategory(input: string | null | undefined): string {
     if (k.replace(/\s+/g, '') === collapsed) return v;
   }
   const snake = key.replace(/\s+/g, '_');
-  console.warn(`[normalizeCategory] no match for "${input}" — falling back to "${snake}"`);
+  if (!CANONICAL_CATEGORY_SET.has(snake)) {
+    console.warn(`[normalizeCategory] no match for "${input}" — falling back to "${snake}"`);
+  }
   return snake;
 }
 

@@ -17,6 +17,26 @@ import { FIRST_LAUNCH_KEY } from '../_layout';
 import type { Scan, HairProfile, PreferredBrands } from '../../types';
 import { isBaldProfile } from '../../types';
 import { inferBudgetFromBrands } from '../../constants/productConstants';
+import {
+  fetchAllMilestones,
+  MILESTONES,
+  type EarnedMilestone,
+  type MilestoneKey,
+} from '../../lib/milestones';
+import { fetchDailyAdherence } from '../../services/habitService';
+import { computeRollingAdherence, ADHERENCE_WINDOW_DAYS } from '../../lib/habit';
+
+function milestoneGlyph(key: MilestoneKey): string {
+  switch (key) {
+    case 'first_routine':     return '✓';
+    case 'week_one':          return '✓';
+    case 'consistency_30':    return '◆';
+    case 'first_rescan':      return '◎';
+    case 'first_improvement': return '↑';
+    case 'year_one':          return '★';
+    default:                  return '◦';
+  }
+}
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -33,6 +53,9 @@ export default function ProfileScreen() {
   const [eveningTime,       setEveningTime]       = useState(new Date(new Date().setHours(21, 0, 0, 0)));
   const [showMorningPicker, setShowMorningPicker] = useState(false);
   const [showEveningPicker, setShowEveningPicker] = useState(false);
+  const [milestones,        setMilestones]        = useState<EarnedMilestone[]>([]);
+  const [adherencePct,      setAdherencePct]      = useState<number | null>(null);
+  const [adherenceDays,     setAdherenceDays]     = useState<number>(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,6 +101,23 @@ export default function ProfileScreen() {
       .eq('user_id', user.id)
       .eq('is_active', true);
     setKitCount(kitActiveCount ?? 0);
+
+    try {
+      const all = await fetchAllMilestones(user.id);
+      setMilestones(all);
+    } catch {
+      setMilestones([]);
+    }
+
+    try {
+      const daily = await fetchDailyAdherence(user.id, ADHERENCE_WINDOW_DAYS);
+      const scheduledDays = daily.filter(d => d.scheduled_count > 0).length;
+      setAdherenceDays(scheduledDays);
+      setAdherencePct(scheduledDays >= 7 ? computeRollingAdherence(daily) : null);
+    } catch {
+      setAdherenceDays(0);
+      setAdherencePct(null);
+    }
 
     const reminderRaw = await AsyncStorage.getItem('@lume/reminder_enabled');
     if (reminderRaw === 'true') {
@@ -328,6 +368,80 @@ export default function ProfileScreen() {
               </>
             )}
           </View>
+        </View>
+
+        {/* ── Adherence ── */}
+        <Text style={s.sectionLabel}>ADHERENCE</Text>
+        <View style={s.adherenceCard}>
+          {adherencePct == null ? (
+            <>
+              <Text style={s.adherenceEmpty}>Not enough data yet</Text>
+              <Text style={s.adherenceEmptySub}>Check in for a few more days</Text>
+            </>
+          ) : (
+            <>
+              <Text style={s.adherenceNum}>{adherencePct}%</Text>
+              <Text style={s.adherenceLabel}>Adherence</Text>
+              <Text style={s.adherenceSub}>Last 30 days</Text>
+            </>
+          )}
+        </View>
+
+        {/* ── Milestones ── */}
+        <Text style={s.sectionLabel}>MILESTONES</Text>
+        <View style={s.card}>
+          <View style={s.milestoneHeader}>
+            <Text style={s.milestoneCount}>
+              {milestones.length} milestone{milestones.length === 1 ? '' : 's'} earned
+            </Text>
+          </View>
+          {milestones.length === 0 ? (
+            <>
+              <View style={s.divider} />
+              <Text style={s.milestoneEmpty}>
+                No milestones yet — keep using your routine
+              </Text>
+            </>
+          ) : (
+            <>
+              {milestones.slice(0, 3).map(m => {
+                const key = m.milestone_key as MilestoneKey;
+                const def = MILESTONES[key];
+                if (!def) return null;
+                return (
+                  <View key={m.id}>
+                    <View style={s.divider} />
+                    <View style={s.milestoneRow}>
+                      <View style={s.milestoneIcon}>
+                        <Text style={s.milestoneGlyph}>{milestoneGlyph(key)}</Text>
+                      </View>
+                      <View style={s.milestoneBody}>
+                        <Text style={s.milestoneTitle}>{def.title}</Text>
+                        <Text style={s.milestoneDate}>
+                          {new Date(m.earned_at).toLocaleDateString('en-GB', {
+                            day: 'numeric', month: 'short', year: 'numeric',
+                          })}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+              {milestones.length > 3 && (
+                <>
+                  <View style={s.divider} />
+                  <TouchableOpacity
+                    style={s.row}
+                    onPress={() => router.push('/profile/milestones' as any)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.rowLabel}>View all milestones</Text>
+                    <Text style={s.rowArrow}>›</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </>
+          )}
         </View>
 
         {/* ── Notifications ── */}
@@ -586,4 +700,46 @@ const s = StyleSheet.create({
   actionsDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
   deleteBtn:      { paddingVertical: 12, alignItems: 'center' },
   deleteText:     { fontSize: 13, color: Colors.danger },
+
+  // Adherence
+  adherenceCard: {
+    backgroundColor:   Colors.surface,
+    borderRadius:      Radius.card,
+    borderWidth:       1,
+    borderColor:       Colors.border,
+    marginHorizontal:  Spacing.lg,
+    paddingVertical:   Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    alignItems:        'center',
+  },
+  adherenceNum:      { fontFamily: Typography.serif, fontSize: 40, color: Colors.accent, lineHeight: 46 },
+  adherenceLabel:    { fontSize: 13, color: Colors.text, marginTop: 4 },
+  adherenceSub:      { fontSize: 11, color: Colors.text2, marginTop: 2 },
+  adherenceEmpty:    { fontFamily: Typography.serif, fontSize: 16, color: Colors.text },
+  adherenceEmptySub: { fontSize: 12, color: Colors.text2, marginTop: 4 },
+
+  // Milestones
+  milestoneHeader: { paddingVertical: 13 },
+  milestoneCount:  { fontSize: 13, color: Colors.text2 },
+  milestoneEmpty:  { fontSize: 13, color: Colors.text2, paddingVertical: 13 },
+  milestoneRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    paddingVertical: 12,
+    gap:           Spacing.md,
+  },
+  milestoneIcon: {
+    width:           32,
+    height:          32,
+    borderRadius:    16,
+    borderWidth:     1,
+    borderColor:     Colors.accent,
+    backgroundColor: Colors.surface2,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  milestoneGlyph: { fontSize: 14, color: Colors.accent, lineHeight: 18 },
+  milestoneBody:  { flex: 1 },
+  milestoneTitle: { fontSize: 14, color: Colors.text },
+  milestoneDate:  { fontSize: 11, color: Colors.text3, marginTop: 2 },
 });

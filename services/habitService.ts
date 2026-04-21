@@ -8,6 +8,7 @@ import {
   type DayAdherence,
   type ScheduledRow,
 } from '../lib/habit';
+import { checkMilestonesForCheckin } from '../lib/milestones';
 import type {
   Scan, HairProfile, HairRoutineStep, HairRecommendations,
   Recommendations, RoutineStep,
@@ -178,6 +179,9 @@ export async function recordCheckin(
     .eq('superseded', false);
 
   if (error) throw error;
+
+  // Fire-and-forget milestone check — must not block the user's check-in.
+  void checkMilestonesForCheckin(userId);
 }
 
 export async function unrecordCheckin(userId: string, stepId: string, date: string): Promise<void> {
@@ -215,6 +219,8 @@ export async function recordBulkCheckin(
     .select('id');
 
   if (error) throw error;
+
+  void checkMilestonesForCheckin(userId);
   return data?.length ?? 0;
 }
 

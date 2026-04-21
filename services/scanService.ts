@@ -140,6 +140,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { scheduleRescanNudge, cancelRescanNudge } from './notificationService';
 import { scheduleRoutineForScan, supersedePreviousScanRows } from './habitService';
+import { checkMilestonesForScan } from '../lib/milestones';
 import { analyseWithGemini } from '../lib/gemini';
 import {
   getRecommendationsFromGemini,
@@ -789,6 +790,8 @@ export async function runScanPhase2(
     } catch (err) {
       console.error('[habit-schedule] FAILED', err);
     }
+
+    void checkMilestonesForScan(userId, data.id as string);
   }
 
   return data as Scan;
