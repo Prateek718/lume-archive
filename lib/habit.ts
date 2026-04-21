@@ -263,8 +263,9 @@ function washFrequencyDays(freq: string | undefined | null): number {
 }
 
 // ─── Scheduling: beard defaults ──────────────────────────────────────────────
-// BeardRecommendation has no structured routine. We use fixed defaults when a
-// user has non-zero beard density.
+// Used as a fallback when the scan's beard recommendations don't include a
+// structured steps array (e.g. legacy scans). New scans embed beard.steps
+// directly and we honour those instead.
 const BEARD_DEFAULT_STEPS = [
   { step_id: 'beard_wash', time_of_day: 'daily' as const, cadence: 'every_wash' as const },  // follows hair wash rhythm
   { step_id: 'beard_oil',  time_of_day: 'pm'    as const, cadence: 'daily'      as const },
@@ -283,6 +284,24 @@ export interface GenerateScheduleInput {
   days?:           number;    // how many days to pre-generate; defaults to 28
 }
 
+// Shape of a beard step embedded in scan.recommendations.beard. New-format
+// beard recommendations carry a `steps` array; legacy scans don't.
+interface BeardStep extends RoutineStep {
+  cadence?: 'daily' | 'every_wash' | 'weekly' | 'monthly';
+}
+
+// Normalise a skin step to the new schema: derive time_of_day from legacy
+// step_id prefixes (skin_am_*, skin_pm_*) when the field is missing.
+function resolveSkinTimeOfDay(step: RoutineStep): ('am' | 'pm')[] {
+  if (Array.isArray(step.time_of_day) && step.time_of_day.length > 0) {
+    return step.time_of_day;
+  }
+  if (step.step_id.startsWith('skin_am_')) return ['am'];
+  if (step.step_id.startsWith('skin_pm_')) return ['pm'];
+  // New-schema step without explicit time_of_day → default to both slots.
+  return ['am', 'pm'];
+}
+
 export function generateScheduledRows(input: GenerateScheduleInput): ScheduledRow[] {
   const {
     scanId,
@@ -296,30 +315,56 @@ export function generateScheduledRows(input: GenerateScheduleInput): ScheduledRo
 
   const rows: ScheduledRow[] = [];
 
-  const skinMorning: RoutineStep[] = scan.recommendations?.skin?.routine?.morning ?? [];
-  const skinEvening: RoutineStep[] = scan.recommendations?.skin?.routine?.evening ?? [];
+  // ── Skin: support both schemas. Prefer new `steps` array when present. ──
+  const newSkinSteps: RoutineStep[] = scan.recommendations?.skin?.steps ?? [];
+  const legacyMorning: RoutineStep[] = scan.recommendations?.skin?.routine?.morning ?? [];
+  const legacyEvening: RoutineStep[] = scan.recommendations?.skin?.routine?.evening ?? [];
+
+  // Materialise an effective list of skin steps with explicit time_of_day arrays.
+  type EffectiveSkinStep = { step_id: string; time_of_day: ('am' | 'pm')[] };
+  const effectiveSkin: EffectiveSkinStep[] = (() => {
+    if (newSkinSteps.length > 0) {
+      return newSkinSteps
+        .filter(s => {
+          if (!s.step_id) {
+            console.log('[habit-gen] skipping skin step without step_id', { step: s });
+            return false;
+          }
+          return !s.step_id.startsWith('makeup_');
+        })
+        .map(s => ({ step_id: s.step_id, time_of_day: resolveSkinTimeOfDay(s) }));
+    }
+    // Legacy path: morning + evening arrays.
+    const list: EffectiveSkinStep[] = [];
+    for (const s of legacyMorning) {
+      if (!s.step_id) { console.log('[habit-gen] skipping legacy morning step without step_id', { step: s }); continue; }
+      if (s.step_id.startsWith('makeup_')) continue;
+      list.push({ step_id: s.step_id, time_of_day: ['am'] });
+    }
+    for (const s of legacyEvening) {
+      if (!s.step_id) { console.log('[habit-gen] skipping legacy evening step without step_id', { step: s }); continue; }
+      if (s.step_id.startsWith('makeup_')) continue;
+      list.push({ step_id: s.step_id, time_of_day: ['pm'] });
+    }
+    return list;
+  })();
+
   console.log('[habit-gen] inputs:', {
-    hasRecommendations: !!scan.recommendations,
-    skinMorningCount:   skinMorning.length,
-    skinEveningCount:   skinEvening.length,
-    beard_density:      scan.beard_density,
-    userHairProfilePresent: !!userHairProfile,
-    userHairRoutineCount:   (userHairRoutine ?? []).length,
+    hasRecommendations:      !!scan.recommendations,
+    newSkinStepsCount:       newSkinSteps.length,
+    legacyMorningCount:      legacyMorning.length,
+    legacyEveningCount:      legacyEvening.length,
+    effectiveSkinCount:      effectiveSkin.length,
+    beard_density:           scan.beard_density,
+    userHairProfilePresent:  !!userHairProfile,
+    userHairRoutineCount:    (userHairRoutine ?? []).length,
   });
 
-  // Skip makeup_* entirely — makeup is not tracked.
-  // Also skip items with a missing step_id (data-quality guard — legacy scans
-  // or partial Gemini output may lack this field even though the type says it's required).
-  const isTrackedSkin = (s: RoutineStep, src: string) => {
-    if (!s.step_id) {
-      console.log('[habit-gen] skipping skin step without step_id', { src, step: s });
-      return false;
-    }
-    return !s.step_id.startsWith('makeup_');
-  };
-
-  const trackedMorning = skinMorning.filter((s) => isTrackedSkin(s, 'morning'));
-  const trackedEvening = skinEvening.filter((s) => isTrackedSkin(s, 'evening'));
+  // ── Beard: support new steps array with fallback to defaults ──
+  const beardRecsRaw = scan.recommendations?.beard as { steps?: BeardStep[] } | null | undefined;
+  const beardSteps: BeardStep[] | null = Array.isArray(beardRecsRaw?.steps) && beardRecsRaw!.steps!.length > 0
+    ? beardRecsRaw!.steps!.filter(s => !!s.step_id)
+    : null;
 
   const hasBeard = scan.beard_density && scan.beard_density !== 'none';
   const washFreqDays = washFrequencyDays(userHairProfile?.wash_frequency);
@@ -337,30 +382,45 @@ export function generateScheduledRows(input: GenerateScheduleInput): ScheduledRo
     const dayOffset = i;                                    // 0-based offset from startDate
     const isWashDay = dayOffset % washFreqDays === 0;       // wash days anchored to startDate
 
-    // Skin AM — every day
-    for (const s of trackedMorning) {
-      rows.push({ user_id: userId, scan_id: scanId, step_id: s.step_id, time_of_day: 'am', date });
-    }
-    // Skin PM — every day
-    for (const s of trackedEvening) {
-      rows.push({ user_id: userId, scan_id: scanId, step_id: s.step_id, time_of_day: 'pm', date });
-    }
-
-    // Beard — daily steps always, beard_wash only on wash days
-    if (hasBeard) {
-      for (const b of BEARD_DEFAULT_STEPS) {
-        if (b.step_id === 'beard_wash' && !isWashDay) continue;
-        rows.push({
-          user_id:     userId,
-          scan_id:     scanId,
-          step_id:     b.step_id,
-          time_of_day: b.time_of_day,
-          date,
-        });
+    // Skin — one row per (step, time_of_day) per day
+    for (const s of effectiveSkin) {
+      for (const slot of s.time_of_day) {
+        rows.push({ user_id: userId, scan_id: scanId, step_id: s.step_id, time_of_day: slot, date });
       }
     }
 
-    // Hair — cadence-aware
+    // Beard — prefer the scan's beard.steps if present, else defaults.
+    if (hasBeard) {
+      if (beardSteps) {
+        for (const b of beardSteps) {
+          // Wash steps follow the hair wash cadence; everything else is daily.
+          if (b.step_id === 'beard_wash' && !isWashDay) continue;
+          // Determine time_of_day. New schema uses an array; default to 'daily'.
+          const slots: ScheduledRow['time_of_day'][] = (() => {
+            if (Array.isArray(b.time_of_day) && b.time_of_day.length > 0) {
+              return b.time_of_day as ScheduledRow['time_of_day'][];
+            }
+            return ['daily'];
+          })();
+          for (const slot of slots) {
+            rows.push({ user_id: userId, scan_id: scanId, step_id: b.step_id, time_of_day: slot, date });
+          }
+        }
+      } else {
+        for (const b of BEARD_DEFAULT_STEPS) {
+          if (b.step_id === 'beard_wash' && !isWashDay) continue;
+          rows.push({
+            user_id:     userId,
+            scan_id:     scanId,
+            step_id:     b.step_id,
+            time_of_day: b.time_of_day,
+            date,
+          });
+        }
+      }
+    }
+
+    // Hair — cadence-aware (unchanged)
     for (const h of hairSteps) {
       let schedule = false;
       let time_of_day: ScheduledRow['time_of_day'] = 'daily';
@@ -390,19 +450,16 @@ export function generateScheduledRows(input: GenerateScheduleInput): ScheduledRo
 
   if (rows.length === 0) {
     console.warn('[habit-gen] returning 0 rows — reasons:', {
-      noRecommendations:   !scan.recommendations,
-      noSkinMorning:       skinMorning.length === 0,
-      noSkinEvening:       skinEvening.length === 0,
-      noBeard:             !hasBeard,
-      noHairRoutine:       hairSteps.length === 0,
+      noRecommendations: !scan.recommendations,
+      noSkinSteps:       effectiveSkin.length === 0,
+      noBeard:           !hasBeard,
+      noHairRoutine:     hairSteps.length === 0,
     });
-    // Sanity check: if we were given skin routine items but produced nothing,
-    // something upstream (step_id missing, all filtered as makeup, etc.) ate them.
-    if (skinMorning.length > 0 || skinEvening.length > 0) {
+    if (effectiveSkin.length > 0) {
       console.warn(
-        '[habit-gen] skin routine was present but produced 0 rows — ' +
-        'check for missing step_id or all steps filtered as makeup',
-        { skinMorningRaw: skinMorning, skinEveningRaw: skinEvening },
+        '[habit-gen] skin steps were present but produced 0 rows — ' +
+        'check for missing step_id or all filtered as makeup',
+        { effectiveSkin },
       );
     }
   }

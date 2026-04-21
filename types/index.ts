@@ -3,9 +3,10 @@
 
 // ─── Brand preferences ────────────────────────────────────────────────────────
 export interface PreferredBrands {
-  skin:   string[];
-  hair:   string[];
-  makeup: string[];
+  skin:    string[];
+  hair:    string[];
+  makeup:  string[];
+  beard?:  string[];   // optional — present for male/other users post Phase D
 }
 
 export type BudgetTier = 'budget' | 'mid' | 'premium';
@@ -16,6 +17,15 @@ export type BrandPhilosophy =
   | 'professional_salon'
   | 'luxury'
   | 'mass_market';
+
+// ─── Beard goal ──────────────────────────────────────────────────────────────
+// Captured during the first scan with detected beard density. Drives which
+// beard products get prescribed and which actives the scoring boosts.
+export type BeardGoal =
+  | 'clean_simple'
+  | 'healthy_groomed'
+  | 'growing_thickening'
+  | 'styled';
 
 // ─── User ────────────────────────────────────────────────────────────────────
 // Matches the public.users table.
@@ -39,6 +49,7 @@ export interface User {
   preferred_brands_v2:    PreferredBrands | null;
   budget?:                string;
   traits?:                UserTraits;
+  beard_goal?:            BeardGoal | null;
 }
 
 // ─── Stable diagnostic traits ────────────────────────────────────────────────
@@ -108,12 +119,14 @@ export interface HairRecommendations {
 }
 
 export interface HairRoutineStep {
-  step_id: string;                                    // e.g. "hair_shampoo", "hair_condition"
-  label:   string;
-  product: string;
-  cadence: 'every_wash' | 'weekly' | 'monthly';
-  level:   'simple' | 'balanced' | 'full';
-  order:   number;
+  step_id:             string;       // e.g. "hair_shampoo", "hair_conditioner"
+  label:               string;
+  product:             string;
+  cadence:             'every_wash' | 'weekly' | 'monthly';
+  level:               'simple' | 'balanced' | 'full';
+  order:               number;
+  category?:           string;       // canonical category id (Phase D+)
+  clinical_reasoning?: string;       // 1-2 sentences tied to user's hair profile
 }
 
 // ─── Recommendations ─────────────────────────────────────────────────────────
@@ -170,19 +183,27 @@ export interface ProductRecommendation {
 }
 
 export interface RoutineStep {
-  step_id: string;                         // e.g. "skin_am_cleanse", "beard_wash"
-  label:   string;
-  product: string;
-  level:   string;
-  order:   number;
+  step_id:             string;        // canonical id, e.g. "skin_cleanse", "skin_treat_1", "beard_wash"
+  label:               string;        // short noun, e.g. "Cleanse", "Treat", "Moisturize", "Protect"
+  product:             string;        // generic descriptor, e.g. "Niacinamide serum"
+  level:               string;        // legacy field — retained for older scans, unused by new schema
+  order:               number;        // display order within the routine
+  time_of_day?:        ('am' | 'pm')[]; // which slots this step applies to. Required on new-schema steps.
+  target_concern?:     string;         // populated only for Treat steps (e.g. 'acne', 'hyperpigmentation')
+  clinical_reasoning?: string;         // 1–2 sentences tying the step to this user's scan
+  category?:           string;         // canonical category id (face_cleanser, serum_niacinamide, ...)
+  cadence?:            'daily' | 'every_wash' | 'weekly' | 'monthly';
 }
 
 export interface SkinRecommendation {
-  advice:      string;
-  routine:     { morning: RoutineStep[]; evening: RoutineStep[] };
+  advice:   string;
+  steps?:   RoutineStep[];
+
+  /** @deprecated — pre-2026-04-21 scans store routine as { morning, evening }. New scans use `steps`. Read both for back-compat. */
+  routine?: { morning: RoutineStep[]; evening: RoutineStep[] };
 
   /** @deprecated — removed from Gemini schema on 2026-04-20. Still present on scans created before this date. Preview now derives from first sentence of `advice`. */
-  summary?:    string;
+  summary?: string;
 }
 
 export interface BeardStyleItem {

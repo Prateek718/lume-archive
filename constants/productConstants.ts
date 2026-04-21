@@ -10,6 +10,7 @@ import type {
   PreferredBrands,
   BudgetTier,
   MatchedProduct,
+  BeardGoal,
 } from '../types';
 
 // ─── Schema ────────────────────────────────────────────────────────────────────
@@ -117,6 +118,142 @@ const AYURVEDIC_BRANDS = new Set<string>([
   'Indulekha', 'Good Vibes', 'WOW Skin Science', 'WOW', 'Mamaearth',
 ]);
 
+// ─── Canonical category enum ───────────────────────────────────────────────────
+// The full set of category IDs the scoring engine and prompts agree on. Any
+// free-text category coming from Gemini is normalised into one of these via
+// normalizeCategory() before it reaches the scorer.
+
+export const CANONICAL_CATEGORIES = [
+  'face_cleanser',
+  'moisturizer',
+  'serum_niacinamide',
+  'serum_hyaluronic_acid',
+  'serum_vitamin_c',
+  'serum_retinol',
+  'serum_salicylic_acid',
+  'serum_azelaic_acid',
+  'serum_brightening',
+  'serum_soothing',
+  'spf_sunscreen',
+  'toner',
+  'eye_cream',
+  'face_mask',
+  'face_oil',
+  'face_gel',
+  'beard_wash',
+  'beard_oil',
+  'beard_balm',
+  'hair_shampoo',
+  'hair_conditioner',
+  'hair_oil',
+  'hair_serum',
+  'hair_mask',
+  'brow_pencil',
+  'concealer',
+  'foundation_base',
+  'bb_cream',
+] as const;
+
+export type CategoryGroup = 'skin' | 'hair' | 'beard' | 'makeup';
+
+const SKIN_CATEGORY_SET = new Set<string>([
+  'face_cleanser', 'moisturizer',
+  'serum_niacinamide', 'serum_hyaluronic_acid', 'serum_vitamin_c',
+  'serum_retinol', 'serum_salicylic_acid', 'serum_azelaic_acid',
+  'serum_brightening', 'serum_soothing',
+  'spf_sunscreen', 'toner', 'eye_cream',
+  'face_mask', 'face_oil', 'face_gel',
+]);
+const HAIR_CATEGORY_SET = new Set<string>([
+  'hair_shampoo', 'hair_conditioner', 'hair_oil', 'hair_serum', 'hair_mask',
+]);
+const BEARD_CATEGORY_SET = new Set<string>([
+  'beard_wash', 'beard_oil', 'beard_balm',
+]);
+const MAKEUP_CATEGORY_SET = new Set<string>([
+  'brow_pencil', 'concealer', 'foundation_base', 'bb_cream',
+]);
+
+// Returns the brand list (sorted, unique) for a category group, derived
+// directly from the catalogue. Used by my-brands.tsx so the brand picker
+// stays in sync with whichever products the catalogue actually contains.
+export function getBrandsForCategoryGroup(group: CategoryGroup): string[] {
+  const set =
+    group === 'skin'   ? SKIN_CATEGORY_SET   :
+    group === 'hair'   ? HAIR_CATEGORY_SET   :
+    group === 'beard'  ? BEARD_CATEGORY_SET  :
+    MAKEUP_CATEGORY_SET;
+  const brands = new Set<string>();
+  for (const p of PRODUCTS) {
+    if (set.has(p.category)) brands.add(p.brand);
+  }
+  return [...brands].sort();
+}
+
+// ─── Free-text → canonical category mapping ────────────────────────────────────
+// Gemini sometimes emits free-text category names ("gel moisturiser",
+// "ha serum") even when instructed not to. This map keeps the scorer fed with
+// stable IDs regardless. Case-insensitive, space-insensitive matching.
+
+const CATEGORY_ALIASES: Array<{ canonical: string; aliases: string[] }> = [
+  { canonical: 'moisturizer',          aliases: ['moisturizer', 'moisturiser', 'gel moisturiser', 'gel moisturizer', 'lightweight moisturiser', 'lightweight moisturizer', 'water cream', 'cream moisturiser', 'cream moisturizer', 'heavy moisturiser', 'heavy moisturizer', 'fragrance free moisturiser', 'fragrance-free moisturiser'] },
+  { canonical: 'serum_niacinamide',    aliases: ['niacinamide serum', 'niacinamide 10%', 'niacinamide', 'pore serum'] },
+  { canonical: 'serum_hyaluronic_acid', aliases: ['hyaluronic acid serum', 'ha serum', 'hyaluronic serum', 'hydration serum'] },
+  { canonical: 'serum_vitamin_c',      aliases: ['vitamin c serum', 'vit c serum', 'brightening serum with vitamin c', 'vitamin c'] },
+  { canonical: 'serum_retinol',        aliases: ['retinol serum', 'retinoid serum', 'retinol', 'retinoid'] },
+  { canonical: 'serum_salicylic_acid', aliases: ['salicylic acid serum', 'bha serum', 'salicylic acid'] },
+  { canonical: 'serum_azelaic_acid',   aliases: ['azelaic acid serum', 'azelaic acid'] },
+  { canonical: 'serum_brightening',    aliases: ['brightening serum', 'alpha arbutin serum', 'pigmentation serum', 'alpha arbutin'] },
+  { canonical: 'serum_soothing',       aliases: ['calming serum', 'soothing serum', 'centella serum', 'cica serum'] },
+  { canonical: 'spf_sunscreen',        aliases: ['sunscreen', 'spf', 'sun cream', 'spf 50', 'spf 30', 'mineral sunscreen', 'sunscreen spf 50'] },
+  { canonical: 'toner',                aliases: ['toner', 'exfoliating toner', 'bha toner', 'aha toner'] },
+  { canonical: 'eye_cream',            aliases: ['eye cream', 'under eye cream', 'eye serum', 'undereye cream'] },
+  { canonical: 'face_cleanser',        aliases: ['cleanser', 'face wash', 'gentle cleanser', 'face cleanser', 'gel cleanser', 'cream cleanser', 'salicylic cleanser', 'foaming cleanser'] },
+  { canonical: 'face_mask',            aliases: ['face mask', 'face pack', 'clay mask', 'sheet mask'] },
+  { canonical: 'face_oil',             aliases: ['face oil', 'facial oil'] },
+  { canonical: 'face_gel',             aliases: ['face gel', 'aloe gel'] },
+  { canonical: 'beard_wash',           aliases: ['beard wash', 'beard cleanser', 'beard shampoo'] },
+  { canonical: 'beard_oil',            aliases: ['beard oil', 'growth oil', 'beard growth oil'] },
+  { canonical: 'beard_balm',           aliases: ['beard balm', 'beard butter', 'beard wax'] },
+  { canonical: 'hair_shampoo',         aliases: ['shampoo', 'hair shampoo', 'anti dandruff shampoo', 'anti-dandruff shampoo', 'clarifying shampoo'] },
+  { canonical: 'hair_conditioner',     aliases: ['conditioner', 'hair conditioner', 'leave in conditioner', 'leave-in conditioner'] },
+  { canonical: 'hair_oil',             aliases: ['hair oil', 'scalp oil'] },
+  { canonical: 'hair_serum',           aliases: ['hair serum', 'scalp serum'] },
+  { canonical: 'hair_mask',            aliases: ['hair mask', 'hair treatment', 'scalp treatment', 'scalp_treatment', 'hair_scalp_treatment'] },
+  { canonical: 'brow_pencil',          aliases: ['brow pencil', 'brow gel', 'eyebrow pencil', 'eyebrow_pencil'] },
+  { canonical: 'concealer',            aliases: ['concealer'] },
+  { canonical: 'foundation_base',      aliases: ['foundation', 'mousse foundation', 'foundation_fair', 'foundation_medium', 'foundation_deep'] },
+  { canonical: 'bb_cream',             aliases: ['bb cream', 'tinted moisturiser', 'tinted moisturizer', 'cc cream'] },
+];
+
+const ALIAS_LOOKUP = (() => {
+  const map = new Map<string, string>();
+  for (const { canonical, aliases } of CATEGORY_ALIASES) {
+    map.set(canonical.toLowerCase(), canonical);
+    for (const a of aliases) {
+      map.set(a.toLowerCase().replace(/\s+/g, ' ').trim(), canonical);
+    }
+  }
+  return map;
+})();
+
+// Normalise free-text category descriptors to canonical IDs. Falls back to a
+// snake_cased version of the input with a console.warn so we can find gaps.
+export function normalizeCategory(input: string | null | undefined): string {
+  if (!input) return '';
+  const key = input.toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+  const hit = ALIAS_LOOKUP.get(key);
+  if (hit) return hit;
+  // Try the no-space variant too (e.g. "haserum")
+  const collapsed = key.replace(/\s+/g, '');
+  for (const [k, v] of ALIAS_LOOKUP) {
+    if (k.replace(/\s+/g, '') === collapsed) return v;
+  }
+  const snake = key.replace(/\s+/g, '_');
+  console.warn(`[normalizeCategory] no match for "${input}" — falling back to "${snake}"`);
+  return snake;
+}
+
 // ─── Budget inference ──────────────────────────────────────────────────────────
 
 // Takes a flat list of brand names and returns the likely budget band.
@@ -174,11 +311,21 @@ type ScoredMatchedProduct = MatchedProduct & { score: number; why_this_one: stri
 
 const TIER_RANK: Record<PriceTier, number> = { entry: 0, mid: 1, premium: 2 };
 
+// Active-ingredient buckets used by beard-goal scoring boosts.
+const BEARD_GROWTH_ACTIVES   = new Set<string>(['redensyl', 'anagain', 'procapil', 'biotin', 'capilia_longa', 'minoxidil']);
+const BEARD_CONDITION_ACTIVES = new Set<string>(['argan_oil', 'jojoba_oil', 'sandalwood_oil', 'sweet_almond_oil', 'castor_oil', 'shea_butter', 'cocoa_butter']);
+const BEARD_CATEGORIES_FOR_BOOST = new Set<string>(['beard_oil', 'beard_balm', 'beard_wash']);
+
 export function getScoredProducts(params: {
-  category:    string;
-  userProfile: UserProfileForScoring;
+  category:        string;
+  target_concern?: string;
+  userProfile:     UserProfileForScoring;
+  beard_goal?:     BeardGoal;
 }): ScoredMatchedProduct[] {
-  const { category, userProfile } = params;
+  const canonical        = normalizeCategory(params.category);
+  const { userProfile }  = params;
+  const targetConcern    = params.target_concern;
+  const beardGoal        = params.beard_goal;
   const brandPrefs       = userProfile.brand_preferences ?? [];
   const inferredBudget   = inferBudgetFromBrandList(brandPrefs);
   const primaryConcerns  = userProfile.primary_concerns ?? [];
@@ -186,7 +333,7 @@ export function getScoredProducts(params: {
   const hasAyurvedicPref = brandPrefs.some(b => AYURVEDIC_BRANDS.has(b));
 
   const scored = PRODUCTS
-    .filter(p => p.category === category)
+    .filter(p => p.category === canonical)
     .map(product => {
       let score = 50;  // category gate passed
 
@@ -205,6 +352,12 @@ export function getScoredProducts(params: {
       const overlap = primaryConcerns.filter(c => product.suitable_for_concerns.includes(c)).length;
       score += Math.min(overlap * 3, 10);
 
+      // Direct target_concern match (Treat steps): heavy boost for products
+      // explicitly suitable for the prescribed concern.
+      if (targetConcern && product.suitable_for_concerns.includes(targetConcern)) {
+        score += 15;
+      }
+
       // Skin-type soft gate
       if (userProfile.skin_type) {
         const supportsType =
@@ -216,6 +369,15 @@ export function getScoredProducts(params: {
 
       if (userProfile.climate && product.climate_suitability.includes(userProfile.climate)) {
         score += 5;
+      }
+
+      // Beard-goal boosts — only meaningful for beard categories.
+      if (beardGoal && BEARD_CATEGORIES_FOR_BOOST.has(product.category)) {
+        if (beardGoal === 'growing_thickening') {
+          if (product.actives.some(a => BEARD_GROWTH_ACTIVES.has(a))) score += 15;
+        } else if (beardGoal === 'healthy_groomed') {
+          if (product.actives.some(a => BEARD_CONDITION_ACTIVES.has(a))) score += 10;
+        }
       }
 
       // Ayurvedic products only surface to users with an ayurvedic brand preference.
@@ -336,9 +498,10 @@ export function getProductsForBrands(params: {
 
 export function getProductsForProfile(params: {
   categories:      {
-    category:     string;
-    attributes:   string[];
-    categoryType: 'skin' | 'hair' | 'makeup' | 'beard';
+    category:        string;
+    attributes:      string[];
+    categoryType:    'skin' | 'hair' | 'makeup' | 'beard';
+    target_concern?: string;
   }[];
   preferredBrands: PreferredBrands | string[];
   gender:          'all' | 'men' | 'women';
@@ -347,6 +510,7 @@ export function getProductsForProfile(params: {
   concerns?:       string[];
   city?:           string;
   isNewUser?:      boolean;
+  beardGoal?:      BeardGoal;
 }): Record<string, MatchedProduct[]> {
   const { categories, preferredBrands } = params;
 
@@ -361,9 +525,12 @@ export function getProductsForProfile(params: {
   const climate = params.city ? deriveClimateFromCity(params.city) : 'temperate';
   const results: Record<string, MatchedProduct[]> = {};
 
-  for (const { category } of categories) {
+  for (const { category, target_concern } of categories) {
+    const canonical = normalizeCategory(category);
     const scored = getScoredProducts({
-      category,
+      category:        canonical,
+      target_concern,
+      beard_goal:      params.beardGoal,
       userProfile: {
         skin_type:         params.skinType,
         primary_concerns:  params.concerns,
@@ -372,7 +539,7 @@ export function getProductsForProfile(params: {
         is_new_user:       params.isNewUser,
       },
     });
-    if (scored.length > 0) results[category] = scored;
+    if (scored.length > 0) results[canonical] = scored;
   }
   return results;
 }

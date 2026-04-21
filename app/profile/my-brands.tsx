@@ -1,6 +1,6 @@
 // My Brands screen — user selects preferred brands per category for product recommendations.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, ActivityIndicator,
@@ -9,50 +9,32 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../../lib/supabase';
-import { PRODUCTS } from '../../constants/productConstants';
+import { getBrandsForCategoryGroup } from '../../constants/productConstants';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { refreshRecommendations } from '../../services/scanService';
 import type { PreferredBrands } from '../../types';
 
-// ── Derive brand lists from the product catalogue ──────────────────────────────
+type SectionKey = 'skin' | 'hair' | 'beard' | 'makeup';
 
-const SKIN_CATEGORIES = [
-  'face_cleanser', 'toner', 'moisturiser',
-  'spf_sunscreen', 'serum_vitamin_c',
-  'serum_niacinamide', 'serum_retinol',
-  'eye_cream', 'face_mask', 'lip_balm',
-];
-
-const HAIR_CATEGORIES = [
-  'shampoo', 'conditioner', 'hair_oil',
-  'hair_mask', 'hair_serum', 'scalp_serum',
-  'leave_in_conditioner',
-];
-
-const MAKEUP_CATEGORIES = [
-  'foundation_fair', 'foundation_medium',
-  'foundation_deep', 'kajal_eyeliner',
-  'eyebrow_pencil', 'face_primer',
-  'lipstick_nude', 'lipstick_red', 'lipstick_berry',
-];
-
-function getBrandsForCategories(cats: string[]): string[] {
-  return [...new Set(
-    PRODUCTS
-      .filter(p => cats.includes(p.category))
-      .map(p => p.brand),
-  )].sort();
+interface BrandSection {
+  title:  string;
+  key:    SectionKey;
+  brands: string[];
 }
 
-const SKIN_BRANDS   = getBrandsForCategories(SKIN_CATEGORIES);
-const HAIR_BRANDS   = getBrandsForCategories(HAIR_CATEGORIES);
-const MAKEUP_BRANDS = getBrandsForCategories(MAKEUP_CATEGORIES);
+// Gender-aware section list. Male users see Beard; female users see Makeup;
+// other/null users see all four.
+function buildBrandSections(gender: string | null | undefined): BrandSection[] {
+  const skin   = { title: 'SKINCARE', key: 'skin'   as const, brands: getBrandsForCategoryGroup('skin')   };
+  const hair   = { title: 'HAIR',     key: 'hair'   as const, brands: getBrandsForCategoryGroup('hair')   };
+  const beard  = { title: 'BEARD',    key: 'beard'  as const, brands: getBrandsForCategoryGroup('beard')  };
+  const makeup = { title: 'MAKEUP',   key: 'makeup' as const, brands: getBrandsForCategoryGroup('makeup') };
 
-const BRAND_SECTIONS: { title: string; key: 'skin' | 'hair' | 'makeup'; brands: string[] }[] = [
-  { title: 'SKINCARE', key: 'skin',   brands: SKIN_BRANDS   },
-  { title: 'HAIR',     key: 'hair',   brands: HAIR_BRANDS   },
-  { title: 'MAKEUP',   key: 'makeup', brands: MAKEUP_BRANDS },
-];
+  if (gender === 'man')   return [skin, hair, beard];
+  if (gender === 'woman') return [skin, hair, makeup];
+  // other / null / unknown → show everything
+  return [skin, hair, beard, makeup];
+}
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
@@ -61,8 +43,9 @@ export default function MyBrandsScreen() {
   const insets = useSafeAreaInsets();
 
   const [selectedBrands, setSelectedBrands] = useState<PreferredBrands>({
-    skin: [], hair: [], makeup: [],
+    skin: [], hair: [], makeup: [], beard: [],
   });
+  const [gender,     setGender]     = useState<string | null>(null);
   const [saving,     setSaving]     = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -72,20 +55,27 @@ export default function MyBrandsScreen() {
       if (!user) return;
       const { data } = await supabase
         .from('users')
-        .select('preferred_brands_v2')
+        .select('preferred_brands_v2, gender')
         .eq('id', user.id)
         .single();
-      const row = data as { preferred_brands_v2?: PreferredBrands } | null;
-      setSelectedBrands(
-        row?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] },
-      );
+      const row = data as { preferred_brands_v2?: PreferredBrands; gender?: string | null } | null;
+      setGender(row?.gender ?? null);
+      const stored = row?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] };
+      setSelectedBrands({
+        skin:   stored.skin   ?? [],
+        hair:   stored.hair   ?? [],
+        makeup: stored.makeup ?? [],
+        beard:  stored.beard  ?? [],
+      });
     };
     load();
   }, []);
 
-  const toggleBrand = (brand: string, sectionKey: 'skin' | 'hair' | 'makeup') => {
+  const sections = useMemo(() => buildBrandSections(gender), [gender]);
+
+  const toggleBrand = (brand: string, sectionKey: SectionKey) => {
     setSelectedBrands(prev => {
-      const list = prev[sectionKey];
+      const list = prev[sectionKey] ?? [];
       return {
         ...prev,
         [sectionKey]: list.includes(brand)
@@ -159,14 +149,15 @@ export default function MyBrandsScreen() {
         contentContainerStyle={s.content}
         showsVerticalScrollIndicator={false}
       >
-        {BRAND_SECTIONS.map(section => {
+        {sections.map(section => {
           const sectionKey = section.key;
+          const selectedList = selectedBrands[sectionKey] ?? [];
           return (
             <View key={section.title} style={s.section}>
               <Text style={s.sectionLabel}>{section.title}</Text>
               <View style={s.pillsWrap}>
                 {section.brands.map(brand => {
-                  const selected = selectedBrands[sectionKey].includes(brand);
+                  const selected = selectedList.includes(brand);
                   return (
                     <TouchableOpacity
                       key={brand}

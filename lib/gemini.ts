@@ -7,8 +7,43 @@ import type {
   Recommendations,
   HairProfile,
   HairRecommendations,
+  BeardGoal,
 } from '../types';
 import { isBaldProfile } from '../types';
+
+// Canonical category enum — the Gemini prompts must emit one of these values
+// for the `category` field on every routine step + product. Keep in sync with
+// constants/productConstants.ts CANONICAL_CATEGORIES.
+const CANONICAL_CATEGORY_LIST = [
+  'face_cleanser',
+  'moisturizer',
+  'serum_niacinamide',
+  'serum_hyaluronic_acid',
+  'serum_vitamin_c',
+  'serum_retinol',
+  'serum_salicylic_acid',
+  'serum_azelaic_acid',
+  'serum_brightening',
+  'serum_soothing',
+  'spf_sunscreen',
+  'toner',
+  'eye_cream',
+  'face_mask',
+  'face_oil',
+  'face_gel',
+  'beard_wash',
+  'beard_oil',
+  'beard_balm',
+  'hair_shampoo',
+  'hair_conditioner',
+  'hair_oil',
+  'hair_serum',
+  'hair_mask',
+  'brow_pencil',
+  'concealer',
+  'foundation_base',
+  'bb_cream',
+].join(', ');
 
 const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY!;
 
@@ -320,18 +355,17 @@ function buildRecsPrompt(
   analysis:        GeminiAnalysis,
   matchedProducts: MatchedProduct[],
   ageRange:        string | null,
+  beardGoal:       BeardGoal | null,
 ): string {
 
-  // The app's scoring engine picks the actual products. Gemini's job is to
-  // name the ingredient CATEGORY (not a brand + product name) that suits this
-  // user, plus a personalised reason for choosing that category. The scoring
-  // engine maps category → product downstream and generates its own rationale.
+  // Pre-selected categories from the scoring engine — Gemini writes a
+  // user-specific clinical reasoning sentence for each.
   const matchedSection = matchedProducts.length > 0
     ? `Ingredient categories pre-selected for this user:\n${
         matchedProducts.map(p =>
           `- Category: ${p.category}${p.actives && p.actives.length > 0 ? ` (actives: ${p.actives.join(', ')})` : ''}`
         ).join('\n')
-      }\n\nFor each category above, write a one-sentence personalised reason explaining why that CATEGORY of product suits this specific user — their skin type, concerns, city climate. Do not name a brand or a specific product — only describe the category.`
+      }\n\nFor each category above, write a one-sentence clinical reason tying the category to this specific user's scan observations. Do not name a brand or a specific product.`
     : '';
 
   const undertoneCtx = gender === 'woman' && analysis.skin_undertone
@@ -348,197 +382,201 @@ Foundation family: Fitzpatrick 1-2 = fair, 3 = light-medium, 4-5 = medium-tan, 6
     ? `\nAge range: ${ageRange}`
     : '';
 
-  return `You are Lumé, an expert skin and care advisor.
-Gender: ${gender}${ageCtx}${undertoneCtx}
+  // Beard goal context — drives which beard steps appear.
+  const beardGoalCtx = beardGoal
+    ? `\nBeard goal: ${beardGoal}`
+    : `\nBeard goal: clean_simple (default — user has not yet set a goal)`;
+
+  return `You are Lumé — a clinical skin advisor writing prescriptions, not generic recommendations.
+Each routine step is a prescription tied to a specific observation in the user's scan. Reasoning must reference what was actually detected, not generic copy.
+
+Gender: ${gender}${ageCtx}${undertoneCtx}${beardGoalCtx}
 Face analysis: ${JSON.stringify(analysis)}
 
 ${matchedSection}
 
+CANONICAL CATEGORY ENUM — every "category" field on every step and product MUST be one of:
+${CANONICAL_CATEGORY_LIST}
+
+Use these IDs verbatim. Do NOT invent new categories. Do NOT use synonyms ("gel moisturiser", "vitamin c") — emit the canonical ID ("moisturizer", "serum_vitamin_c").
+
 EDITORIAL RULES — apply to every field:
-- Never begin a field with "Your", "With your", "For your", or any phrase that names a user trait (face shape, skin type, texture, density, condition). The app already knows these.
-- Use imperative voice for actionable fields (advice, why). "Do X" — not "You should do X" or "X is recommended."
-- Return only what to do. Do NOT include avoid or not_recommended items. Absence communicates negative recommendation.
-- Every field is a single idea. If you have two reasons, pick the stronger one.
-- advice: max 2 sentences. The FIRST SENTENCE must stand alone as a 1-line preview — it is rendered without the second sentence on the recommendations card.
+- Never begin a field with "Your", "With your", "For your", or any phrase that names a user trait. The app already knows these.
+- Use imperative voice for actionable fields. "Do X" — not "You should do X."
+- Every field is a single idea.
+- advice: max 2 sentences. The FIRST SENTENCE must stand alone as a 1-line preview.
 - why (on beard_styles): max 18 words, one sentence, imperative.
-    Good: "Keep length at the chin to lengthen a round face."
-    Bad:  "With your round face, keeping length at the chin will help."
-- Frame fixed traits (face shape, features) as assets, never flaws.
-- For dark circles: "Brighten the under-eye area..." not "you have dark circles."
-- step_id values must match the documented format EXACTLY. The app uses them as stable keys across scans to track adherence over time — if the format drifts, tracking breaks.
+- Frame fixed traits as assets, never flaws.
+- step_id values must match the documented format EXACTLY. They are stable keys for adherence tracking.
 
-step_id FORMAT — required on every routine step:
-  Skin morning: "skin_am_<category>"
-  Skin evening: "skin_pm_<category>"
-  Beard:        "beard_<category>"
-  <category> for skin: one of cleanse, toner, serum, treatment, moisturize, spf
-  <category> for beard: one of wash, oil, balm, comb
-  Use "serum" for niacinamide / vitamin C / HA. Use "treatment" for retinol / AHA / eye cream.
+═══════════════════════════════════════════════════════════════
+SKIN ROUTINE — variable length, prescription style
+═══════════════════════════════════════════════════════════════
 
-SKIN ROUTINE RULES:
+Output a single \`steps\` array (NOT separate morning/evening). Each step has a time_of_day array indicating which slots it applies to.
 
-Build the morning and evening routine based
-on the two-layer framework below.
-The routine is a structured checklist —
-short labels only, no advice in steps.
+ALWAYS-PRESENT STEPS (3 total):
+1. skin_cleanse  → label "Cleanse",   time_of_day ["am","pm"], category "face_cleanser"
+2. skin_moisturize → label "Moisturize", time_of_day ["am","pm"], category "moisturizer"
+3. skin_protect  → label "Protect",   time_of_day ["am"],      category "spf_sunscreen"
 
-Each step: { "step_id": "skin_am_<cat>" | "skin_pm_<cat>", "label": "1-2 words", "product": "1-4 words", "order": integer }
+OPTIONAL TREAT STEPS — insert 0, 1, or 2 based on detected concerns:
 
-FOUNDATION steps (always include):
-Morning:
-  order 1: { step_id "skin_am_cleanse", label "Cleanse", product by skin_type:
-    oily/acne → Salicylic cleanser
-    dry → Cream cleanser
-    sensitive → Gentle cleanser
-    normal/combination → Gel cleanser }
-  order 2: { step_id "skin_am_spf", label "Protect", product "Sunscreen SPF 50" } (MORNING ONLY)
+  step_id: skin_treat_1 (and skin_treat_2 if a second active is needed)
+  label: "Treat"
+  target_concern: REQUIRED (e.g. "acne", "hyperpigmentation", "fine_lines", "dehydration", "dark_circles")
 
-Evening:
-  order 1: { step_id "skin_pm_cleanse", label "Cleanse", product: same type as morning }
-  Last order: { step_id "skin_pm_moisturize", label "Nourish", product:
-    oily → Gel moisturiser
-    dry → Cream moisturiser
-    normal/combination → Lightweight moisturiser
-    sensitive → Fragrance-free moisturiser }
+Insert ONE Treat step (skin_treat_1) if the user has a single primary concern needing active treatment.
+Insert TWO Treat steps (skin_treat_1 + skin_treat_2) ONLY if the user has TWO distinct concerns needing different actives that cannot share a slot (e.g. salicylic acid for acne in AM + retinol for fine lines in PM).
 
-Moisturiser (Nourish step):
-Always include in BOTH morning and evening.
-Type by skin:
-  oily/combination → Gel moisturiser
-  dry → Cream moisturiser
-  normal → Lightweight moisturiser
-  sensitive → Fragrance-free moisturiser
+TIME-OF-DAY for actives:
+- vitamin C, niacinamide, salicylic acid → AM-friendly (time_of_day ["am"] or ["am","pm"])
+- retinol → PM ONLY (time_of_day ["pm"])
+- AHA exfoliants → PM ONLY (time_of_day ["pm"])
+- hyaluronic acid → either (time_of_day ["am","pm"])
+- eye cream → time_of_day ["pm"] (single Treat slot)
 
-Skipping moisturiser causes oily skin to
-produce more sebum — always include it.
+ORDER FIELD: 1=skin_cleanse, 2=skin_treat_1, 3=skin_treat_2, 4=skin_moisturize, 5=skin_protect.
 
-Morning order: Cleanse → treatments →
-Moisturise → Protect
-Evening order: Cleanse → treatments →
-Moisturise
+NEVER add retinol if age_range is '18-25' or unset.
 
-TREATMENT steps (add only if concern detected):
-For each concern, add ONE step:
+CLINICAL_REASONING — REQUIRED on every skin step:
+Tie the reasoning to THIS USER'S specific observations from the scan. Reference detected zones, concerns, or skin attributes you observed. Do NOT use generic copy.
 
-  oiliness OR acne detected:
-    Morning order 3: { step_id "skin_am_serum", label "Balance", product "Niacinamide serum" }
+  Bad (generic):  "Niacinamide is great for oily skin."
+  Good (clinical): "Your T-zone shows excess sebum and visible enlarged pores. Niacinamide regulates sebum and reduces pore appearance over 8 weeks."
+  Bad:  "Sunscreen prevents sun damage."
+  Good: "Fitzpatrick IV skin in tropical climate is highly susceptible to PIH. SPF 50 mineral filter blocks UV without irritating sensitive zones."
 
-  dark_circles detected:
-    Evening, second-to-last order: { step_id "skin_pm_treatment", label "Eye care", product "Eye cream" }
+Step shape (skin):
+{
+  "step_id":           "skin_cleanse" | "skin_treat_1" | "skin_treat_2" | "skin_moisturize" | "skin_protect",
+  "label":             "Cleanse" | "Treat" | "Moisturize" | "Protect",
+  "time_of_day":       ["am"] | ["pm"] | ["am","pm"],
+  "order":             1 | 2 | 3 | 4 | 5,
+  "target_concern":    "<concern>" (REQUIRED for Treat steps, omit otherwise),
+  "category":          one of the CANONICAL CATEGORY ENUM values,
+  "clinical_reasoning": "1–2 sentences tied to this user's scan",
+  "product":           generic descriptor (e.g. "Niacinamide serum")
+}
 
-  dark_spots OR hyperpigmentation detected:
-    Morning order 3 (or 4 if niacinamide present):
-    { step_id "skin_am_serum", label "Brighten", product "Vitamin C serum" }
+═══════════════════════════════════════════════════════════════
+BEARD ROUTINE (men only)
+═══════════════════════════════════════════════════════════════
 
-  dehydration detected:
-    Morning after cleanse: { step_id "skin_am_serum", label "Hydrate", product "HA serum" }
+If beard_density is "none" → omit beard section entirely (return null).
 
-  uneven_texture detected AND no retinol:
-    Evening, before moisturiser: { step_id "skin_pm_treatment", label "Renew", product "AHA exfoliant" }
-    Add note "2-3x/week" to product field
+Otherwise, generate steps based on beard_goal:
 
-  fine_lines detected AND age_range is
-  '26-35' or older:
-    Evening, before moisturiser: { step_id "skin_pm_treatment", label "Renew", product "Retinol" }
-    Add note "2-3x/week" to product field
-    NEVER add retinol if age_range is '18-25'
-    or age_range is not set
+  beard_goal = clean_simple:
+    Steps: [beard_wash]
 
-SERUM LIMIT: Maximum ONE serum per routine.
-If multiple serums are indicated by concerns,
-choose the MOST IMPACTFUL one only:
+  beard_goal = healthy_groomed:
+    Steps: [beard_wash, beard_oil]
+    beard_oil category: beard_oil with conditioning actives (argan, jojoba, sandalwood)
 
-Priority order for oily/combination skin:
-  1. Niacinamide serum (oiliness/acne)
-  2. Vitamin C serum (hyperpigmentation)
-  — never both simultaneously
+  beard_goal = growing_thickening:
+    Steps: [beard_wash, beard_oil]
+    beard_oil should target growth — note in clinical_reasoning that it focuses on follicle stimulation (redensyl, biotin)
 
-Priority for dry skin:
-  1. Hyaluronic acid serum (dehydration)
-  2. Vitamin C serum (hyperpigmentation)
-  — never both simultaneously
+  beard_goal = styled:
+    Steps: [beard_wash, beard_oil, beard_balm]
 
-If the user has both oiliness AND
-hyperpigmentation: recommend niacinamide
-only — it also helps with pigmentation
-over time.
+If beard_goal is unset or null, default to clean_simple (single beard_wash step) — the app will regenerate once the user sets their goal.
 
-Exception: if ONLY hyperpigmentation is
-detected with no oiliness or acne →
-then vitamin C serum is appropriate.
+Beard step shape (similar to skin, but cadence-driven):
+{
+  "step_id":            "beard_wash" | "beard_oil" | "beard_balm",
+  "label":              "Cleanse" | "Nourish" | "Shape",
+  "time_of_day":        ["am"] | ["pm"] | ["am","pm"],
+  "order":              1 | 2 | 3,
+  "category":           "beard_wash" | "beard_oil" | "beard_balm",
+  "clinical_reasoning": "1–2 sentences tied to this user's beard observations",
+  "product":            generic descriptor,
+  "cadence":            "daily" | "every_wash" | "weekly" (optional)
+}
 
-TONER RULE:
-Include toner ONLY if:
-  - skin_type is oily OR acne-prone AND
-  - no niacinamide serum is being added
-In that case: add after cleanse, morning only:
-  { "step_id": "skin_am_toner", "label": "Tone", "product": "BHA toner", "order": 2 }
-  Then renumber subsequent steps.
+beard_styles: 2-3 RECOMMENDED styles only.
+Each: { "name", "why" (max 18 words), "maintenance": "low"|"medium"|"high" }
 
-In all other cases: do NOT include toner.
-No toner for dry, normal, sensitive skin.
-No toner if niacinamide serum is present.
+═══════════════════════════════════════════════════════════════
+MAKEUP RULES (women only)
+═══════════════════════════════════════════════════════════════
 
-STEP COUNT RULES:
-Morning: minimum 2 steps (cleanse + SPF),
-  maximum 4 steps total.
-Evening: minimum 2 steps (cleanse + moisturiser),
-  maximum 4 steps total.
-Never exceed 4 steps in any single routine.
-Never exceed 5 unique product categories total.
-
-BEARD RULES:
-beard_density = stubble or none:
-  No beard products. beard.routine = []
-
-beard_density = medium or heavy:
-  Always: { step_id "beard_wash", label "Cleanse", product "Beard wash" }
-        + { step_id "beard_oil",  label "Nourish", product "Beard oil"  }
-  Add { step_id "beard_balm", label "Shape", product "Beard balm" } ONLY if beard_condition = needs_shaping
-  Add anti-dandruff wash ONLY if dandruff detected (still step_id "beard_wash")
-  MAX 3 products
-
-beard_styles: return 2-3 RECOMMENDED styles ONLY.
-  Do NOT return avoid or not_recommended entries — omitting a style is how you communicate "don't do this".
-  Each entry: { "name": "<style name>", "why": "<max 18 words, imperative, no trait-naming openings>", "maintenance": "low" | "medium" | "high" }
-
-MAKEUP RULES (women only):
-Base: include ONLY if hyperpigmentation
-  or uneven_texture detected
-Brow pencil: ONLY if brow_condition is
-  sparse or ungroomed
+Base: include ONLY if hyperpigmentation or uneven_texture detected
+Brow pencil: ONLY if brow_condition is sparse or ungroomed
 Concealer: ONLY if dark_circles detected
-Lip: always include 1 lip product
-  (undertone matched)
+Lip: always include 1 lip product (undertone matched)
 MAX 3 products total
 
-Return ONLY valid JSON, no markdown, no fences:
+═══════════════════════════════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════════════════════════════
+
+Return ONLY valid JSON. No markdown, no fences, no preamble. Match this shape exactly:
+
 {
   "skin": {
-    "advice": "max 2 sentences, first sentence stands alone as preview, imperative",
-    "routine": {
-      "morning": [
-        { "step_id": "skin_am_cleanse", "label": "Cleanse", "product": "Gel cleanser",      "order": 1 },
-        { "step_id": "skin_am_spf",     "label": "Protect", "product": "Sunscreen SPF 50", "order": 2 }
-      ],
-      "evening": [
-        { "step_id": "skin_pm_cleanse",    "label": "Cleanse", "product": "Gel cleanser",    "order": 1 },
-        { "step_id": "skin_pm_moisturize", "label": "Nourish", "product": "Gel moisturiser", "order": 2 }
-      ]
-    }
+    "advice": "max 2 sentences, first sentence stands alone, imperative",
+    "steps": [
+      {
+        "step_id": "skin_cleanse",
+        "label": "Cleanse",
+        "time_of_day": ["am","pm"],
+        "order": 1,
+        "category": "face_cleanser",
+        "clinical_reasoning": "Tied to this user's observed skin condition.",
+        "product": "Gel cleanser"
+      },
+      {
+        "step_id": "skin_treat_1",
+        "label": "Treat",
+        "time_of_day": ["am"],
+        "order": 2,
+        "target_concern": "acne",
+        "category": "serum_niacinamide",
+        "clinical_reasoning": "Tied to acne observations seen in scan.",
+        "product": "Niacinamide serum"
+      },
+      {
+        "step_id": "skin_moisturize",
+        "label": "Moisturize",
+        "time_of_day": ["am","pm"],
+        "order": 4,
+        "category": "moisturizer",
+        "clinical_reasoning": "Tied to this user's hydration needs.",
+        "product": "Gel moisturiser"
+      },
+      {
+        "step_id": "skin_protect",
+        "label": "Protect",
+        "time_of_day": ["am"],
+        "order": 5,
+        "category": "spf_sunscreen",
+        "clinical_reasoning": "Tied to this user's photodamage risk.",
+        "product": "Sunscreen SPF 50"
+      }
+    ]
   },
   "beard": {
-    "advice": "max 2 sentences, first sentence stands alone as preview, imperative",
-    "routine": [
-      { "step_id": "beard_wash", "label": "Cleanse", "product": "Beard wash", "order": 1 },
-      { "step_id": "beard_oil",  "label": "Nourish", "product": "Beard oil",  "order": 2 }
+    "advice": "max 2 sentences, imperative",
+    "steps": [
+      {
+        "step_id": "beard_wash",
+        "label": "Cleanse",
+        "time_of_day": ["am"],
+        "order": 1,
+        "category": "beard_wash",
+        "clinical_reasoning": "Tied to this user's beard observations.",
+        "product": "Beard wash"
+      }
     ],
     "beard_styles": [
       { "name": "Short boxed beard", "why": "Trim edges sharply to frame a round face.", "maintenance": "medium" }
     ]
   },
   "makeup": {
-    "advice": "max 2 sentences, first sentence stands alone as preview, imperative",
+    "advice": "max 2 sentences, imperative",
     "techniques": ["technique 1", "technique 2"]
   },
   "products": [
@@ -546,23 +584,17 @@ Return ONLY valid JSON, no markdown, no fences:
       "category": "face_cleanser",
       "name": "Gel cleanser",
       "brand": "category",
-      "reason": "1 sentence personalised reason for this category",
+      "reason": "1 sentence personalised reason for this category, clinical voice",
       "match_score": 85
     }
   ]
 }
 
-Note: products.name and products.brand MUST be generic category descriptors
-(e.g. "Niacinamide serum", "Gel cleanser", "Mineral sunscreen SPF 50").
-Do NOT name a specific brand or product — the app's scoring engine picks
-the actual product from the catalogue. Always set products.brand to the
-literal string "category".
-Note: beard is null if gender is woman.
-Note: makeup is null if gender is man.
-Note: routine arrays show ONLY the steps
-that apply to this user — not a fixed template.
-The example above shows minimum steps.
-Add treatment steps based on concerns detected.`;
+Notes:
+- products.name and products.brand MUST be generic category descriptors. Always set products.brand to the literal string "category".
+- beard is null if gender is woman OR beard_density is "none".
+- makeup is null if gender is man.
+- skin.steps array must contain at least skin_cleanse, skin_moisturize, skin_protect. Treat steps are optional based on concerns detected.`;
 }
 
 export async function getRecommendationsFromGemini(
@@ -570,6 +602,7 @@ export async function getRecommendationsFromGemini(
   analysis:        GeminiAnalysis,
   matchedProducts: MatchedProduct[],
   ageRange:        string | null,
+  beardGoal:       BeardGoal | null = null,
 ): Promise<Recommendations> {
   const recsStart = Date.now();
   const response = await fetchWithRetry(ENDPOINT_TEXT, {
@@ -577,7 +610,7 @@ export async function getRecommendationsFromGemini(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{
-        parts: [{ text: buildRecsPrompt(gender, analysis, matchedProducts, ageRange) }],
+        parts: [{ text: buildRecsPrompt(gender, analysis, matchedProducts, ageRange, beardGoal) }],
       }],
       generationConfig: {
         temperature:     0,
@@ -698,12 +731,16 @@ EDITORIAL RULES — apply to every field:
 - condition_explanation: max 2 sentences. State why this scalp needs this care — no trait-naming openings.
 - step_id values must match the documented format EXACTLY. The app uses them as stable keys across scans to track adherence over time.
 
-step_id FORMAT — required on every routine step:
-  hair_<category> where <category> is one of:
-    shampoo, condition, mask, oil, serum, scalp_treatment
+step_id FORMAT — required on every routine step. Use ONLY these canonical IDs:
+  hair_shampoo, hair_conditioner, hair_oil, hair_serum, hair_mask
 
 cadence — required on every routine step, one of:
   "every_wash" | "weekly" | "monthly"
+
+CANONICAL CATEGORY ENUM — every "category" field must be one of:
+${CANONICAL_CATEGORY_LIST}
+
+clinical_reasoning — REQUIRED on every step. 1-2 sentences tying the step to this user's specific scalp/hair observations. Not generic copy.
 
 Return ONLY a valid JSON object with no markdown, no code fences, no explanation, matching this exact structure:
 {
@@ -712,10 +749,9 @@ Return ONLY a valid JSON object with no markdown, no code fences, no explanation
   "styles_detailed": [],
   "condition_explanation": "max 2 sentences, no trait-naming openings",
   "routine": [
-    { "step_id": "hair_shampoo",         "label": "Cleanse", "product": "Gentle scalp shampoo", "cadence": "every_wash", "level": "simple",   "order": 1 },
-    { "step_id": "hair_condition",       "label": "Hydrate", "product": "Scalp moisturiser",    "cadence": "every_wash", "level": "simple",   "order": 2 },
-    { "step_id": "hair_scalp_treatment", "label": "Protect", "product": "SPF 50 sunscreen",     "cadence": "every_wash", "level": "balanced", "order": 3 },
-    { "step_id": "hair_scalp_treatment", "label": "Treat",   "product": "Scalp serum",          "cadence": "weekly",     "level": "full",     "order": 4 }
+    { "step_id": "hair_shampoo",     "label": "Cleanse", "product": "Gentle scalp shampoo", "category": "hair_shampoo",     "cadence": "every_wash", "level": "simple",   "order": 1, "clinical_reasoning": "Tied to this user's scalp condition." },
+    { "step_id": "hair_conditioner", "label": "Hydrate", "product": "Scalp moisturiser",    "category": "hair_conditioner", "cadence": "every_wash", "level": "simple",   "order": 2, "clinical_reasoning": "Tied to this user's hydration needs." },
+    { "step_id": "hair_serum",       "label": "Treat",   "product": "Scalp serum",          "category": "hair_serum",       "cadence": "weekly",     "level": "full",     "order": 4, "clinical_reasoning": "Tied to this user's primary scalp concern." }
   ],
   "products": [
     {
@@ -774,12 +810,16 @@ EDITORIAL RULES — apply to every field:
 - condition_explanation: max 2 sentences. State why this hair needs this care — no trait-naming openings.
 - step_id values must match the documented format EXACTLY. The app uses them as stable keys across scans.
 
-step_id FORMAT — required on every routine step:
-  hair_<category> where <category> is one of:
-    shampoo, condition, mask, oil, serum, scalp_treatment
+step_id FORMAT — required on every routine step. Use ONLY these canonical IDs:
+  hair_shampoo, hair_conditioner, hair_oil, hair_serum, hair_mask
 
 cadence — required on every routine step, one of:
   "every_wash" | "weekly" | "monthly"
+
+CANONICAL CATEGORY ENUM — every "category" field must be one of:
+${CANONICAL_CATEGORY_LIST}
+
+clinical_reasoning — REQUIRED on every step. 1-2 sentences tying the step to this user's specific hair/scalp observations. Not generic copy.
 
 Return ONLY a valid JSON object with no markdown, no code fences, no explanation, matching this exact structure:
 {
@@ -791,10 +831,10 @@ Return ONLY a valid JSON object with no markdown, no code fences, no explanation
   ],
   "condition_explanation": "max 2 sentences explaining why this hair needs this care",
   "routine": [
-    { "step_id": "hair_shampoo",   "label": "Cleanse",   "product": "Shampoo",     "cadence": "every_wash", "level": "simple",   "order": 1 },
-    { "step_id": "hair_condition", "label": "Condition", "product": "Conditioner", "cadence": "every_wash", "level": "simple",   "order": 2 },
-    { "step_id": "hair_oil",       "label": "Nourish",   "product": "Hair oil",    "cadence": "weekly",     "level": "balanced", "order": 3 },
-    { "step_id": "hair_serum",     "label": "Smooth",    "product": "Hair serum",  "cadence": "every_wash", "level": "full",     "order": 4 }
+    { "step_id": "hair_shampoo",     "label": "Cleanse",   "product": "Shampoo",     "category": "hair_shampoo",     "cadence": "every_wash", "level": "simple",   "order": 1, "clinical_reasoning": "Tied to this user's scalp type and concern." },
+    { "step_id": "hair_conditioner", "label": "Condition", "product": "Conditioner", "category": "hair_conditioner", "cadence": "every_wash", "level": "simple",   "order": 2, "clinical_reasoning": "Tied to this user's hair texture and length." },
+    { "step_id": "hair_oil",         "label": "Nourish",   "product": "Hair oil",    "category": "hair_oil",         "cadence": "weekly",     "level": "balanced", "order": 3, "clinical_reasoning": "Tied to this user's hydration needs." },
+    { "step_id": "hair_serum",       "label": "Smooth",    "product": "Hair serum",  "category": "hair_serum",       "cadence": "every_wash", "level": "full",     "order": 4, "clinical_reasoning": "Tied to this user's primary concern." }
   ],
   "products": [
     {
