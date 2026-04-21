@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -11,6 +11,7 @@ import {
 import { Colors } from '../constants/theme';
 import type { MatchedProduct } from '../types';
 import { addProductToKitFromBuy } from '../services/kitService';
+import { getProductNykaaUrl } from '../constants/productConstants';
 
 interface ProductPickerSheetProps {
   visible:      boolean;
@@ -61,6 +62,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   hair_mask:             'Hair mask',
 };
 
+// Format ₹ price with thousands separator, no decimals.
+function formatPrice(inr?: number): string | null {
+  if (typeof inr !== 'number' || !Number.isFinite(inr)) return null;
+  return `₹${Math.round(inr).toLocaleString('en-IN')}`;
+}
+
+function resolveRationale(p: MatchedProduct): string | null {
+  return p.why_this_one ?? p.why_good ?? null;
+}
+
 export default function ProductPickerSheet({
   visible,
   onClose,
@@ -73,11 +84,11 @@ export default function ProductPickerSheet({
   stepId,
   onBought,
 }: ProductPickerSheetProps) {
-  const getUrl = nykaaUrl ?? ((p: MatchedProduct) => p.nykaa_url ?? defaultNykaaUrl(p));
+  const [altsExpanded, setAltsExpanded] = useState(false);
+
+  const getUrl = nykaaUrl ?? ((p: MatchedProduct) => getProductNykaaUrl(p) ?? defaultNykaaUrl(p));
 
   const handleBuy = async (product: MatchedProduct) => {
-    // Optimistically insert the kit row before opening the URL so the app state
-    // is correct even if the user never returns from the affiliate page.
     if (userId && stepId) {
       try {
         await addProductToKitFromBuy({
@@ -94,6 +105,71 @@ export default function ProductPickerSheet({
     Linking.openURL(getUrl(product));
   };
 
+  const primary      = products[0];
+  const alternatives = products.slice(1, 3);
+
+  const renderPrimary = (product: MatchedProduct) => {
+    const price = formatPrice(product.price_inr);
+    const why   = resolveRationale(product);
+    return (
+      <View style={s.primaryCard}>
+        <View style={s.cardRow}>
+          <View style={s.cardLeft}>
+            <Text style={s.primaryProductName} numberOfLines={2}>
+              {product.name}
+            </Text>
+            <Text style={s.primaryProductBrand} numberOfLines={1}>
+              {product.brand}{price ? ` · ${price}` : ''}
+            </Text>
+            {why ? (
+              <Text style={s.primaryProductWhy} numberOfLines={3}>
+                {why}
+              </Text>
+            ) : null}
+          </View>
+          <TouchableOpacity
+            style={s.primaryBuyBtn}
+            onPress={() => handleBuy(product)}
+            activeOpacity={0.75}
+          >
+            <Text style={s.primaryBuyBtnText}>Buy →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderAlternative = (product: MatchedProduct, index: number) => {
+    const price = formatPrice(product.price_inr);
+    const why   = resolveRationale(product);
+    return (
+      <View key={`${product.id ?? product.name}-${index}`} style={s.altCard}>
+        <View style={s.cardRow}>
+          <View style={s.cardLeft}>
+            <Text style={s.altProductName} numberOfLines={1}>
+              {product.name}
+            </Text>
+            <Text style={s.altProductBrand} numberOfLines={1}>
+              {product.brand}{price ? ` · ${price}` : ''}
+            </Text>
+            {why ? (
+              <Text style={s.altProductWhy} numberOfLines={2}>
+                {why}
+              </Text>
+            ) : null}
+          </View>
+          <TouchableOpacity
+            style={s.altBuyBtn}
+            onPress={() => handleBuy(product)}
+            activeOpacity={0.75}
+          >
+            <Text style={s.altBuyBtnText}>Buy →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <Modal
       visible={visible}
@@ -101,22 +177,18 @@ export default function ProductPickerSheet({
       animationType="slide"
       onRequestClose={onClose}
     >
-      {/* Overlay — tap outside to close */}
       <TouchableOpacity
         style={s.overlay}
         activeOpacity={1}
         onPress={onClose}
       >
-        {/* Sheet — prevent overlay tap propagating through the sheet */}
         <TouchableOpacity
           style={s.sheet}
           activeOpacity={1}
           onPress={() => { /* absorb tap */ }}
         >
-          {/* Handle bar */}
           <View style={s.handle} />
 
-          {/* Title */}
           <Text style={s.title}>
             {stepName} · {
               CATEGORY_LABELS[categoryName]
@@ -124,54 +196,37 @@ export default function ProductPickerSheet({
             }
           </Text>
 
-          {/* Reason */}
           <Text style={s.reason}>{reason}</Text>
 
-          {/* Divider */}
           <View style={s.divider} />
 
-          {/* Product list */}
           <ScrollView
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            {products.map((product, index) => {
-              const featured = product.is_featured === true;
-              return (
-                <View
-                  key={`${product.name}-${index}`}
-                  style={featured ? s.cardFeatured : s.card}
-                >
-                  {featured && (
-                    <View style={s.featuredBadge}>
-                      <Text style={s.featuredBadgeText}>Featured</Text>
-                    </View>
-                  )}
-                  <View style={s.cardRow}>
-                    <View style={s.cardLeft}>
-                      <Text style={s.productName} numberOfLines={1}>
-                        {product.name}
-                      </Text>
-                      <Text style={s.productBrand} numberOfLines={1}>
-                        {product.brand}
-                      </Text>
-                      <Text style={s.productWhy} numberOfLines={2}>
-                        {product.why_good}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={s.buyBtn}
-                      onPress={() => handleBuy(product)}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={s.buyBtnText}>Buy →</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
+            {primary ? renderPrimary(primary) : (
+              <Text style={s.emptyText}>No matching products yet.</Text>
+            )}
 
-            {/* Close button */}
+            {alternatives.length > 0 && (
+              <>
+                <TouchableOpacity
+                  style={s.altChip}
+                  onPress={() => setAltsExpanded(prev => !prev)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={s.altChipText}>
+                    {altsExpanded
+                      ? `Hide alternatives`
+                      : `See ${alternatives.length} alternative${alternatives.length === 1 ? '' : 's'}`}
+                  </Text>
+                  <Text style={s.altChipChevron}>{altsExpanded ? '∧' : '∨'}</Text>
+                </TouchableOpacity>
+
+                {altsExpanded && alternatives.map(renderAlternative)}
+              </>
+            )}
+
             <TouchableOpacity
               style={s.closeBtn}
               onPress={onClose}
@@ -194,11 +249,11 @@ const s = StyleSheet.create({
   },
 
   sheet: {
-    backgroundColor:     Colors.card,
+    backgroundColor:      Colors.card,
     borderTopLeftRadius:  20,
     borderTopRightRadius: 20,
-    padding:             20,
-    paddingBottom:       36,
+    padding:              20,
+    paddingBottom:        36,
   },
 
   handle: {
@@ -229,39 +284,106 @@ const s = StyleSheet.create({
     marginBottom:    14,
   },
 
-  card: {
+  // Primary card — larger, highlighted.
+  primaryCard: {
+    backgroundColor:   Colors.dangerBg,
+    borderWidth:       1.5,
+    borderColor:       Colors.accent,
+    borderRadius:      12,
+    padding:           14,
+    marginBottom:      12,
+  },
+
+  primaryProductName: {
+    fontSize:     14,
+    color:        Colors.text,
+    fontWeight:   '600',
+    marginBottom: 3,
+  },
+
+  primaryProductBrand: {
+    fontSize:     11,
+    color:        Colors.text2,
+    marginBottom: 6,
+  },
+
+  primaryProductWhy: {
+    fontSize:     11,
+    color:        Colors.text2,
+    lineHeight:   16,
+  },
+
+  primaryBuyBtn: {
+    borderWidth:       1,
+    borderColor:       Colors.accent,
+    backgroundColor:   Colors.accent,
+    borderRadius:      8,
+    paddingVertical:   6,
+    paddingHorizontal: 12,
+    alignSelf:         'flex-start',
+  },
+
+  primaryBuyBtnText: {
+    fontSize:   11,
+    color:      Colors.textOnAccent,
+    fontWeight: '600',
+  },
+
+  // Expandable chip
+  altChip: {
+    flexDirection:    'row',
+    justifyContent:   'space-between',
+    alignItems:       'center',
+    backgroundColor:  Colors.card,
+    borderWidth:      1,
+    borderColor:      Colors.border,
+    borderRadius:     8,
+    paddingVertical:  8,
+    paddingHorizontal: 12,
+    marginBottom:     8,
+  },
+
+  altChipText: {
+    fontSize:   11,
+    color:      Colors.text2,
+    fontWeight: '500',
+  },
+
+  altChipChevron: {
+    fontSize: 11,
+    color:    Colors.text2,
+  },
+
+  // Alternative card — smaller, same shape.
+  altCard: {
     backgroundColor: Colors.card,
     borderWidth:     1,
     borderColor:     Colors.border,
     borderRadius:    10,
-    padding:         12,
-    marginBottom:    8,
-  },
-
-  cardFeatured: {
-    backgroundColor: Colors.dangerBg,
-    borderWidth:     1.5,
-    borderColor:     Colors.accent,
-    borderRadius:    10,
-    padding:         12,
-    marginBottom:    8,
-  },
-
-  featuredBadge: {
-    backgroundColor: Colors.accent,
-    borderRadius:    4,
-    paddingVertical:   2,
-    paddingHorizontal: 6,
-    alignSelf:       'flex-start',
+    padding:         10,
     marginBottom:    6,
   },
 
-  featuredBadgeText: {
-    fontSize:    9,
-    color:       Colors.textOnAccent,
-    fontWeight:  '600',
+  altProductName: {
+    fontSize:     12,
+    color:        Colors.text,
+    fontWeight:   '500',
+    marginBottom: 2,
   },
 
+  altProductBrand: {
+    fontSize:     10,
+    color:        Colors.text2,
+    marginBottom: 4,
+  },
+
+  altProductWhy: {
+    fontSize:   9,
+    color:      Colors.text2,
+    lineHeight: 14,
+  },
+
+  // Shared row layout
   cardRow: {
     flexDirection:  'row',
     justifyContent: 'space-between',
@@ -273,47 +395,34 @@ const s = StyleSheet.create({
     marginRight: 12,
   },
 
-  productName: {
-    fontSize:     12,
-    color:        Colors.text,
-    fontWeight:   '500',
-    marginBottom: 2,
-  },
-
-  productBrand: {
-    fontSize:     10,
-    color:        Colors.text2,
-    marginBottom: 2,
-  },
-
-  productWhy: {
-    fontSize:     9,
-    color:        Colors.text2,
-    lineHeight:   14,
-    marginBottom: 4,
-  },
-
-  buyBtn: {
-    borderWidth:  1,
-    borderColor:  Colors.accent,
-    borderRadius: 6,
+  altBuyBtn: {
+    borderWidth:       1,
+    borderColor:       Colors.accent,
+    borderRadius:      6,
     paddingVertical:   4,
     paddingHorizontal: 8,
-    alignSelf:    'flex-start',
+    alignSelf:         'flex-start',
   },
 
-  buyBtnText: {
+  altBuyBtnText: {
     fontSize: 10,
     color:    Colors.accent,
   },
 
+  emptyText: {
+    fontSize:    12,
+    color:       Colors.text2,
+    textAlign:   'center',
+    paddingVertical: 20,
+  },
+
   closeBtn: {
-    marginTop: 8,
+    marginTop: 12,
   },
 
   closeBtnText: {
-    fontSize:   13,
-    color:      Colors.text2,
-    textAlign:  'center',
+    fontSize:  13,
+    color:     Colors.text2,
+    textAlign: 'center',
   },
 });

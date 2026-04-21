@@ -11,7 +11,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
-import { PRODUCTS, getProductsForBrands } from '../constants/productConstants';
+import { PRODUCTS, getProductsForBrands, getProductNykaaUrl } from '../constants/productConstants';
 import type { Product } from '../constants/productConstants';
 import { logProductEvent, getProductMap } from '../services/scanService';
 import { supabase } from '../lib/supabase';
@@ -167,7 +167,8 @@ export default function HairDetailScreen() {
         eventType:   'clicked_buy',
       });
     }
-    Linking.openURL(product.nykaa_url);
+    const url = getProductNykaaUrl(product);
+    if (url) Linking.openURL(url);
   };
 
   if (loading) {

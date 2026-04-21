@@ -590,6 +590,9 @@ export async function runScanPhase2(
     preferredBrands: userProfile.preferredBrands,
     gender:          productGender,
     budget:          userProfile.budget as BudgetTier,
+    skinType:        analysis.skin_type ?? undefined,
+    concerns:        analysis.skin_concerns ?? undefined,
+    city:            userProfile.city ?? undefined,
   });
   const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
 
@@ -908,6 +911,9 @@ export async function refreshRecommendations(
       preferredBrands: preferredBrandsRaw,
       gender:          productGender,
       budget:          inferredBudget,
+      skinType:        analysis.skin_type ?? undefined,
+      concerns:        analysis.skin_concerns ?? undefined,
+      city:            (userRow?.city as string | null) ?? undefined,
     });
     // Flatten to one product per category for Gemini description writing
     const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
@@ -1075,6 +1081,7 @@ export async function generateAndSaveHairProfile(
     preferredBrands: preferredBrandsRaw,
     gender:          hairGender,
     budget:          inferredBudget,
+    city:            city ?? undefined,
   });
   // Flatten to one product per category for Gemini description writing
   const matchedHairProducts: MatchedProduct[] = Object.values(hairProductMap).map(arr => arr[0]);

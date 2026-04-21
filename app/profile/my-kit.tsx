@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../../lib/supabase';
 import { fetchActiveKit, removeKitItem, markKitReordered, type UserKitRow } from '../../services/kitService';
-import { PRODUCTS, type Product } from '../../constants/productConstants';
+import { PRODUCTS, getProductNykaaUrl, type Product } from '../../constants/productConstants';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
 type KitCategory = 'skin' | 'hair' | 'beard' | 'other';
@@ -78,9 +78,10 @@ export default function MyKitScreen() {
 
   const handleReorder = async (entry: KitEntry) => {
     setActionSheet({ visible: false });
-    if (entry.product?.nykaa_url) {
+    const url = getProductNykaaUrl(entry.product);
+    if (url) {
       await markKitReordered(entry.row.id);
-      Linking.openURL(entry.product.nykaa_url);
+      Linking.openURL(url);
     }
   };
 
@@ -99,7 +100,7 @@ export default function MyKitScreen() {
     const name = p?.name ?? entry.row.product_id;
     const brand = p?.brand ?? '';
     const viaLume = entry.row.acquired_via === 'lume_affiliate';
-    const canReorder = !!p?.nykaa_url;
+    const canReorder = !!getProductNykaaUrl(p);
 
     return (
       <TouchableOpacity
@@ -203,7 +204,7 @@ export default function MyKitScreen() {
             <Text style={s.sheetTitle}>
               {actionSheet.entry?.product?.name ?? actionSheet.entry?.row.product_id ?? ''}
             </Text>
-            {actionSheet.entry?.product?.nykaa_url && (
+            {getProductNykaaUrl(actionSheet.entry?.product) && (
               <TouchableOpacity
                 style={s.sheetAction}
                 activeOpacity={0.75}

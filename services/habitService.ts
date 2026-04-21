@@ -8,7 +8,10 @@ import {
   type DayAdherence,
   type ScheduledRow,
 } from '../lib/habit';
-import type { Scan, HairProfile, HairRoutineStep } from '../types';
+import type {
+  Scan, HairProfile, HairRoutineStep, HairRecommendations,
+  Recommendations, RoutineStep,
+} from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -32,6 +35,13 @@ export interface RoutineDayStep {
   completed_at: string | null;
   kit_item_id:  string | null;
   row_id:       string;       // routine_checkins.id — used for direct updates
+  scan_id:      string;
+  // Joined from the scan's recommendations (or hair_recommendations for hair_*).
+  // Beard steps fall back to hardcoded defaults — BeardRecommendation has no
+  // structured routine. Always present after fetchRoutineForDate.
+  label:        string;
+  product:      string;
+  order:        number;       // sort key within a category bucket; 999 if unknown
 }
 
 // ─── Date helper ─────────────────────────────────────────────────────────────
@@ -239,25 +249,120 @@ export async function fetchDailyAdherence(
 
 // ─── Fetch today's (or a past day's) routine ─────────────────────────────────
 
+// Stable sort buckets so the list never re-shuffles between fetches.
+function categoryBucket(stepId: string): number {
+  if (stepId.startsWith('skin_am_')) return 1;
+  if (stepId.startsWith('skin_pm_')) return 2;
+  if (stepId.startsWith('beard_'))   return 3;
+  if (stepId.startsWith('hair_'))    return 4;
+  return 5;
+}
+
+// Beard steps aren't in scan.recommendations.beard (BeardRecommendation has no
+// routine field) — they're scheduled from hardcoded defaults, so we mirror those
+// defaults here for label/product display.
+function beardFallbackMeta(stepId: string): { label: string; product: string; order: number } | null {
+  switch (stepId) {
+    // Order: cleanse → nourish (oil absorbs) → shape (balm seals).
+    case 'beard_wash': return { label: 'Cleanse', product: 'Beard wash', order: 1 };
+    case 'beard_oil':  return { label: 'Nourish', product: 'Beard oil',  order: 2 };
+    case 'beard_balm': return { label: 'Shape',   product: 'Beard balm', order: 3 };
+    default: return null;
+  }
+}
+
+function humanizeStepId(stepId: string): string {
+  const short = stepId.replace(/^(skin_am_|skin_pm_|beard_|hair_)/, '').replace(/_/g, ' ');
+  return short.charAt(0).toUpperCase() + short.slice(1);
+}
+
 async function fetchRoutineForDate(userId: string, date: string): Promise<RoutineDayStep[]> {
   const { data, error } = await supabase
     .from('routine_checkins')
-    .select('id, step_id, time_of_day, completed_at, kit_item_id')
+    .select('id, scan_id, step_id, time_of_day, completed_at, kit_item_id')
     .eq('user_id', userId)
     .eq('date', date)
-    .eq('superseded', false)
-    .order('time_of_day', { ascending: true });
-
+    .eq('superseded', false);
   if (error) throw error;
 
-  return (data ?? []).map((r) => ({
-    step_id:      r.step_id,
-    time_of_day:  r.time_of_day as RoutineDayStep['time_of_day'],
-    completed:    r.completed_at !== null,
-    completed_at: r.completed_at,
-    kit_item_id:  r.kit_item_id,
-    row_id:       r.id,
-  }));
+  const rawRows = (data ?? []) as Array<{
+    id: string; scan_id: string; step_id: string;
+    time_of_day: string; completed_at: string | null; kit_item_id: string | null;
+  }>;
+  if (rawRows.length === 0) return [];
+
+  // Pull the relevant scan recommendations + the user's hair routine in parallel.
+  const scanIds = Array.from(new Set(rawRows.map(r => r.scan_id).filter(Boolean)));
+  const scansPromise = scanIds.length > 0
+    ? supabase.from('scans').select('id, recommendations').in('id', scanIds)
+    : Promise.resolve({ data: [] as Array<{ id: string; recommendations: Recommendations | null }>, error: null });
+  const userPromise = supabase
+    .from('users').select('hair_recommendations').eq('id', userId).single();
+
+  const [scansRes, userRes] = await Promise.all([scansPromise, userPromise]);
+  if (scansRes.error) throw scansRes.error;
+
+  // (scan_id|step_id) -> meta, for skin/beard rows. Beard step_ids are absent
+  // from scan recommendations; we'll fall back per-row below.
+  const byScanStep = new Map<string, { label: string; product: string; order: number }>();
+  for (const s of (scansRes.data ?? []) as Array<{ id: string; recommendations: Recommendations | null }>) {
+    const rec = s.recommendations;
+    const allSkin: RoutineStep[] = [
+      ...(rec?.skin?.routine?.morning ?? []),
+      ...(rec?.skin?.routine?.evening ?? []),
+    ];
+    for (const step of allSkin) {
+      if (!step.step_id) continue;
+      byScanStep.set(`${s.id}|${step.step_id}`, {
+        label:   step.label,
+        product: step.product,
+        order:   step.order ?? 999,
+      });
+    }
+  }
+
+  // Hair steps live on the user, not on individual scans.
+  const hairRecs = (userRes.data as { hair_recommendations?: HairRecommendations | null } | null)?.hair_recommendations ?? null;
+  const hairByStep = new Map<string, { label: string; product: string; order: number }>();
+  for (const h of hairRecs?.routine ?? []) {
+    if (!h.step_id) continue;
+    hairByStep.set(h.step_id, { label: h.label, product: h.product, order: h.order ?? 999 });
+  }
+
+  const enriched: RoutineDayStep[] = rawRows.map((r) => {
+    let meta: { label: string; product: string; order: number } | undefined;
+    if (r.step_id.startsWith('hair_')) {
+      meta = hairByStep.get(r.step_id);
+    } else if (r.step_id.startsWith('beard_')) {
+      meta = byScanStep.get(`${r.scan_id}|${r.step_id}`)
+          ?? beardFallbackMeta(r.step_id)
+          ?? undefined;
+    } else {
+      meta = byScanStep.get(`${r.scan_id}|${r.step_id}`);
+    }
+    return {
+      row_id:       r.id,
+      scan_id:      r.scan_id,
+      step_id:      r.step_id,
+      time_of_day:  r.time_of_day as RoutineDayStep['time_of_day'],
+      completed:    r.completed_at !== null,
+      completed_at: r.completed_at,
+      kit_item_id:  r.kit_item_id,
+      label:        meta?.label   ?? humanizeStepId(r.step_id),
+      product:      meta?.product ?? '',
+      order:        meta?.order   ?? 999,
+    };
+  });
+
+  enriched.sort((a, b) => {
+    const ba = categoryBucket(a.step_id);
+    const bb = categoryBucket(b.step_id);
+    if (ba !== bb) return ba - bb;
+    if (a.order !== b.order) return a.order - b.order;
+    return a.step_id.localeCompare(b.step_id);
+  });
+
+  return enriched;
 }
 
 export async function fetchTodayRoutine(userId: string): Promise<RoutineDayStep[]> {

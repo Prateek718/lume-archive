@@ -4,7 +4,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, Modal, ActivityIndicator,
+  RefreshControl, Modal, ActivityIndicator, Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,19 +17,15 @@ import {
   type RoutineDayStep,
 } from '../../services/habitService';
 import { getProductMap } from '../../services/scanService';
+import { fetchActiveKit } from '../../services/kitService';
 import {
   computeStreak, buildWeekStrip, computeRollingAdherence,
   type DayAdherence, type StreakInfo, type WeekDay,
 } from '../../lib/habit';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import ProductPickerSheet from '../../components/ProductPickerSheet';
-import type {
-  Scan, RoutineStep, HairRecommendations, HairRoutineStep, MatchedProduct,
-} from '../../types';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-type StepMeta = { label: string; product: string; category?: string };
-type StepMetaMap = Record<string, StepMeta>;
+import { PRODUCTS } from '../../constants/productConstants';
+import type { MatchedProduct } from '../../types';
 
 // ─── Step-id helpers ─────────────────────────────────────────────────────────
 
@@ -97,16 +93,6 @@ function fallbackLabel(stepId: string): string {
   return short.charAt(0).toUpperCase() + short.slice(1);
 }
 
-function sectionForStep(step: RoutineDayStep): 'am' | 'pm' | 'hair' | 'beard' | 'other' {
-  if (step.step_id.startsWith('skin_am_')) return 'am';
-  if (step.step_id.startsWith('skin_pm_')) return 'pm';
-  if (step.step_id.startsWith('hair_'))    return 'hair';
-  if (step.step_id.startsWith('beard_')) {
-    return step.time_of_day === 'pm' ? 'pm' : 'am';  // beard_oil=pm, beard_balm=am, beard_wash=daily
-  }
-  return step.time_of_day === 'pm' ? 'pm' : 'am';
-}
-
 function cadencePill(step: RoutineDayStep): string | null {
   if (step.time_of_day === 'weekly')  return 'Weekly';
   if (step.time_of_day === 'monthly') return 'Monthly';
@@ -132,9 +118,8 @@ export default function RoutineScreen() {
 
   const [userId, setUserId] = useState<string | null>(null);
   const [hasScan, setHasScan] = useState<boolean>(false);
-  const [latestScanId, setLatestScanId] = useState<string | null>(null);
-  const [stepMeta, setStepMeta] = useState<StepMetaMap>({});
   const [productMap, setProductMap] = useState<Record<string, MatchedProduct[]>>({});
+  const [kitMap, setKitMap] = useState<Record<string, { name: string; brand: string }>>({});
 
   const [todaySteps,    setTodaySteps]    = useState<RoutineDayStep[]>([]);
   const [yesterdaySteps, setYesterdaySteps] = useState<RoutineDayStep[]>([]);
@@ -164,64 +149,37 @@ export default function RoutineScreen() {
       if (!user) { setLoading(false); setRefreshing(false); return; }
       setUserId(user.id);
 
-      // Latest scan + stepMeta from recs
+      // Latest scan id — needed for productMap (picker catalogue).
       const { data: scansData } = await supabase
         .from('scans')
-        .select('id, recommendations, beard_density, created_at')
+        .select('id')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1);
-      const latestScan = (scansData?.[0] as Scan | undefined) ?? null;
-      const scanId = latestScan?.id ?? null;
-      setLatestScanId(scanId);
-      setHasScan(!!latestScan);
+      const scanId = (scansData?.[0] as { id: string } | undefined)?.id ?? null;
+      setHasScan(!!scanId);
 
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('hair_recommendations')
-        .eq('id', user.id)
-        .single();
-
-      const meta: StepMetaMap = {};
-      const morning: RoutineStep[] = latestScan?.recommendations?.skin?.routine?.morning ?? [];
-      const evening: RoutineStep[] = latestScan?.recommendations?.skin?.routine?.evening ?? [];
-      for (const s of morning) {
-        if (s.step_id) meta[s.step_id] = { label: s.label, product: s.product, category: deriveCategory(s.step_id, s.product) };
-      }
-      for (const s of evening) {
-        if (s.step_id) meta[s.step_id] = { label: s.label, product: s.product, category: deriveCategory(s.step_id, s.product) };
-      }
-
-      // Beard defaults — habitService doesn't persist labels for beard_wash/oil/balm so hard-wire.
-      meta['beard_wash'] = meta['beard_wash'] ?? { label: 'Cleanse', product: 'Beard wash', category: 'beard_wash' };
-      meta['beard_oil']  = meta['beard_oil']  ?? { label: 'Nourish', product: 'Beard oil',  category: 'beard_oil' };
-      meta['beard_balm'] = meta['beard_balm'] ?? { label: 'Shape',   product: 'Beard balm', category: 'beard_balm' };
-
-      // Hair steps from the user's saved hair_recommendations
-      const hairRec = (userRow as { hair_recommendations?: HairRecommendations | null } | null)?.hair_recommendations ?? null;
-      const hairRoutine: HairRoutineStep[] = hairRec?.routine ?? [];
-      for (const h of hairRoutine) {
-        if (h.step_id) meta[h.step_id] = { label: h.label, product: h.product, category: deriveCategory(h.step_id, h.product) };
-      }
-      setStepMeta(meta);
-
-      // Products for pickers
-      if (scanId) {
-        const pm = await getProductMap(scanId);
-        setProductMap(pm);
-      } else {
-        setProductMap({});
-      }
-
-      // Today + yesterday + past-day (if selected) + 30-day adherence
-      const [today, yesterday, adherence] = await Promise.all([
+      // Today + yesterday + adherence + product catalogue + active kit, all in parallel.
+      const [today, yesterday, adherence, pm, kitRows] = await Promise.all([
         fetchTodayRoutine(user.id),
         fetchPastDayRoutine(user.id, yesterdayISO()),
         fetchDailyAdherence(user.id, 30),
+        scanId ? getProductMap(scanId) : Promise.resolve({} as Record<string, MatchedProduct[]>),
+        fetchActiveKit(user.id),
       ]);
       setTodaySteps(today);
       setYesterdaySteps(yesterday);
       setDailyAdherence(adherence);
+      setProductMap(pm);
+
+      // Build kit lookup: kit_item_id -> { name, brand } via PRODUCTS catalogue.
+      const km: Record<string, { name: string; brand: string }> = {};
+      for (const row of kitRows) {
+        const p = PRODUCTS.find((q) => q.id === row.product_id);
+        if (p) km[row.id] = { name: p.name, brand: p.brand };
+        else km[row.id] = { name: row.product_id, brand: '' };
+      }
+      setKitMap(km);
 
       if (selectedDate !== todayISO()) {
         const past = await fetchPastDayRoutine(user.id, selectedDate);
@@ -254,72 +212,156 @@ export default function RoutineScreen() {
 
   const activeSteps = viewingToday ? todaySteps : pastDaySteps;
 
-  const amSteps    = activeSteps.filter(s => sectionForStep(s) === 'am');
-  const pmSteps    = activeSteps.filter(s => sectionForStep(s) === 'pm');
-  const hairSteps  = activeSteps.filter(s => sectionForStep(s) === 'hair');
+  // Display sections — beard and hair are shown in both AM and PM today views.
+  const skinAmSteps  = activeSteps.filter(s => s.step_id.startsWith('skin_am_'));
+  const skinPmSteps  = activeSteps.filter(s => s.step_id.startsWith('skin_pm_'));
+  const beardSteps   = activeSteps.filter(s => s.step_id.startsWith('beard_'));
+  const hairSteps    = activeSteps.filter(s => s.step_id.startsWith('hair_'));
 
-  const currentPeriodSteps = viewingToday
-    ? (period === 'am' ? amSteps : pmSteps)
-    : [];  // past view shows both
+  // Mark-all bucket — skin_am_* + beard with am bucket (or pm equivalents).
+  // Hair is excluded; cadence-driven steps shouldn't be bulk-toggled.
+  const currentPeriodSteps = useMemo<RoutineDayStep[]>(() => {
+    if (!viewingToday) return [];
+    if (period === 'am') {
+      return [
+        ...skinAmSteps,
+        ...beardSteps.filter(b => b.time_of_day !== 'pm'),  // 'am' or 'daily'
+      ];
+    }
+    return [
+      ...skinPmSteps,
+      ...beardSteps.filter(b => b.time_of_day === 'pm'),
+    ];
+  }, [viewingToday, period, skinAmSteps, skinPmSteps, beardSteps]);
 
   const periodUnchecked = currentPeriodSteps.filter(s => !s.completed);
   const periodAllDone = currentPeriodSteps.length > 0 && periodUnchecked.length === 0;
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-  const toggleStep = useCallback(async (step: RoutineDayStep) => {
-    if (!userId) return;
-    if (!viewingToday) return; // past is read-only
-    try {
-      if (step.completed) {
-        await unrecordCheckin(userId, step.step_id, selectedDate);
-      } else {
-        await recordCheckin(userId, step.step_id, selectedDate, step.kit_item_id ?? undefined);
-      }
-      await loadAll();
-    } catch (err) {
-      console.error('[routine] toggleStep failed', err);
-    }
-  }, [userId, viewingToday, selectedDate, loadAll]);
+  // Today's completion ratio for the week-strip "today" dot.
+  const todayPct = activeSteps.length === 0
+    ? 0
+    : Math.round((activeSteps.filter(x => x.completed).length / activeSteps.length) * 100);
 
-  const handleMarkAll = useCallback(async () => {
+  // ── Actions (optimistic) ──────────────────────────────────────────────────
+  // Each toggle / mark-all updates local state immediately, then fires the
+  // Supabase write in the background. On error we revert. We never re-fetch
+  // the routine on a tap — the list must not re-shuffle mid-interaction.
+  const adjustAdherence = useCallback((delta: number, date: string) => {
+    setDailyAdherence((prev) => {
+      const idx = prev.findIndex((d) => d.date === date);
+      if (idx === -1) {
+        // Today may not be in the window yet — append.
+        return [...prev, { date, scheduled_count: 0, completed_count: Math.max(0, delta) }];
+      }
+      const next = [...prev];
+      next[idx] = { ...next[idx], completed_count: Math.max(0, next[idx].completed_count + delta) };
+      return next;
+    });
+  }, []);
+
+  const toggleStep = useCallback((step: RoutineDayStep) => {
     if (!userId || !viewingToday) return;
-    try {
-      if (periodAllDone) {
-        // unmark all current-period steps
-        for (const s of currentPeriodSteps) {
-          if (s.completed) await unrecordCheckin(userId, s.step_id, selectedDate);
-        }
-      } else {
-        const ids = periodUnchecked.map(s => s.step_id);
-        if (ids.length > 0) await recordBulkCheckin(userId, ids, selectedDate);
-      }
-      await loadAll();
-    } catch (err) {
-      console.error('[routine] markAll failed', err);
-    }
-  }, [userId, viewingToday, periodAllDone, currentPeriodSteps, periodUnchecked, selectedDate, loadAll]);
+    const willComplete = !step.completed;
+    const nowIso = new Date().toISOString();
+    const date = selectedDate;
 
-  const markYesterdayDone = useCallback(async (stepId: string) => {
+    setTodaySteps((prev) => prev.map((s) => s.row_id === step.row_id
+      ? { ...s, completed: willComplete, completed_at: willComplete ? nowIso : null }
+      : s));
+    adjustAdherence(willComplete ? 1 : -1, date);
+
+    (async () => {
+      try {
+        if (willComplete) {
+          await recordCheckin(userId, step.step_id, date, step.kit_item_id ?? undefined);
+        } else {
+          await unrecordCheckin(userId, step.step_id, date);
+        }
+      } catch (err) {
+        console.error('[routine] toggleStep failed', err);
+        setTodaySteps((prev) => prev.map((s) => s.row_id === step.row_id
+          ? { ...s, completed: step.completed, completed_at: step.completed_at }
+          : s));
+        adjustAdherence(willComplete ? -1 : 1, date);
+        Alert.alert('Could not save', 'Please try again.');
+      }
+    })();
+  }, [userId, viewingToday, selectedDate, adjustAdherence]);
+
+  const handleMarkAll = useCallback(() => {
+    if (!userId || !viewingToday) return;
+    const willMark = !periodAllDone;
+    const targets = willMark
+      ? periodUnchecked
+      : currentPeriodSteps.filter((s) => s.completed);
+    if (targets.length === 0) return;
+
+    const targetIds = new Set(targets.map((s) => s.row_id));
+    const nowIso = new Date().toISOString();
+    const date = selectedDate;
+    const snapshot = targets.map((s) => ({ row_id: s.row_id, completed: s.completed, completed_at: s.completed_at }));
+
+    setTodaySteps((prev) => prev.map((s) => targetIds.has(s.row_id)
+      ? { ...s, completed: willMark, completed_at: willMark ? nowIso : null }
+      : s));
+    adjustAdherence(willMark ? targets.length : -targets.length, date);
+
+    (async () => {
+      try {
+        if (willMark) {
+          await recordBulkCheckin(userId, targets.map((t) => t.step_id), date);
+        } else {
+          // habitService has no bulk un-record; fan out.
+          await Promise.all(targets.map((t) => unrecordCheckin(userId, t.step_id, date)));
+        }
+      } catch (err) {
+        console.error('[routine] markAll failed', err);
+        setTodaySteps((prev) => prev.map((s) => {
+          const snap = snapshot.find((x) => x.row_id === s.row_id);
+          return snap ? { ...s, completed: snap.completed, completed_at: snap.completed_at } : s;
+        }));
+        adjustAdherence(willMark ? -targets.length : targets.length, date);
+        Alert.alert('Could not save', 'Please try again.');
+      }
+    })();
+  }, [userId, viewingToday, periodAllDone, periodUnchecked, currentPeriodSteps, selectedDate, adjustAdherence]);
+
+  const markYesterdayDone = useCallback((stepId: string) => {
     if (!userId) return;
-    try {
-      await recordCheckin(userId, stepId, yesterdayISO());
-      setYesterdaySheet({ visible: false });
-      await loadAll();
-    } catch (err) {
-      console.error('[routine] markYesterdayDone failed', err);
-    }
-  }, [userId, loadAll]);
+    const date = yesterdayISO();
+    const target = yesterdaySteps.find((s) => s.step_id === stepId);
+    setYesterdaySheet({ visible: false });
+    if (!target || target.completed) return;
+
+    const nowIso = new Date().toISOString();
+    setYesterdaySteps((prev) => prev.map((s) => s.step_id === stepId
+      ? { ...s, completed: true, completed_at: nowIso }
+      : s));
+    adjustAdherence(1, date);
+
+    (async () => {
+      try {
+        await recordCheckin(userId, stepId, date);
+      } catch (err) {
+        console.error('[routine] markYesterdayDone failed', err);
+        setYesterdaySteps((prev) => prev.map((s) => s.step_id === stepId
+          ? { ...s, completed: false, completed_at: null }
+          : s));
+        adjustAdherence(-1, date);
+        Alert.alert('Could not save', 'Please try again.');
+      }
+    })();
+  }, [userId, yesterdaySteps, adjustAdherence]);
 
   const openPicker = useCallback((step: RoutineDayStep) => {
-    const meta = stepMeta[step.step_id];
-    const category = meta?.category ?? deriveCategory(step.step_id, meta?.product);
+    const category = deriveCategory(step.step_id, step.product);
     if (!category) return;
     setPickerStepId(step.step_id);
     setPickerCategory(category);
-    setPickerStepLabel(meta?.label ?? fallbackLabel(step.step_id));
-    setPickerReason(meta?.product ?? '');
+    setPickerStepLabel(step.label || fallbackLabel(step.step_id));
+    setPickerReason(step.product ?? '');
     setPickerVisible(true);
-  }, [stepMeta]);
+  }, []);
 
   const onSelectDay = useCallback(async (w: WeekDay) => {
     if (w.is_today) {
@@ -338,13 +380,12 @@ export default function RoutineScreen() {
 
   // ── Step row ───────────────────────────────────────────────────────────────
   const renderStep = (step: RoutineDayStep) => {
-    const meta = stepMeta[step.step_id];
-    const label = meta?.label ?? fallbackLabel(step.step_id);
-    const category = meta?.category ?? deriveCategory(step.step_id, meta?.product);
+    const label = step.label || fallbackLabel(step.step_id);
+    const category = deriveCategory(step.step_id, step.product);
     const hasProducts = category ? (productMap[category]?.length ?? 0) > 0 : false;
     const cadence = cadencePill(step);
-    const showPickerChip = viewingToday && !step.kit_item_id && !meta?.product && hasProducts;
-    const productText = meta?.product ?? '';
+    const linkedKit = step.kit_item_id ? kitMap[step.kit_item_id] ?? null : null;
+    const showPickerChip = viewingToday && !linkedKit && hasProducts;
 
     const onRowLongPress = () => {
       if (!viewingToday) return;
@@ -371,17 +412,24 @@ export default function RoutineScreen() {
         )}
         <View style={{ flex: 1 }}>
           <Text style={[s.stepLabel, step.completed && s.stepLabelDone]}>{label}</Text>
-          {hasProducts && !meta?.product && showPickerChip ? (
-            <TouchableOpacity
-              onPress={(e) => { e.stopPropagation(); openPicker(step); }}
-              style={s.pickChip}
-              activeOpacity={0.75}
-            >
-              <Text style={s.pickChipText}>Pick product →</Text>
-            </TouchableOpacity>
-          ) : productText ? (
-            <Text style={s.stepProduct}>{productText}</Text>
-          ) : null}
+          {linkedKit ? (
+            <Text style={s.stepProductLinked} numberOfLines={1}>
+              {linkedKit.brand ? `${linkedKit.name} · ${linkedKit.brand}` : linkedKit.name}
+            </Text>
+          ) : (
+            <>
+              {step.product ? <Text style={s.stepProduct}>{step.product}</Text> : null}
+              {showPickerChip && (
+                <TouchableOpacity
+                  onPress={(e) => { e.stopPropagation(); openPicker(step); }}
+                  style={s.pickChip}
+                  activeOpacity={0.75}
+                >
+                  <Text style={s.pickChipText}>Pick product →</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
         </View>
         {cadence && (
           <View style={s.cadencePill}>
@@ -399,12 +447,7 @@ export default function RoutineScreen() {
     let inner: React.ReactNode = null;
 
     if (w.is_today) {
-      const pct = (amSteps.length + pmSteps.length + hairSteps.length) === 0
-        ? 0
-        : Math.round(
-            (activeSteps.filter(x => x.completed).length / activeSteps.length) * 100
-          );
-      inner = <Text style={s.dotToday}>{pct}</Text>;
+      inner = <Text style={s.dotToday}>{todayPct}</Text>;
       styles.push(s.dotCircleToday);
     } else if (w.status === 'adherent') {
       styles.push(s.dotCircleAdherent);
@@ -548,23 +591,36 @@ export default function RoutineScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Step list — current period */}
-            {currentPeriodSteps.length === 0 ? (
-              <View style={s.emptySection}>
-                <Text style={s.emptySectionText}>
-                  No {period.toUpperCase()} steps scheduled today
-                </Text>
-              </View>
-            ) : (
-              currentPeriodSteps.map(renderStep)
+            {/* Skin section — AM or PM depending on toggle */}
+            {(period === 'am' ? skinAmSteps : skinPmSteps).length > 0 && (
+              <>
+                <Text style={s.sectionLabel}>SKIN</Text>
+                {(period === 'am' ? skinAmSteps : skinPmSteps).map(renderStep)}
+              </>
             )}
 
-            {/* Hair section */}
+            {/* Beard section — always full beard, ignores AM/PM toggle */}
+            {beardSteps.length > 0 && (
+              <>
+                <Text style={s.sectionLabel}>BEARD</Text>
+                {beardSteps.map(renderStep)}
+              </>
+            )}
+
+            {/* Hair section — full hair routine, ignores AM/PM toggle */}
             {hairSteps.length > 0 && (
               <>
                 <Text style={s.sectionLabel}>HAIR</Text>
                 {hairSteps.map(renderStep)}
               </>
+            )}
+
+            {/* Empty fallback when nothing is scheduled at all today */}
+            {skinAmSteps.length === 0 && skinPmSteps.length === 0
+             && beardSteps.length === 0 && hairSteps.length === 0 && (
+              <View style={s.emptySection}>
+                <Text style={s.emptySectionText}>No routine scheduled today</Text>
+              </View>
             )}
           </>
         )}
@@ -572,16 +628,22 @@ export default function RoutineScreen() {
         {/* PAST DAY VIEW */}
         {!viewingToday && (
           <>
-            {amSteps.length > 0 && (
+            {skinAmSteps.length > 0 && (
               <>
                 <Text style={s.sectionLabel}>AM</Text>
-                {amSteps.map(renderStep)}
+                {skinAmSteps.map(renderStep)}
               </>
             )}
-            {pmSteps.length > 0 && (
+            {skinPmSteps.length > 0 && (
               <>
                 <Text style={s.sectionLabel}>PM</Text>
-                {pmSteps.map(renderStep)}
+                {skinPmSteps.map(renderStep)}
+              </>
+            )}
+            {beardSteps.length > 0 && (
+              <>
+                <Text style={s.sectionLabel}>BEARD</Text>
+                {beardSteps.map(renderStep)}
               </>
             )}
             {hairSteps.length > 0 && (
@@ -628,7 +690,7 @@ export default function RoutineScreen() {
         >
           <View style={s.actionSheet}>
             <Text style={s.sheetTitle}>
-              {yesterdaySheet.step ? (stepMeta[yesterdaySheet.step.step_id]?.label ?? fallbackLabel(yesterdaySheet.step.step_id)) : ''}
+              {yesterdaySheet.step ? (yesterdaySheet.step.label || fallbackLabel(yesterdaySheet.step.step_id)) : ''}
             </Text>
             <TouchableOpacity
               style={s.sheetAction}
@@ -734,6 +796,7 @@ const s = StyleSheet.create({
   stepLabel:     { fontSize: 15, color: Colors.text, fontWeight: '500' },
   stepLabelDone: { color: Colors.text2 },
   stepProduct:   { fontSize: 11, color: Colors.text2, marginTop: 1 },
+  stepProductLinked: { fontSize: 12, color: Colors.text, marginTop: 2, fontWeight: '500' },
   pickChip:      { alignSelf: 'flex-start', marginTop: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill, borderWidth: 1, borderColor: Colors.accent },
   pickChipText:  { fontSize: 10, color: Colors.accent, fontWeight: '600' },
 

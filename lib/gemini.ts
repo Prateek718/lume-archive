@@ -322,12 +322,16 @@ function buildRecsPrompt(
   ageRange:        string | null,
 ): string {
 
+  // The app's scoring engine picks the actual products. Gemini's job is to
+  // name the ingredient CATEGORY (not a brand + product name) that suits this
+  // user, plus a personalised reason for choosing that category. The scoring
+  // engine maps category → product downstream and generates its own rationale.
   const matchedSection = matchedProducts.length > 0
-    ? `Matched products for this user:\n${
+    ? `Ingredient categories pre-selected for this user:\n${
         matchedProducts.map(p =>
-          `- Category: ${p.category}\n  Product: ${p.name} by ${p.brand}\n  Description: ${p.why_good}`
+          `- Category: ${p.category}${p.actives && p.actives.length > 0 ? ` (actives: ${p.actives.join(', ')})` : ''}`
         ).join('\n')
-      }\n\nFor each matched product, write a personalised reason (1 sentence) explaining why it suits this specific user — their skin type, concerns, city climate. Describe the actual product, not an imagined ideal.`
+      }\n\nFor each category above, write a one-sentence personalised reason explaining why that CATEGORY of product suits this specific user — their skin type, concerns, city climate. Do not name a brand or a specific product — only describe the category.`
     : '';
 
   const undertoneCtx = gender === 'woman' && analysis.skin_undertone
@@ -540,14 +544,19 @@ Return ONLY valid JSON, no markdown, no fences:
   "products": [
     {
       "category": "face_cleanser",
-      "name": "exact product name",
-      "brand": "exact brand",
-      "reason": "1 sentence personalised reason",
+      "name": "Gel cleanser",
+      "brand": "category",
+      "reason": "1 sentence personalised reason for this category",
       "match_score": 85
     }
   ]
 }
 
+Note: products.name and products.brand MUST be generic category descriptors
+(e.g. "Niacinamide serum", "Gel cleanser", "Mineral sunscreen SPF 50").
+Do NOT name a specific brand or product — the app's scoring engine picks
+the actual product from the catalogue. Always set products.brand to the
+literal string "category".
 Note: beard is null if gender is woman.
 Note: makeup is null if gender is man.
 Note: routine arrays show ONLY the steps
@@ -663,12 +672,14 @@ function buildHairRecsPrompt(
         `Gender: ${gender}`,
       ].filter(Boolean).join('\n');
 
+  // The app's scoring engine picks the actual products downstream; Gemini
+  // describes the ingredient CATEGORY, not a specific product or brand.
   const matchedSection = matchedProducts.length > 0
-    ? `Matched ${bald ? 'scalp care' : 'hair'} products for this user:\n${matchedProducts.map(p =>
-        `- Category: ${p.category}\n  Product: ${p.name} by ${p.brand}\n  Description: ${p.why_good}`
-      ).join('\n')}\n\nFor each matched product, write a personalised reason referencing their specific ${
+    ? `Ingredient categories pre-selected for this user:\n${matchedProducts.map(p =>
+        `- Category: ${p.category}${p.actives && p.actives.length > 0 ? ` (actives: ${p.actives.join(', ')})` : ''}`
+      ).join('\n')}\n\nFor each category above, write a one-sentence personalised reason referencing their specific ${
         bald ? 'scalp type and scalp concern' : 'scalp type, concern, hair texture, wash frequency, and oiling habit'
-      }. The reason must describe the actual product shown.`
+      }. Describe the category only — do not name a brand or specific product.`
     : '';
 
   if (bald) {
@@ -709,13 +720,18 @@ Return ONLY a valid JSON object with no markdown, no code fences, no explanation
   "products": [
     {
       "category": "scalp_serum",
-      "name": "exact product name as provided above",
-      "brand": "exact brand as provided above",
+      "name": "Scalp serum",
+      "brand": "category",
       "reason": "personalised one sentence referencing scalp type and concern",
       "match_score": <integer 60-100>
     }
   ]
 }
+
+products.name and products.brand MUST be generic category descriptors (e.g.
+"Scalp serum", "Gentle shampoo", "Hair oil"). Do NOT name a specific brand
+or product — the app's scoring engine picks the actual product from the
+catalogue. Always set products.brand to the literal string "category".
 
 styles: Must be an empty array — do NOT suggest hair styles for bald users.
 styles_detailed: Must be an empty array.
@@ -783,13 +799,18 @@ Return ONLY a valid JSON object with no markdown, no code fences, no explanation
   "products": [
     {
       "category": "shampoo",
-      "name": "exact product name as provided above",
-      "brand": "exact brand as provided above",
+      "name": "Shampoo",
+      "brand": "category",
       "reason": "personalised one sentence referencing scalp type, concern, or texture",
       "match_score": <integer 60-100>
     }
   ]
 }
+
+products.name and products.brand MUST be generic category descriptors (e.g.
+"Shampoo", "Hair oil", "Leave-in conditioner"). Do NOT name a specific
+brand or product — the app's scoring engine picks the actual product from
+the catalogue. Always set products.brand to the literal string "category".
 
 routine: Exactly 4 steps. Every step MUST have step_id and cadence. simple=Cleanse+Condition (order 1-2), balanced=Nourish (order 3), full=Smooth (order 4). Use generic product category names only.
 CRITICAL: routine step product fields must use generic names only. Use 'Shampoo' not 'Anti-dandruff Shampoo'. Use 'Hair oil' not 'Argan Oil Treatment'. Use 'Hair serum' not 'Hydrating Shine Serum'.
