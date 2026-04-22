@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
 import { getProductMap } from '../services/scanService';
 import { supabase } from '../lib/supabase';
+import { hasValidHairProfile } from '../lib/hair';
 import type { Scan, HairRecommendations, HairProfile, MatchedProduct } from '../types';
 import ProductPickerSheet from '../components/ProductPickerSheet';
 
@@ -109,8 +110,8 @@ export default function HairDetailScreen() {
       if (!hairRecs && row?.hair_recommendations) {
         setHairRecs(row.hair_recommendations);
       }
-      if (row?.hair_profile) {
-        setHairProfile(row.hair_profile);
+      if (hasValidHairProfile(row?.hair_profile)) {
+        setHairProfile(row!.hair_profile!);
       }
       if (scan?.id) {
         getProductMap(scan.id).then(setProductMap);

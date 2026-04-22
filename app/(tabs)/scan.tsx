@@ -16,6 +16,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { DeadTimeQuestionCard } from '../../components/DeadTimeQuestionCard';
 import { HairProfileDuringVision } from '../../components/HairProfileDuringVision';
 import { RescanFeedbackFlow, type RescanFeedback } from '../../components/RescanFeedbackFlow';
+import { hasValidHairProfile } from '../../lib/hair';
 import type { Scan, HairProfile } from '../../types';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -497,11 +498,7 @@ export default function ScanScreen() {
           .eq('id', user.id)
           .single();
         if (profile?.gender) setGender(profile.gender as string);
-        const needs = !profile?.hair_profile;
-        console.log('[scan-diag] focus loadProfile — gender:', profile?.gender,
-          '· hair_profile:', profile?.hair_profile,
-          '· needsHairProfile→', needs);
-        setNeedsHairProfile(needs);
+        setNeedsHairProfile(!hasValidHairProfile(profile?.hair_profile as HairProfile | null | undefined));
       };
       loadProfile();
       hydratePendingObservation();
@@ -523,11 +520,7 @@ export default function ScanScreen() {
   };
 
   const handleCapture = useCallback(
-    (uri: string) => {
-      console.log('[scan-diag] handleCapture — gender:', gender,
-        '· needsHairProfile:', needsHairProfile);
-      return processPhoto(uri, gender, 'full_face', needsHairProfile);
-    },
+    (uri: string) => processPhoto(uri, gender, 'full_face', needsHairProfile),
     [processPhoto, gender, needsHairProfile],
   );
 
@@ -542,10 +535,7 @@ export default function ScanScreen() {
 
   if (phase === 'camera')     return <CameraScreen onCapture={handleCapture} onCancel={reset} error={error} />;
   if (phase === 'processing') {
-    console.log('[scan-diag] processing branch — showHairProfile:', showHairProfile,
-      '· processingStep:', processingStep);
     if (showHairProfile) {
-      console.log('[scan-diag] mounting HairProfileDuringVision');
       return (
         <HairProfileDuringVision
           gender={gender}

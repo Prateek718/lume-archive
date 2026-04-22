@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../lib/supabase';
+import { hasValidHairProfile } from '../lib/hair';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
 import type { Scan, HairProfile, HairRecommendations } from '../types';
 import { isBaldProfile } from '../types';
@@ -114,7 +115,7 @@ export default function RecommendationsViewScreen() {
 
   const bald      = isBaldProfile(hairProfile);
   const rec       = scan.recommendations;
-  const showHair   = !!hairProfile && !!hairRecs;
+  const showHair   = hasValidHairProfile(hairProfile) && !!hairRecs;
   const showBeard  = (gender === 'man' || gender === 'other')
     && scan.beard_density != null && scan.beard_density !== 'none';
   const showMakeup = gender === 'woman' || gender === 'other';

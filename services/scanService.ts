@@ -153,6 +153,7 @@ import { getProductsForProfile, inferBudgetFromBrands } from '../constants/produ
 import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier, BeardGoal } from '../types';
 import { isBaldProfile } from '../types';
 import { resolveTraits, buildTraitsToSave, fetchUserTraits, saveUserTraits } from '../lib/traits';
+import { hasValidHairProfile } from '../lib/hair';
 
 const RECOMMENDATIONS_KEY = (scanId: string) => `@lume/recommendations_${scanId}`;
 const LATEST_SCAN_KEY    = '@lume/latest_scan';
@@ -934,8 +935,7 @@ export async function refreshRecommendations(
       hair_profile?: HairProfile;
     } | null)?.hair_profile;
 
-    const hairProfileSet = hairProfile &&
-      Object.keys(hairProfile).length > 0;
+    const hairProfileSet = hasValidHairProfile(hairProfile);
 
     console.log('[refreshRecommendations] step: hair profile check', {
       hairProfileSet,

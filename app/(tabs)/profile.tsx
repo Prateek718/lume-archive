@@ -25,6 +25,7 @@ import {
 } from '../../lib/milestones';
 import { fetchDailyAdherence } from '../../services/habitService';
 import { computeRollingAdherence, ADHERENCE_WINDOW_DAYS } from '../../lib/habit';
+import { hasValidHairProfile } from '../../lib/hair';
 
 function milestoneGlyph(key: MilestoneKey): string {
   switch (key) {
@@ -281,7 +282,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const hairProfileSet = hairProfile !== null;
+  const hairProfileSet = hasValidHairProfile(hairProfile);
 
   const latestScan = scans[0] ?? null;
   const scanPills  = latestScan
