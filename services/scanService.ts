@@ -148,7 +148,7 @@ import {
   getHairRecommendationsFromGemini,
 } from '../lib/gemini';
 import type { GeminiAnalysis } from '../lib/gemini';
-import type { RescanFeedback } from '../components/RescanFeedbackFlow';
+import type { RescanFeedback } from '../types';
 import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
 import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier, BeardGoal } from '../types';
 import { isBaldProfile } from '../types';

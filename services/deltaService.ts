@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import { computeStreak, type DayAdherence } from '../lib/habit';
 import { checkMilestonesForScan } from '../lib/milestones';
 import { PRODUCTS } from '../constants/productConstants';
-import type { RescanFeedback } from '../components/RescanFeedbackFlow';
+import type { RescanFeedback } from '../types';
 import type { Scan } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ import {
   runScanPhase1, runScanPhase2, generateAndSaveHairProfile,
 } from '../services/scanService';
 import type { Scan, HairProfile } from '../types';
-import type { RescanFeedback } from '../components/RescanFeedbackFlow';
+import type { RescanFeedback } from '../types';
 
 export type ScanPhase = 'home' | 'camera' | 'processing' | 'result';
 
@@ -114,7 +114,8 @@ export function useScan() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        router.replace('/(auth)/splash');
+        // TODO(phase-2): restore '/(auth)/splash' once auth screens are rebuilt.
+        router.replace('/');
         setPhase('home');
         setShowHairProfile(false);
         return;

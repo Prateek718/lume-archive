@@ -354,3 +354,28 @@ export interface Waitlist {
   city:       string | null;
   created_at: string;
 }
+
+// ─── Rescan Feedback ──────────────────────────────────────────────────────────
+// Migrated from components/RescanFeedbackFlow.tsx during Phase 0 demolition.
+// Collected on the 2nd+ scan while Gemini generates recommendations, and
+// persisted on the scan_delta row at delta-computation time.
+export type SubjectiveImprovement =
+  | 'much_better'
+  | 'slightly_better'
+  | 'same'
+  | 'slightly_worse'
+  | 'much_worse';
+
+export type AdherenceBlocker =
+  | 'travel'
+  | 'ran_out'
+  | 'too_busy'
+  | 'product_wrong'
+  | 'lost_motivation'
+  | 'more_consistent_than_thought';
+
+export interface RescanFeedback {
+  subjective_improvement?: SubjectiveImprovement;
+  adherence_blockers?:     AdherenceBlocker[];
+  irritation_flags?:       string[]; // kit_item_ids
+}
