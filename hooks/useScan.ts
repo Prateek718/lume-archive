@@ -103,9 +103,12 @@ export function useScan() {
     scanType: string = 'full_face',
     needsHairProfile: boolean = false,
   ) => {
+    console.log('[scan-diag] useScan.processPhoto entered — needsHairProfile:', needsHairProfile,
+      '· gender:', genderParam, '· scanType:', scanType);
     setError(null);
     setRecsError(false);
     setPhase('processing');
+    console.log('[scan-diag] useScan setShowHairProfile →', needsHairProfile);
     setShowHairProfile(needsHairProfile);
 
     const processingStart = Date.now();

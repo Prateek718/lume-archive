@@ -130,6 +130,8 @@ export function HairProfileDuringVision({
   visionStep: string;
   onComplete: (profile: HairProfile) => void;
 }) {
+  console.log('[scan-diag] HairProfileDuringVision render — gender:', gender,
+    '· visionStep:', visionStep);
   const [step,    setStep]    = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
 

@@ -124,7 +124,7 @@ export default function ScanHistoryScreen() {
                   </View>
                 )}
                 <View style={s.linkRow}>
-                  <Text style={s.viewLink}>View prescription →</Text>
+                  <Text style={s.viewLink}>View care plan →</Text>
                   {hasDelta && (
                     <TouchableOpacity
                       onPress={() => openDelta(scan.id!)}

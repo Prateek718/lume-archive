@@ -80,7 +80,7 @@ export function DeadTimeQuestionCard({ userId, beardDensity, gender, onAnswered 
     <View style={s.card}>
       <Text style={s.label}>ONE QUICK QUESTION</Text>
       <Text style={s.title}>What&apos;s your beard goal?</Text>
-      <Text style={s.subtitle}>Tap one — it tailors your beard prescription.</Text>
+      <Text style={s.subtitle}>Tap one — it tailors your beard care plan.</Text>
 
       <View style={s.options}>
         {OPTIONS.map(opt => {

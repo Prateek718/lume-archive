@@ -455,7 +455,7 @@ function ObservationScreen({
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={rs.cta} onPress={onContinue} activeOpacity={0.85}>
-            <Text style={rs.ctaText}>See your plan →</Text>
+            <Text style={rs.ctaText}>See your care plan →</Text>
           </TouchableOpacity>
         )}
 
@@ -497,7 +497,11 @@ export default function ScanScreen() {
           .eq('id', user.id)
           .single();
         if (profile?.gender) setGender(profile.gender as string);
-        setNeedsHairProfile(!profile?.hair_profile);
+        const needs = !profile?.hair_profile;
+        console.log('[scan-diag] focus loadProfile — gender:', profile?.gender,
+          '· hair_profile:', profile?.hair_profile,
+          '· needsHairProfile→', needs);
+        setNeedsHairProfile(needs);
       };
       loadProfile();
       hydratePendingObservation();
@@ -519,7 +523,11 @@ export default function ScanScreen() {
   };
 
   const handleCapture = useCallback(
-    (uri: string) => processPhoto(uri, gender, 'full_face', needsHairProfile),
+    (uri: string) => {
+      console.log('[scan-diag] handleCapture — gender:', gender,
+        '· needsHairProfile:', needsHairProfile);
+      return processPhoto(uri, gender, 'full_face', needsHairProfile);
+    },
     [processPhoto, gender, needsHairProfile],
   );
 
@@ -534,7 +542,10 @@ export default function ScanScreen() {
 
   if (phase === 'camera')     return <CameraScreen onCapture={handleCapture} onCancel={reset} error={error} />;
   if (phase === 'processing') {
+    console.log('[scan-diag] processing branch — showHairProfile:', showHairProfile,
+      '· processingStep:', processingStep);
     if (showHairProfile) {
+      console.log('[scan-diag] mounting HairProfileDuringVision');
       return (
         <HairProfileDuringVision
           gender={gender}

@@ -126,19 +126,21 @@ export default function RecommendationsScreen() {
     );
   }
 
-  const isWoman = gender === 'woman';
-  const bald    = isBaldProfile(hairProfile);
-  const rec     = scan!.recommendations!;
+  const bald       = isBaldProfile(hairProfile);
+  const rec        = scan!.recommendations!;
+  const showHair   = !!hairProfile && !!hairRecs;
+  const showBeard  = (gender === 'man' || gender === 'other')
+    && scan?.beard_density != null && scan.beard_density !== 'none';
+  const showMakeup = gender === 'woman' || gender === 'other';
 
   const hairTags = hairProfile
     ? bald
       ? ['Bald / Shaved', hairProfile.scalp_concern && hairProfile.scalp_concern !== 'none' ? hairProfile.scalp_concern : null].filter(Boolean) as string[]
       : [hairProfile.texture, hairProfile.primary_concern?.[0] && hairProfile.primary_concern[0] !== 'none' ? hairProfile.primary_concern[0] : null].filter(Boolean) as string[]
     : [];
-  const skinTags  = [scan?.skin_type, ...(scan?.skin_concerns?.slice(0, 2) ?? [])].filter(Boolean) as string[];
-  const thirdTags = isWoman
-    ? [scan?.brow_condition, scan?.undereye].filter(Boolean) as string[]
-    : [scan?.beard_condition ?? scan?.beard_density].filter(Boolean) as string[];
+  const skinTags   = [scan?.skin_type, ...(scan?.skin_concerns?.slice(0, 2) ?? [])].filter(Boolean) as string[];
+  const beardTags  = [scan?.beard_condition ?? scan?.beard_density].filter(Boolean) as string[];
+  const makeupTags = [scan?.brow_condition, scan?.undereye].filter(Boolean) as string[];
 
   // Product counts per domain
   const SKIN_CATS   = ['face_cleanser', 'moisturiser', 'spf_sunscreen', 'serum_vitamin_c', 'serum_niacinamide', 'eye_cream'];
@@ -173,27 +175,11 @@ export default function RecommendationsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={s.header}>
-          <Text style={s.title}>Your plan</Text>
+          <Text style={s.title}>Your care plan</Text>
           <Text style={s.subtitle}>
             {[scan?.skin_type, city, ageRange].filter(Boolean).join(' · ')}
           </Text>
         </View>
-
-        <CategoryCard
-          title={bald ? 'Scalp Care' : 'Hair'}
-          meta={hairProfile
-            ? `${hairRecs?.routine?.length ?? 0} steps · ${hairRecs?.products?.length ?? 0} products`
-            : 'Set up hair profile'}
-          tags={hairTags}
-          preview={firstSentence(hairRecs?.advice) || hairRecs?.summary || (hairProfile ? 'Personalised routine ready.' : 'Tap to create your hair profile.')}
-          onPress={() => {
-            if (!hairProfile) {
-              router.push({ pathname: '/hair-profile' as any, params: { returnTo: 'hair-detail' } });
-            } else {
-              goDetail('/hair-detail', hairRecs ? { hairRecsJson: JSON.stringify(hairRecs) } : {});
-            }
-          }}
-        />
 
         <CategoryCard
           title="Skin"
@@ -203,21 +189,33 @@ export default function RecommendationsScreen() {
           onPress={() => goDetail('/skin-detail')}
         />
 
-        {isWoman ? (
+        {showHair && (
           <CategoryCard
-            title="Makeup"
-            meta={`${rec.makeup?.techniques?.length ?? 0} steps · ${makeupProductCount} products`}
-            tags={thirdTags}
-            preview={firstSentence(rec.makeup?.advice) || rec.makeup?.summary || ''}
-            onPress={() => goDetail('/makeup-detail')}
+            title={bald ? 'Scalp Care' : 'Hair'}
+            meta={`${hairRecs?.routine?.length ?? 0} steps · ${hairRecs?.products?.length ?? 0} products`}
+            tags={hairTags}
+            preview={firstSentence(hairRecs?.advice) || hairRecs?.summary || 'Personalised routine ready.'}
+            onPress={() => goDetail('/hair-detail', hairRecs ? { hairRecsJson: JSON.stringify(hairRecs) } : {})}
           />
-        ) : (
+        )}
+
+        {showBeard && (
           <CategoryCard
             title="Beard"
             meta={`${beardProductCount} products · Daily`}
-            tags={thirdTags}
+            tags={beardTags}
             preview={firstSentence(rec.beard?.advice) || rec.beard?.summary || ''}
             onPress={() => goDetail('/beard-detail')}
+          />
+        )}
+
+        {showMakeup && (
+          <CategoryCard
+            title="Makeup"
+            meta={`${rec.makeup?.techniques?.length ?? 0} steps · ${makeupProductCount} products`}
+            tags={makeupTags}
+            preview={firstSentence(rec.makeup?.advice) || rec.makeup?.summary || ''}
+            onPress={() => goDetail('/makeup-detail')}
           />
         )}
 
