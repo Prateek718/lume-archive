@@ -13,7 +13,6 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { FIRST_LAUNCH_KEY } from '../_layout';
 
 type GenderValue    = 'man' | 'woman' | 'other';
-type RoutineLevel   = 'simple' | 'balanced' | 'full';
 type AgeRange       = '18-25' | '26-35' | '36-45' | '46-55' | '55+';
 
 const GENDER_OPTIONS: { label: string; emoji: string; value: GenderValue }[] = [
@@ -24,29 +23,21 @@ const GENDER_OPTIONS: { label: string; emoji: string; value: GenderValue }[] = [
 
 const AGE_RANGE_OPTIONS: AgeRange[] = ['18-25', '26-35', '36-45', '46-55', '55+'];
 
-const ROUTINE_OPTIONS: { label: string; sub: string; value: RoutineLevel }[] = [
-  { label: 'Keep it simple',   sub: '2–3 essential products only',  value: 'simple'   },
-  { label: 'Balanced routine', sub: '4–5 products, targeted care',  value: 'balanced' },
-  { label: 'Full routine',     sub: '6+ products, complete care',   value: 'full'     },
-];
-
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [step,         setStep]         = useState<1 | 2 | 3 | 4 | 5>(1);
-  const [displayName,  setDisplayName]  = useState('');
-  const [gender,       setGender]       = useState<GenderValue | null>(null);
-  const [ageRange,     setAgeRange]     = useState<AgeRange | null>(null);
-  const [city,         setCity]         = useState('');
-  const [routineLevel, setRoutineLevel] = useState<RoutineLevel>('simple');
-  const [loading,      setLoading]      = useState(false);
+  const [step,        setStep]        = useState<1 | 2 | 3 | 4>(1);
+  const [displayName, setDisplayName] = useState('');
+  const [gender,      setGender]      = useState<GenderValue | null>(null);
+  const [ageRange,    setAgeRange]    = useState<AgeRange | null>(null);
+  const [city,        setCity]        = useState('');
+  const [loading,     setLoading]     = useState(false);
 
   const goBack = () => {
     if (step === 2) setStep(1);
     else if (step === 3) setStep(2);
     else if (step === 4) setStep(3);
-    else if (step === 5) setStep(4);
   };
 
   const handleComplete = async () => {
@@ -64,7 +55,6 @@ export default function OnboardingScreen() {
       gender:              gender,
       age_range:           ageRange,
       city:                city.trim(),
-      routine_level:       routineLevel,
       onboarding_complete: true,
     }).eq('id', session.user.id);
 
@@ -100,7 +90,7 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={s.dotsRow}>
-          {([1, 2, 3, 4, 5] as const).map(i => (
+          {([1, 2, 3, 4] as const).map(i => (
             <View key={i} style={[s.dot, i === step && s.dotActive]} />
           ))}
         </View>
@@ -213,51 +203,13 @@ export default function OnboardingScreen() {
               onChangeText={setCity}
               autoFocus
               autoCapitalize="words"
-              returnKeyType="next"
-              onSubmitEditing={() => city.trim() && setStep(5)}
+              returnKeyType="done"
+              onSubmitEditing={() => city.trim() && !loading && handleComplete()}
             />
             <TouchableOpacity
-              style={[s.cta, !city.trim() && s.ctaDisabled]}
-              onPress={() => setStep(5)}
-              disabled={!city.trim()}
-              activeOpacity={0.8}
-            >
-              <Text style={s.ctaText}>Continue</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {/* ── STEP 5: Routine level ── */}
-        {step === 5 && (
-          <>
-            <Text style={s.title}>What kind of routine{'\n'}are you looking for?</Text>
-            <Text style={s.subtitle}>We'll recommend the right number of products</Text>
-            <View style={s.routineCol}>
-              {ROUTINE_OPTIONS.map((opt, idx) => (
-                <View key={opt.value}>
-                  <TouchableOpacity
-                    style={s.routineRow}
-                    onPress={() => setRoutineLevel(opt.value)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={s.routineTexts}>
-                      <Text style={[s.routineLabel, routineLevel === opt.value && s.routineLabelActive]}>
-                        {opt.label}
-                      </Text>
-                      <Text style={s.routineSub}>{opt.sub}</Text>
-                    </View>
-                    <View style={[s.radioOuter, routineLevel === opt.value && s.radioOuterActive]}>
-                      {routineLevel === opt.value && <View style={s.radioInner} />}
-                    </View>
-                  </TouchableOpacity>
-                  {idx < ROUTINE_OPTIONS.length - 1 && <View style={s.routineDivider} />}
-                </View>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={[s.cta, loading && s.ctaDisabled]}
+              style={[s.cta, (!city.trim() || loading) && s.ctaDisabled]}
               onPress={handleComplete}
-              disabled={loading}
+              disabled={!city.trim() || loading}
               activeOpacity={0.8}
             >
               {loading
@@ -408,42 +360,6 @@ const s = StyleSheet.create({
   ageLabelActive: {
     color:      Colors.text,
     fontWeight: '600',
-  },
-
-  // Routine level step
-  routineCol: {
-    backgroundColor: Colors.surface,
-    borderRadius:    12,
-    borderWidth:     1,
-    borderColor:     Colors.border,
-    marginBottom:    Spacing.lg,
-    overflow:        'hidden',
-  },
-  routineRow: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    justifyContent:  'space-between',
-    paddingVertical: 18,
-    paddingHorizontal: Spacing.md,
-  },
-  routineTexts: { flex: 1, marginRight: Spacing.md },
-  routineLabel: {
-    fontSize:  Typography.size.md,
-    color:     Colors.text2,
-    marginBottom: 3,
-  },
-  routineLabelActive: { color: Colors.text, fontWeight: '600' },
-  routineSub:  { fontSize: 13, color: Colors.text3 },
-  routineDivider: { height: 1, backgroundColor: Colors.border, marginHorizontal: Spacing.md },
-  radioOuter: {
-    width: 20, height: 20, borderRadius: 10,
-    borderWidth: 1.5, borderColor: Colors.text2,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
-  radioOuterActive: { borderColor: Colors.accent },
-  radioInner: {
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: Colors.accent,
   },
 
   privacyNote: {
