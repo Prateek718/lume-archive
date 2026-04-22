@@ -8,3 +8,4 @@ export { Dots } from './Dots';
 export { OptionRow } from './OptionRow';
 export { BackButton } from './BackButton';
 export { Placeholder } from './Placeholder';
+export { GoogleSignInButton } from './GoogleSignInButton';

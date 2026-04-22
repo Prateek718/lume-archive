@@ -32,7 +32,7 @@ export type BeardGoal =
 export interface User {
   id:                     string;           // uuid — matches auth.users id
   display_name:           string | null;
-  gender:                 'man' | 'woman' | 'other' | null;
+  gender:                 'man' | 'woman' | 'other' | 'prefer_not_to_say' | null;
   city:                   string | null;
   avatar_url:             string | null;
   referral_code:          string | null;
@@ -42,6 +42,7 @@ export interface User {
   notification_routine:   boolean;
   last_scan_at:           string | null;    // ISO timestamp
   onboarding_complete:    boolean;
+  care_categories:        Array<'skin' | 'hair' | 'beard' | 'makeup'>;
   age_range?:             '18-25' | '26-35' | '36-45' | '46-55' | '55+' | null;
   created_at:             string;           // ISO timestamp
   hair_profile:           HairProfile | null;

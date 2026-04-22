@@ -7,12 +7,24 @@ interface Props {
   selected: boolean;
   onPress: () => void;
   last?: boolean;
+  variant?: 'radio' | 'checkbox';
+  locked?: boolean;
 }
 
-export function OptionRow({ label, selected, onPress, last = false }: Props) {
+export function OptionRow({
+  label,
+  selected,
+  onPress,
+  last = false,
+  variant = 'radio',
+  locked = false,
+}: Props) {
+  const italic = selected || locked;
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={locked ? undefined : onPress}
+      activeOpacity={locked ? 1 : 0.5}
       style={{
         paddingVertical: 18,
         flexDirection: 'row',
@@ -25,23 +37,59 @@ export function OptionRow({ label, selected, onPress, last = false }: Props) {
       <Text
         style={{
           fontSize: 20,
-          fontFamily: selected ? 'CormorantGaramond_400Regular_Italic' : 'CormorantGaramond_400Regular',
-          fontStyle: selected ? 'italic' : 'normal',
-          color: selected ? Palette.ink : Palette.ink2,
+          fontFamily: italic ? 'CormorantGaramond_400Regular_Italic' : 'CormorantGaramond_400Regular',
+          fontStyle: italic ? 'italic' : 'normal',
+          color: italic ? Palette.ink : Palette.ink2,
         }}
       >
         {label}
       </Text>
-      <View
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: 99,
-          borderWidth: 1,
-          backgroundColor: selected ? Palette.accent : 'transparent',
-          borderColor: selected ? Palette.accent : Palette.ink4,
-        }}
-      />
+
+      {locked ? (
+        <Text
+          style={{
+            fontFamily: 'Inter_500Medium',
+            fontSize: 9,
+            letterSpacing: 1.5,
+            textTransform: 'uppercase',
+            color: Palette.ink3,
+          }}
+        >
+          Included
+        </Text>
+      ) : variant === 'checkbox' && selected ? (
+        <View
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 99,
+            borderWidth: 1,
+            borderColor: Palette.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: 4,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: Palette.accent,
+            }}
+          />
+        </View>
+      ) : (
+        <View
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 99,
+            borderWidth: 1,
+            backgroundColor: selected ? Palette.accent : 'transparent',
+            borderColor: selected ? Palette.accent : Palette.ink4,
+          }}
+        />
+      )}
     </TouchableOpacity>
   );
 }
