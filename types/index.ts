@@ -39,11 +39,13 @@ export type BrandPhilosophy =
 // ─── Beard goal ──────────────────────────────────────────────────────────────
 // Captured during the first scan with detected beard density. Drives which
 // beard products get prescribed and which actives the scoring boosts.
+// User-facing labels — these strings are stored verbatim in DB.
 export type BeardGoal =
-  | 'clean_simple'
-  | 'healthy_groomed'
-  | 'growing_thickening'
-  | 'styled';
+  | 'fuller'
+  | 'sharper'
+  | 'shorter'
+  | 'longer'
+  | 'none';
 
 // ─── User ────────────────────────────────────────────────────────────────────
 // Matches the public.users table.

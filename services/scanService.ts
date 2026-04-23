@@ -194,34 +194,6 @@ export async function logRoutineStep(params: {
 // Callback so the UI can show which step is running.
 export type ProgressCallback = (step: string) => void;
 
-// Poll users.beard_goal for up to `timeoutMs`, giving the user time to tap
-// the DeadTimeQuestionCard on ObservationScreen. Returns the stored value
-// (or null if the user didn't answer in time). Only called for men with a
-// detected beard — callers are expected to short-circuit otherwise.
-async function pollBeardGoal(
-  userId:    string,
-  timeoutMs: number = 30_000,
-  intervalMs: number = 1_500,
-): Promise<BeardGoal | null> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const { data } = await supabase
-      .from('users')
-      .select('beard_goal')
-      .eq('id', userId)
-      .single();
-    const row = data as { beard_goal?: BeardGoal | null } | null;
-    if (row?.beard_goal) return row.beard_goal;
-    await new Promise(r => setTimeout(r, intervalMs));
-  }
-  const { data: finalRow } = await supabase
-    .from('users')
-    .select('beard_goal')
-    .eq('id', userId)
-    .single();
-  return (finalRow as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
-}
-
 // Compress the photo to 512×512 JPEG and return base64 string.
 // Done on-device before anything is sent anywhere.
 async function compressImage(uri: string): Promise<string> {
@@ -383,7 +355,10 @@ export function buildMakeupCategories(
 }
 
 // Shape of phase 1's output — phase 2 and finalize both consume this.
+// scanId is the row id pre-inserted in phase 1 so that Gemini usage logging
+// can attribute vision + recs calls to a single scan.
 export interface Phase1Result {
+  scanId:          string;
   partialScan:     PartialScan;
   existingTraits:  UserTraits | undefined;
   analysis:        GeminiAnalysis;
@@ -395,24 +370,44 @@ export interface Phase1Result {
     careCategories:  string[];
   };
   previousContext: string;
-  scanType:        string;
+  scanType:        'first' | 'rescan';
   compressedUri:   string;
 }
 
 // ── Phase 1 — vision analysis only (~18s) ─────────────────────────────────────
-// Compresses image, fetches user context, calls Gemini vision, resolves
-// traits against the user's locked history, and returns a PartialScan ready
-// for ObservationScreen. If any traits need user input, _pendingTraitDecisions
-// is attached to the PartialScan and Phase 2 should be deferred.
+// Compresses image, inserts a scan row early so the id can be attached to
+// Gemini usage logs, calls Gemini vision, resolves traits against the user's
+// locked history, and returns a PartialScan ready for ObservationScreen.
+// If any traits need user input, _pendingTraitDecisions is attached to the
+// PartialScan and Phase 2 should be deferred.
 export async function runScanPhase1(
   photoUri:    string,
   gender:      string,
   userId:      string,
   onProgress?: ProgressCallback,
-  scanType:    string = 'full_face',
 ): Promise<Phase1Result> {
   onProgress?.('Preparing image…');
   const base64 = await compressImage(photoUri);
+
+  // Determine first-vs-rescan and create the scan row before any Gemini call.
+  const { count: priorScanCount } = await supabase
+    .from('scans')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  const scanType: 'first' | 'rescan' =
+    (priorScanCount && priorScanCount > 0) ? 'rescan' : 'first';
+
+  const { data: scanRow, error: insertErr } = await supabase
+    .from('scans')
+    .insert({ user_id: userId, scan_type: scanType })
+    .select('id')
+    .single();
+  if (insertErr || !scanRow) {
+    console.error('[scanService] Failed to create scan row:', insertErr);
+    throw new Error('Could not start scan');
+  }
+  const scanId = scanRow.id as string;
+  console.log('[scanService] Phase 1 scanId:', scanId, 'scanType:', scanType);
 
   const { data: userProfile } = await supabase
     .from('users')
@@ -449,20 +444,28 @@ export async function runScanPhase1(
 
   onProgress?.('Analysing your face…');
   console.log('[scanService] Calling analyseWithGemini, gender:', resolvedGender);
-  const analysis = await analyseWithGemini(
-    base64,
-    city,
-    resolvedGender,
-    careCategories,
-    ageRange,
-    previousScanSummary,
-    null,                   // scanId — not yet known at phase 1
-  );
+  let analysis: GeminiAnalysis;
+  try {
+    analysis = await analyseWithGemini(
+      base64,
+      city,
+      resolvedGender,
+      careCategories,
+      ageRange,
+      previousScanSummary,
+      scanId,
+    );
+  } catch (visionErr) {
+    // Clean up the empty scan row so it doesn't pollute the count check
+    // on the user's next scan attempt (and corrupt first-vs-rescan logic).
+    await supabase.from('scans').delete().eq('id', scanId);
+    throw visionErr;
+  }
   console.log('[scanService] Gemini analysis:', JSON.stringify(analysis).slice(0, 500));
 
   // Build the PartialScan used by ObservationScreen and (eventually) phase 2.
   const partialScan: PartialScan = {
-    id:                `local_${Date.now()}`,
+    id:                scanId,
     user_id:           userId,
     face_shape:        analysis.face_shape ?? null,
     skin_type:         analysis.skin_type ?? null,
@@ -509,6 +512,7 @@ export async function runScanPhase1(
   }
 
   return {
+    scanId,
     partialScan,
     existingTraits,
     analysis,
@@ -526,9 +530,11 @@ export async function runScanPhase1(
 }
 
 // ── Phase 2 — recommendations + save (~32s) ───────────────────────────────────
-// Takes phase 1 output, generates recommendations, saves to Supabase.
-// Can run in background while ObservationScreen is visible.
+// Updates the scan row created in phase 1 with analysis + recommendations.
+// Reads users.beard_goal once at the start (no polling — the scan flow
+// captures the goal before kicking off phase 2).
 export async function runScanPhase2(
+  scanId:          string,
   analysis:        GeminiAnalysis,
   userProfile:     {
     city:            string | null;
@@ -537,9 +543,7 @@ export async function runScanPhase2(
     ageRange:        string | null;
     careCategories:  string[];
   },
-  previousContext: string,
-  scanType:        string,
-  _compressedUri:  string,
+  scanType:        'first' | 'rescan',
   gender:          string,
   userId:          string,
   onProgress?:     ProgressCallback,
@@ -563,6 +567,17 @@ export async function runScanPhase2(
     gender === 'woman' ? 'women' :
     gender === 'man'   ? 'men'   : 'all';
 
+  // Read beard_goal + hair_profile once — no polling.
+  const { data: userRowForPhase2 } = await supabase
+    .from('users')
+    .select('beard_goal, hair_profile')
+    .eq('id', userId)
+    .single();
+  const beardGoal: BeardGoal | null =
+    (userRowForPhase2 as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
+  const hairProfile: HairProfile | null =
+    (userRowForPhase2 as { hair_profile?: HairProfile | null } | null)?.hair_profile ?? null;
+
   const skinCategories   = buildSkinCategories(analysis);
   const beardCategories  = buildBeardCategories(gender);
   const makeupCategories = buildMakeupCategories(gender, analysis);
@@ -575,37 +590,54 @@ export async function runScanPhase2(
     skinType:        analysis.skin_type ?? undefined,
     concerns:        analysis.skin_concerns ?? undefined,
     city:            userProfile.city ?? undefined,
+    beardGoal:       beardGoal ?? undefined,
   });
   const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
 
-  // Beard-goal gating — for men with a detected beard, give the user up to
-  // 30s to tap the DeadTimeQuestionCard on ObservationScreen. The result
-  // informs which beard steps Gemini prescribes and which actives score higher.
-  let beardGoal: BeardGoal | null = null;
-  const beardApplicable =
-    (gender === 'man' || gender === 'other') &&
-    !!analysis.beard_density && analysis.beard_density !== 'none';
-  if (beardApplicable) {
-    onProgress?.('Personalising your beard plan…');
-    beardGoal = await pollBeardGoal(userId, 30_000, 1_500);
-    console.log('[scanService] beard_goal resolved to:', beardGoal ?? '(none — Gemini will default to clean_simple)');
-  }
+  // Hair recs — only when the user already has a hair profile saved.
+  // For new users (Phase 3A first scan) hair_profile is null/{} and this
+  // branch is skipped. Phase 4 hair-setup will populate the profile and
+  // generate hair recs separately.
+  const hairRecsPromise: Promise<HairRecommendations | null> = hasValidHairProfile(hairProfile)
+    ? (() => {
+        const hairCategories = buildHairCategories(hairProfile!);
+        const hairProductMap = getProductsForProfile({
+          categories:      hairCategories,
+          preferredBrands: userProfile.preferredBrands,
+          gender:          productGender,
+          budget:          userProfile.budget as BudgetTier,
+          city:            userProfile.city ?? undefined,
+        });
+        const matchedHairProducts: MatchedProduct[] = Object.values(hairProductMap).map(arr => arr[0]);
+        return getHairRecommendationsFromGemini(
+          hairProfile!,
+          analysis.face_shape ?? null,
+          gender,
+          userProfile.city ?? null,
+          userProfile.budget,
+          matchedHairProducts,
+          { scanId },
+        );
+      })()
+    : Promise.resolve(null);
 
   onProgress?.('Generating recommendations…');
-  console.log('[scanService] Calling getRecommendationsFromGemini');
-  const recommendations = await getRecommendationsFromGemini(
-    gender,
-    analysis,
-    matchedProducts,
-    userProfile.careCategories,
-    userProfile.ageRange,
-    beardGoal,
-    { scanId: null },   // scanId not yet assigned; Supabase insert follows
-  );
+  console.log('[scanService] Calling getRecommendationsFromGemini in parallel with hair recs (hair:', hasValidHairProfile(hairProfile), ')');
+  const [recommendations, hairRecs] = await Promise.all([
+    getRecommendationsFromGemini(
+      gender,
+      analysis,
+      matchedProducts,
+      userProfile.careCategories,
+      userProfile.ageRange,
+      beardGoal,
+      { scanId },
+    ),
+    hairRecsPromise,
+  ]);
   console.log('[scanService] Gemini recommendations received');
 
   onProgress?.('Calculating your score…');
-  console.log('[scanService] Calculating score');
   const scoreOverall = calcOverallScore(
     gender,
     analysis.score_skin,
@@ -615,13 +647,11 @@ export async function runScanPhase2(
   console.log('[scanService] Score:', scoreOverall);
 
   onProgress?.('Saving your results…');
-  console.log('[scanService] Saving to Supabase, userId:', userId);
   const now      = new Date();
   const scanHour = now.getHours();
   const season   = getSeason(now, userProfile.city ?? '');
 
-  const scanRow = {
-    user_id:           userId,
+  const scanUpdate = {
     image_url:         null,
     face_shape:        analysis.face_shape,
     skin_type:         analysis.skin_type,
@@ -641,46 +671,28 @@ export async function runScanPhase2(
     scan_hour:         scanHour,
     season,
     scan_type:         scanType,
-    stylist_mentioned: null,
-    share_count:       0,
   };
 
-  console.log('[scanService] scanRow keys:', Object.keys(scanRow));
-  console.log('[scanService] scanRow sample:', JSON.stringify({
-    user_id:       scanRow.user_id,
-    face_shape:    scanRow.face_shape,
-    score_overall: scanRow.score_overall,
-  }));
+  const { data, error } = await supabase
+    .from('scans')
+    .update(scanUpdate)
+    .eq('id', scanId)
+    .select()
+    .single();
 
-  let data, error;
-  try {
-    const result = await supabase
-      .from('scans')
-      .insert(scanRow)
-      .select()
-      .single();
-    data = result.data;
-    error = result.error;
-  } catch (insertException: unknown) {
-    const msg = insertException instanceof Error ? insertException.message : String(insertException);
-    console.error('[scanService] Insert exception:', msg);
-    return {
-      ...scanRow,
-      id:         `local_${Date.now()}`,
-      created_at: new Date().toISOString(),
-    } as Scan;
-  }
-
-  if (error) {
-    console.error('[scanService] Supabase insert error:', error.message);
+  if (error || !data) {
+    console.error('[scanService] Supabase update error:', error?.message);
     console.error('[scanService] Supabase error details:', JSON.stringify(error));
-    return {
-      ...scanRow,
-      id:         `local_${Date.now()}`,
-      created_at: new Date().toISOString(),
-    } as Scan;
+    throw new Error(`Failed to save scan: ${error?.message ?? 'unknown'}`);
   }
   console.log('[scanService] Saved successfully');
+
+  if (hairRecs) {
+    await supabase
+      .from('users')
+      .update({ hair_recommendations: hairRecs })
+      .eq('id', userId);
+  }
 
   if (data) {
     await supabase
@@ -766,16 +778,14 @@ export async function runScan(
   gender:      string,
   userId:      string,
   onProgress?: ProgressCallback,
-  scanType?:   string,
 ): Promise<Scan> {
   try {
-    const phase1Result = await runScanPhase1(photoUri, gender, userId, onProgress, scanType);
+    const phase1Result = await runScanPhase1(photoUri, gender, userId, onProgress);
     return runScanPhase2(
+      phase1Result.scanId,
       phase1Result.analysis,
       phase1Result.userProfile,
-      phase1Result.previousContext,
       phase1Result.scanType,
-      phase1Result.compressedUri,
       gender,
       userId,
       onProgress,
@@ -798,6 +808,7 @@ export async function finalizeTraitsAndRunPhase2(
   partialScan:   PartialScan,
   confirmations: Record<string, { value: string; source: UserTrait['source'] }>,
   phase1Context: {
+    scanId:          string;
     analysis:        GeminiAnalysis;
     userProfile: {
       city:            string | null;
@@ -806,13 +817,12 @@ export async function finalizeTraitsAndRunPhase2(
       ageRange:        string | null;
       careCategories:  string[];
     };
-    previousContext: string;
-    scanType:        string;
-    compressedUri:   string;
+    scanType:        'first' | 'rescan';
     existingTraits:  UserTraits | undefined;
     gender:          string;
   },
   onProgress?:   ProgressCallback,
+  getUserFeedback?: () => RescanFeedback | undefined,
 ): Promise<Scan> {
   const traitsToSave = buildTraitsToSave(
     partialScan,
@@ -835,15 +845,15 @@ export async function finalizeTraitsAndRunPhase2(
   delete partialScan._pendingTraitDecisions;
 
   return runScanPhase2(
+    phase1Context.scanId,
     applied,
     phase1Context.userProfile,
-    phase1Context.previousContext,
     phase1Context.scanType,
-    phase1Context.compressedUri,
     phase1Context.gender,
     userId,
     onProgress,
     partialScan,
+    getUserFeedback,
   );
 }
 

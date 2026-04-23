@@ -320,7 +320,6 @@ type ScoredMatchedProduct = MatchedProduct & { score: number; why_this_one: stri
 const TIER_RANK: Record<PriceTier, number> = { entry: 0, mid: 1, premium: 2 };
 
 // Active-ingredient buckets used by beard-goal scoring boosts.
-const BEARD_GROWTH_ACTIVES   = new Set<string>(['redensyl', 'anagain', 'procapil', 'biotin', 'capilia_longa', 'minoxidil']);
 const BEARD_CONDITION_ACTIVES = new Set<string>(['argan_oil', 'jojoba_oil', 'sandalwood_oil', 'sweet_almond_oil', 'castor_oil', 'shea_butter', 'cocoa_butter']);
 const BEARD_CATEGORIES_FOR_BOOST = new Set<string>(['beard_oil', 'beard_balm', 'beard_wash']);
 
@@ -380,10 +379,11 @@ export function getScoredProducts(params: {
       }
 
       // Beard-goal boosts — only meaningful for beard categories.
+      // 'fuller' and 'longer' both emphasise conditioning to support healthy
+      // existing growth. We do NOT boost growth actives unless the goal is
+      // explicitly growth-focused — Lumé does not promise new follicle growth.
       if (beardGoal && BEARD_CATEGORIES_FOR_BOOST.has(product.category)) {
-        if (beardGoal === 'growing_thickening') {
-          if (product.actives.some(a => BEARD_GROWTH_ACTIVES.has(a))) score += 15;
-        } else if (beardGoal === 'healthy_groomed') {
+        if (beardGoal === 'fuller' || beardGoal === 'longer') {
           if (product.actives.some(a => BEARD_CONDITION_ACTIVES.has(a))) score += 10;
         }
       }

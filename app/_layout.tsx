@@ -19,6 +19,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Palette } from '../constants/theme';
+import { ScanProvider } from '../hooks/useScan';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -139,13 +140,16 @@ export default function RootLayout() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Palette.bg }}>
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="scan" options={{ presentation: 'card', animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="index" />
-      </Stack>
-    </View>
+    <ScanProvider>
+      <View style={{ flex: 1, backgroundColor: Palette.bg }}>
+        <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="scan" options={{ presentation: 'card', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="(scan)" />
+          <Stack.Screen name="index" />
+        </Stack>
+      </View>
+    </ScanProvider>
   );
 }

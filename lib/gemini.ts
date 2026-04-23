@@ -530,6 +530,7 @@ async function streamGeminiSSE(
   onPartialText?: (accumulated: string) => void,
 ): Promise<StreamResult> {
   const response = await fetchWithRetry(url, body);
+
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Gemini streaming error ${response.status}: ${error}`);
@@ -539,25 +540,28 @@ async function streamGeminiSSE(
   let inputTokens  = 0;
   let outputTokens = 0;
 
-  const processFrame = (frame: string): void => {
-    const trimmed = frame.trim();
-    if (!trimmed || !trimmed.startsWith('data:')) return;
-    const payload = trimmed.slice(5).trim();
-    if (!payload || payload === '[DONE]') return;
+  // Process one SSE line: "data: {...}". Gemini's streamGenerateContent emits
+  // single-newline-delimited frames, so we operate per-line, not per-frame.
+  const processLine = (line: string): void => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    if (!trimmed.startsWith('data:')) return;
+    const jsonStr = trimmed.replace(/^data:\s*/, '');
+    if (!jsonStr || jsonStr === '[DONE]') return;
     try {
-      const evt = JSON.parse(payload);
-      const chunk = evt?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      if (chunk) {
-        accumulated += chunk;
+      const evt = JSON.parse(jsonStr);
+      const textDelta = evt?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (typeof textDelta === 'string') {
+        accumulated += textDelta;
         if (onPartialText) onPartialText(accumulated);
       }
-      if (evt?.usageMetadata) {
-        inputTokens  = evt.usageMetadata.promptTokenCount     ?? inputTokens;
-        outputTokens = evt.usageMetadata.candidatesTokenCount ?? outputTokens;
+      const usage = evt?.usageMetadata;
+      if (usage) {
+        inputTokens  = usage.promptTokenCount     ?? inputTokens;
+        outputTokens = usage.candidatesTokenCount ?? outputTokens;
       }
-    } catch {
-      // Skip malformed frame — the final frame usually carries usage even if
-      // an intermediate one was malformed.
+    } catch (err) {
+      console.warn('[gemini recs] Failed to parse SSE frame:', jsonStr.slice(0, 100), err);
     }
   };
 
@@ -572,13 +576,13 @@ async function streamGeminiSSE(
       if (done) break;
       if (value) buffer += decoder.decode(value, { stream: true });
       let idx: number;
-      while ((idx = buffer.indexOf('\n\n')) !== -1) {
-        const frame = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 2);
-        processFrame(frame);
+      while ((idx = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        processLine(line);
       }
     }
-    if (buffer.trim().length > 0) processFrame(buffer);
+    if (buffer.trim().length > 0) processLine(buffer);
   } else {
     // NOTE: React Native's built-in fetch does not reliably expose response.body.getReader().
     // On device, this fallback branch always runs. onPartial fires once at end, not progressively.
@@ -587,14 +591,27 @@ async function streamGeminiSSE(
     // and output parsing are unaffected.
     //
     // Fallback: RN fetch without streaming body. Read the full text and parse
-    // each SSE frame in one go. Still hits the streamGenerateContent endpoint
+    // each SSE line in one go. Still hits the streamGenerateContent endpoint
     // so we get consistent usage metadata.
     const full = await response.text();
-    const frames = full.split('\n\n');
-    for (const frame of frames) processFrame(frame);
+    const lines = full.split('\n');
+    for (const line of lines) processLine(line);
   }
 
-  return { text: accumulated, inputTokens, outputTokens };
+  // Strip markdown code fences Gemini sometimes wraps the JSON in, then narrow
+  // to the outermost { ... } so the caller can JSON.parse directly.
+  const stripped = accumulated
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim();
+  const firstBrace = stripped.indexOf('{');
+  const lastBrace  = stripped.lastIndexOf('}');
+  const cleaned    = firstBrace !== -1 && lastBrace !== -1
+    ? stripped.slice(firstBrace, lastBrace + 1)
+    : stripped;
+
+  return { text: cleaned, inputTokens, outputTokens };
 }
 
 // Extract the largest valid JSON object from a possibly-truncated buffer.
@@ -658,7 +675,7 @@ function buildSkinRecsPrompt(
     : '';
 
   const beardGoalCtx = wantsBeard
-    ? `\nBeard goal: ${beardGoal ?? 'clean_simple (default)'}`
+    ? `\nBeard goal: ${beardGoal ?? 'none (default — light maintenance only)'}`
     : '';
 
   const ageCtx = ageRange ? `\nAge range: ${ageRange}` : '';
@@ -713,15 +730,38 @@ Step shape (skin):
 `;
 
   // ── Beard section — only when requested ───────────────────────────────────
+  // beard_goal taxonomy (user-facing, stored verbatim in DB):
+  //   fuller   → user wants to fill in cheeks/sides
+  //   sharper  → user wants cleaner edges and jawline definition
+  //   shorter  → user wants a neat, professional, low-maintenance look
+  //   longer   → user wants to grow length out
+  //   none     → no particular goal; default light maintenance
   const beardBlock = wantsBeard
     ? `
 BEARD ROUTINE.
 
-Steps depend on beard_goal:
-  clean_simple        → [beard_wash]
-  healthy_groomed     → [beard_wash, beard_oil]              (conditioning oil — argan, jojoba)
-  growing_thickening  → [beard_wash, beard_oil]              (growth-focused oil — redensyl, biotin; note in reasoning)
-  styled              → [beard_wash, beard_oil, beard_balm]
+Pick steps from these stable step_ids ONLY: beard_wash, beard_oil, beard_balm.
+Each step needs: { step_id, label, product (generic descriptor), order, clinical_reasoning }.
+
+Steps + emphasis depend on beard_goal:
+  fuller   → [beard_wash, beard_oil]
+             Conditioning + volumising oils (argan, jojoba). Reasoning should
+             frame patience honestly — beard fullness is largely genetic; the oil
+             keeps existing hairs healthy and the skin underneath calm so growth
+             that does happen is supported. Do NOT promise new follicle growth.
+  sharper  → [beard_wash, beard_oil, beard_balm]
+             Balm carries the styling/edge-shaping reasoning. Mention shaping
+             with a comb or trimmer for the line work — products alone do not
+             make edges sharp.
+  shorter  → [beard_wash]
+             Minimal routine. Light wash 2-3× a week, optional lightweight oil
+             if skin is dry. Frame as low-maintenance upkeep.
+  longer   → [beard_wash, beard_oil]
+             Conditioning oil to keep length soft and reduce breakage as it
+             grows. Reasoning should set patience (length takes months) and
+             advise against frequent trimming.
+  none     → [beard_wash]
+             Default maintenance only. Wash + optional light oil if dry.
 
 beard_styles: 2-3 RECOMMENDED styles only. No "avoid" entries.
 Each: { "name", "why" (max 18 words, imperative, no trait-naming opening), "maintenance": "low"|"medium"|"high" }
