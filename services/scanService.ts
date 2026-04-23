@@ -392,6 +392,7 @@ export interface Phase1Result {
     preferredBrands: PreferredBrands;
     budget:          string;
     ageRange:        string | null;
+    careCategories:  string[];
   };
   previousContext: string;
   scanType:        string;
@@ -415,7 +416,7 @@ export async function runScanPhase1(
 
   const { data: userProfile } = await supabase
     .from('users')
-    .select('city, gender, preferred_brands_v2, age_range')
+    .select('city, gender, preferred_brands_v2, age_range, care_categories')
     .eq('id', userId)
     .single();
 
@@ -424,6 +425,7 @@ export async function runScanPhase1(
     ?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] };
   const inferredBudget     = inferBudgetFromBrands(preferredBrandsRaw);
   const ageRange           = (userProfile as { age_range?: string } | null)?.age_range ?? null;
+  const careCategories     = (userProfile as { care_categories?: string[] } | null)?.care_categories ?? ['skin'];
   // Gender may have been passed in, but prefer the Supabase value if available
   const resolvedGender     = (userProfile?.gender as string | null) ?? gender;
 
@@ -447,7 +449,15 @@ export async function runScanPhase1(
 
   onProgress?.('Analysing your face…');
   console.log('[scanService] Calling analyseWithGemini, gender:', resolvedGender);
-  const analysis = await analyseWithGemini(base64, city, resolvedGender, inferredBudget, previousScanSummary, ageRange);
+  const analysis = await analyseWithGemini(
+    base64,
+    city,
+    resolvedGender,
+    careCategories,
+    ageRange,
+    previousScanSummary,
+    null,                   // scanId — not yet known at phase 1
+  );
   console.log('[scanService] Gemini analysis:', JSON.stringify(analysis).slice(0, 500));
 
   // Build the PartialScan used by ObservationScreen and (eventually) phase 2.
@@ -507,6 +517,7 @@ export async function runScanPhase1(
       preferredBrands: preferredBrandsRaw,
       budget:          inferredBudget,
       ageRange,
+      careCategories,
     },
     previousContext: previousScanSummary ?? '',
     scanType,
@@ -524,6 +535,7 @@ export async function runScanPhase2(
     preferredBrands: PreferredBrands;
     budget:          string;
     ageRange:        string | null;
+    careCategories:  string[];
   },
   previousContext: string,
   scanType:        string,
@@ -581,7 +593,15 @@ export async function runScanPhase2(
 
   onProgress?.('Generating recommendations…');
   console.log('[scanService] Calling getRecommendationsFromGemini');
-  const recommendations = await getRecommendationsFromGemini(gender, analysis, matchedProducts, userProfile.ageRange, beardGoal);
+  const recommendations = await getRecommendationsFromGemini(
+    gender,
+    analysis,
+    matchedProducts,
+    userProfile.careCategories,
+    userProfile.ageRange,
+    beardGoal,
+    { scanId: null },   // scanId not yet assigned; Supabase insert follows
+  );
   console.log('[scanService] Gemini recommendations received');
 
   onProgress?.('Calculating your score…');
@@ -784,6 +804,7 @@ export async function finalizeTraitsAndRunPhase2(
       preferredBrands: PreferredBrands;
       budget:          string;
       ageRange:        string | null;
+      careCategories:  string[];
     };
     previousContext: string;
     scanType:        string;
@@ -839,7 +860,7 @@ export async function refreshRecommendations(
 
     const { data: userRow } = await supabase
       .from('users')
-      .select('gender, city, preferred_brands_v2, hair_profile, age_range, beard_goal')
+      .select('gender, city, preferred_brands_v2, hair_profile, age_range, beard_goal, care_categories')
       .eq('id', userId)
       .single();
 
@@ -851,6 +872,7 @@ export async function refreshRecommendations(
     const inferredBudget     = inferBudgetFromBrands(preferredBrandsRaw);
     const ageRange           = (userRow as { age_range?: string } | null)?.age_range ?? null;
     const beardGoal          = (userRow as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
+    const careCategories     = (userRow as { care_categories?: string[] } | null)?.care_categories ?? ['skin'];
 
     const { data: scans } = await supabase
       .from('scans')
@@ -905,7 +927,15 @@ export async function refreshRecommendations(
 
     console.log('[refreshRecommendations] step: generating recs');
     onProgress?.('Generating recommendations…');
-    const recommendations = await getRecommendationsFromGemini(gender, analysis, matchedProducts, ageRange, beardGoal);
+    const recommendations = await getRecommendationsFromGemini(
+      gender,
+      analysis,
+      matchedProducts,
+      careCategories,
+      ageRange,
+      beardGoal,
+      { scanId: latestScan.id as string },
+    );
 
     console.log('[refreshRecommendations] step: saving');
     onProgress?.('Saving…');
@@ -1072,6 +1102,7 @@ export async function generateAndSaveHairProfile(
 
   const hairRecs = await getHairRecommendationsFromGemini(
     profile, faceShape, resolvedGender, city, inferredBudget, matchedHairProducts,
+    { scanId: null },   // hair profile setup is not tied to a scan
   );
 
   await supabase.from('users').update({

@@ -1,6 +1,24 @@
 // All TypeScript types for Lumé.
 // These mirror the Supabase database tables exactly.
 
+// ─── Makeup palette primitives ────────────────────────────────────────────────
+// Shared by lib/gemini.ts (palette lookup) and the Recommendations shape.
+// Kept here to avoid a circular import between types/ and lib/gemini.ts.
+export type Undertone = 'warm' | 'cool' | 'neutral';
+export type DepthTier = 'fair' | 'light_medium' | 'medium' | 'tan' | 'deep';
+
+// ─── Skin concern severity (new — 2026-04-23) ────────────────────────────────
+// Attached to each concern flagged by the vision call so the UI can render
+// a severity chip and so recommendations can weight intensity of actives.
+export type SkinConcernSeverity = 'mild' | 'moderate' | 'significant';
+
+export interface SkinConcernObservation {
+  concern:   string;                          // e.g. "dehydration", "acne"
+  severity:  SkinConcernSeverity;
+  zones?:    string[];                        // e.g. ["t_zone", "cheeks"]
+  notes?:    string;                          // short evidence description
+}
+
 // ─── Brand preferences ────────────────────────────────────────────────────────
 export interface PreferredBrands {
   skin:    string[];
@@ -224,9 +242,25 @@ export interface BeardRecommendation {
   summary?:      string;
 }
 
+export interface MakeupPalette {
+  undertone:     Undertone;
+  depth_tier:    DepthTier;
+  hero_line:     string;                    // "A warm, medium palette."
+  trait_chips:   string[];                  // exactly 3 short chips
+  prose:         string;                    // 2-3 sentence paragraph
+  swatches:      string[];                  // 6 hex values from PALETTE_SWATCHES lookup
+  shade_families: {
+    foundation:  string;
+    lip:         string;
+    blush:       string;
+    concealer:   string;
+  };
+}
+
 export interface MakeupRecommendation {
   advice:      string;
   techniques:  string[];
+  palette?:    MakeupPalette | null;
 
   /** @deprecated — removed from Gemini schema on 2026-04-20. Still present on scans created before this date. Preview now derives from first sentence of `advice`. */
   summary?:    string;
@@ -249,7 +283,8 @@ export interface Scan {
   // Face analysis from Gemini
   face_shape:        'oval' | 'round' | 'square' | 'heart' | 'oblong' | 'diamond' | null;
   skin_type:         'oily' | 'dry' | 'combination' | 'normal' | 'sensitive' | null;
-  skin_concerns:     string[] | null;
+  skin_concerns:     string[] | null;        // legacy — mirrored from skin_concerns_detailed[].concern
+  skin_concerns_detailed?: SkinConcernObservation[];   // new — severity + zones per concern
   beard_density:     'none' | 'light' | 'medium' | 'heavy' | null;  // men only
   beard_condition:   string | null;
   brow_condition:    string | null;
