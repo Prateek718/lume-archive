@@ -16,6 +16,7 @@ import type {
 } from '../types';
 import { isBaldProfile } from '../types';
 import { logUsage, type ModelName } from './geminiUsage';
+import { normalizeConcern } from '../constants/concerns';
 
 // ── Canonical category enum ───────────────────────────────────────────────────
 // Must stay in sync with constants/productConstants.ts CANONICAL_CATEGORIES.
@@ -716,6 +717,15 @@ OPTIONAL TREAT STEPS — insert 0, 1, or 2 based on detected concerns. Each Trea
   Insert ONE (skin_treat_1) for a single primary concern.
   Insert TWO (skin_treat_1 + skin_treat_2) ONLY if two concerns need different actives that can't share a slot (e.g. salicylic acid AM + retinol PM).
 
+TARGET CONCERNS — canonical enum, emit exact strings only:
+  acne | oiliness | dehydration | dryness | sensitivity | uneven_texture | fine_lines |
+  dullness | hyperpigmentation | uneven_tone | dark_circles | puffiness | dandruff |
+  oily_scalp | dry_scalp | itchy_scalp | hair_fall | frizz | damage | dullness_hair |
+  patchiness | rough_texture | itchiness_beard
+
+Never emit synonyms like "post-acne marks", "sebum regulation", "skin thinning". Use canonical form.
+Catalog scoring relies on exact string equality.
+
 TIME-OF-DAY for actives:
   vitamin C, niacinamide, salicylic acid → ["am"] or ["am","pm"]
   retinol, AHA                           → ["pm"]
@@ -1075,6 +1085,28 @@ export async function getRecommendationsFromGemini(
         chip => !FACE_SHAPE_PATTERNS.test(chip),
       );
     }
+
+    // Normalize target_concern on every routine step to the canonical enum.
+    // Catalog scoring relies on exact string equality against CANONICAL_CONCERNS;
+    // an un-normalizable value would silently miss the +15 target-match boost,
+    // so drop the field in that case rather than let a mystery string through.
+    const normalizeSteps = (steps: { target_concern?: string }[] | undefined) => {
+      if (!steps) return;
+      for (const step of steps) {
+        if (!step.target_concern) continue;
+        const raw = step.target_concern;
+        const normalized = normalizeConcern(raw);
+        if (normalized) {
+          step.target_concern = normalized;
+        } else {
+          console.warn(`[gemini] unrecognised target_concern "${raw}" — dropping`);
+          delete step.target_concern;
+        }
+      }
+    };
+    normalizeSteps(parsed.skin?.steps);
+    normalizeSteps(parsed.skin?.routine?.morning);
+    normalizeSteps(parsed.skin?.routine?.evening);
 
     // Inject palette swatches from the static lookup. Gemini outputs swatches: []
     // and we fill them in here based on undertone + fitzpatrick from the analysis.

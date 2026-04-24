@@ -7,13 +7,30 @@
     "category": "face_cleanser",
     "price_inr": 1050,
     "price_tier": "premium",
-    "actives": ["ceramides", "niacinamide", "hyaluronic_acid"],
+    "actives": [
+      "ceramides",
+      "niacinamide",
+      "hyaluronic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["oily_skin", "acne", "combination_skin"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/cerave-foaming-facial-cleanser",
       "amazon": "https://www.amazon.in/s?k=cerave+foaming+cleanser"
@@ -27,13 +44,30 @@
     "category": "face_cleanser",
     "price_inr": 1050,
     "price_tier": "premium",
-    "actives": ["ceramides", "hyaluronic_acid"],
+    "actives": [
+      "ceramides",
+      "hyaluronic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dryness", "dehydration", "sensitive_skin"],
-    "suitable_skin_types": ["dry", "normal", "sensitive"],
-    "climate_suitability": ["temperate", "dry", "cold"],
+    "suitable_for_concerns": [
+      "dryness",
+      "dehydration",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "cold"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/cerave-hydrating-cleanser",
       "amazon": "https://www.amazon.in/s?k=cerave+hydrating+cleanser"
@@ -47,13 +81,26 @@
     "category": "face_cleanser",
     "price_inr": 399,
     "price_tier": "entry",
-    "actives": ["salicylic_acid"],
+    "actives": [
+      "salicylic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["acne", "blackheads", "oily_skin", "congestion"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-salicylic-acid-cleanser",
       "amazon": "https://www.amazon.in/s?k=minimalist+salicylic+cleanser",
@@ -68,13 +115,29 @@
     "category": "face_cleanser",
     "price_inr": 349,
     "price_tier": "entry",
-    "actives": ["colloidal_oat", "ceramides"],
+    "actives": [
+      "colloidal_oat",
+      "ceramides"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_skin", "redness", "dryness"],
-    "suitable_skin_types": ["dry", "sensitive", "normal"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "sensitive",
+      "normal"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-oat-cleanser",
       "brand_direct": "https://beminimalist.co"
@@ -88,13 +151,27 @@
     "category": "face_cleanser",
     "price_inr": 345,
     "price_tier": "entry",
-    "actives": ["green_tea_extract", "glycolic_acid"],
+    "actives": [
+      "green_tea_extract",
+      "glycolic_acid"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["oily_skin", "acne", "enlarged_pores"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/plum-green-tea-face-wash",
       "amazon": "https://www.amazon.in/s?k=plum+green+tea+face+wash"
@@ -108,13 +185,30 @@
     "category": "face_cleanser",
     "price_inr": 395,
     "price_tier": "entry",
-    "actives": ["vitamin_c", "niacinamide"],
+    "actives": [
+      "vitamin_c",
+      "niacinamide"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dullness", "hyperpigmentation", "uneven_tone"],
-    "suitable_skin_types": ["normal", "combination", "oily"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "dullness",
+      "hyperpigmentation",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination",
+      "oily"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/dot-key-vitamin-c-face-wash",
       "amazon": "https://www.amazon.in/s?k=dot+key+vitamin+c+face+wash"
@@ -128,13 +222,27 @@
     "category": "face_cleanser",
     "price_inr": 349,
     "price_tier": "entry",
-    "actives": ["salicylic_acid", "zinc_pca"],
+    "actives": [
+      "salicylic_acid",
+      "zinc_pca"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["acne", "oily_skin", "blackheads"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/the-derma-co-salicylic-acid-face-wash",
       "amazon": "https://www.amazon.in/s?k=derma+co+salicylic+face+wash"
@@ -148,13 +256,28 @@
     "category": "face_cleanser",
     "price_inr": 345,
     "price_tier": "entry",
-    "actives": ["ceramides", "glycerin"],
+    "actives": [
+      "ceramides",
+      "glycerin"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_skin", "dryness"],
-    "suitable_skin_types": ["dry", "normal", "sensitive"],
-    "climate_suitability": ["temperate", "dry"],
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/foxtale-daily-cleanser",
       "brand_direct": "https://foxtale.in"
@@ -168,13 +291,29 @@
     "category": "face_cleanser",
     "price_inr": 625,
     "price_tier": "mid",
-    "actives": ["glycerin", "niacinamide"],
+    "actives": [
+      "glycerin",
+      "niacinamide"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_skin", "dryness", "compromised_barrier"],
-    "suitable_skin_types": ["dry", "sensitive", "normal"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "sensitive",
+      "normal"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/cetaphil-gentle-cleanser",
       "amazon": "https://www.amazon.in/s?k=cetaphil+gentle+cleanser"
@@ -188,13 +327,28 @@
     "category": "face_cleanser",
     "price_inr": 645,
     "price_tier": "mid",
-    "actives": ["piroctone_olamine"],
+    "actives": [
+      "piroctone_olamine"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["acne", "oily_skin", "sensitive_skin"],
-    "suitable_skin_types": ["oily", "combination", "sensitive"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/sebamed-clear-face-cleanser",
       "amazon": "https://www.amazon.in/s?k=sebamed+clear+face+foam"
@@ -208,13 +362,29 @@
     "category": "face_cleanser",
     "price_inr": 1450,
     "price_tier": "premium",
-    "actives": ["zinc_pca"],
+    "actives": [
+      "zinc_pca"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["acne", "oily_skin", "sensitive_skin"],
-    "suitable_skin_types": ["oily", "combination", "sensitive"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/la-roche-posay-effaclar-gel",
       "amazon": "https://www.amazon.in/s?k=la+roche+posay+effaclar+gel"
@@ -228,13 +398,29 @@
     "category": "face_cleanser",
     "price_inr": 790,
     "price_tier": "mid",
-    "actives": ["bha", "tea_tree_oil"],
+    "actives": [
+      "bha",
+      "tea_tree_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["acne", "oily_skin", "blackheads"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/cosrx-low-ph-cleanser",
       "amazon": "https://www.amazon.in/s?k=cosrx+low+ph+cleanser"
@@ -248,13 +434,27 @@
     "category": "face_cleanser",
     "price_inr": 170,
     "price_tier": "entry",
-    "actives": ["neem_extract", "turmeric"],
+    "actives": [
+      "neem",
+      "turmeric"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["acne", "oily_skin"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": true,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/himalaya-neem-face-wash",
       "amazon": "https://www.amazon.in/s?k=himalaya+neem+face+wash"
@@ -268,13 +468,28 @@
     "category": "face_cleanser",
     "price_inr": 365,
     "price_tier": "entry",
-    "actives": ["white_lotus_extract", "hyaluronic_acid"],
+    "actives": [
+      "white_lotus_extract",
+      "hyaluronic_acid"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dullness", "dryness"],
-    "suitable_skin_types": ["normal", "dry", "combination"],
-    "climate_suitability": ["temperate", "humid"],
+    "suitable_for_concerns": [
+      "dullness",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dullness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/pilgrim-white-lotus-face-wash",
       "amazon": "https://www.amazon.in/s?k=pilgrim+white+lotus"
@@ -288,13 +503,29 @@
     "category": "face_cleanser",
     "price_inr": 1295,
     "price_tier": "premium",
-    "actives": ["rose_water", "jasmine_extract", "vetiver"],
+    "actives": [
+      "rose_water",
+      "jasmine_extract",
+      "vetiver"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dryness", "dullness"],
-    "suitable_skin_types": ["dry", "normal", "sensitive"],
-    "climate_suitability": ["temperate", "dry"],
+    "suitable_for_concerns": [
+      "dryness",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": true,
+    "primary_concern_target": "dryness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/kama-rose-jasmine-cleanser",
       "brand_direct": "https://www.kamaayurveda.in"
@@ -308,13 +539,30 @@
     "category": "moisturizer",
     "price_inr": 2100,
     "price_tier": "premium",
-    "actives": ["ceramides", "hyaluronic_acid", "glycerin"],
+    "actives": [
+      "ceramides",
+      "hyaluronic_acid",
+      "glycerin"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dryness", "compromised_barrier", "sensitive_skin"],
-    "suitable_skin_types": ["dry", "normal", "sensitive"],
-    "climate_suitability": ["temperate", "dry", "cold"],
+    "suitable_for_concerns": [
+      "dryness",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "cold"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dryness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/cerave-moisturizing-cream",
       "amazon": "https://www.amazon.in/s?k=cerave+moisturizing+cream"
@@ -328,13 +576,29 @@
     "category": "moisturizer",
     "price_inr": 1650,
     "price_tier": "premium",
-    "actives": ["ceramides", "hyaluronic_acid", "niacinamide"],
+    "actives": [
+      "ceramides",
+      "hyaluronic_acid",
+      "niacinamide"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dryness", "normal_skin"],
-    "suitable_skin_types": ["normal", "dry", "combination"],
-    "climate_suitability": ["temperate", "humid", "dry"],
+    "suitable_for_concerns": [
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "humid",
+      "dry"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dryness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/cerave-moisturizing-lotion",
       "amazon": "https://www.amazon.in/s?k=cerave+moisturizing+lotion"
@@ -348,13 +612,29 @@
     "category": "moisturizer",
     "price_inr": 985,
     "price_tier": "mid",
-    "actives": ["glycerin", "panthenol"],
+    "actives": [
+      "glycerin",
+      "panthenol"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_skin", "dryness", "compromised_barrier"],
-    "suitable_skin_types": ["dry", "sensitive", "normal"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "sensitive",
+      "normal"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/cetaphil-moisturizing-lotion",
       "amazon": "https://www.amazon.in/s?k=cetaphil+moisturizing+lotion"
@@ -368,13 +648,28 @@
     "category": "moisturizer",
     "price_inr": 449,
     "price_tier": "entry",
-    "actives": ["marula_oil", "squalane"],
+    "actives": [
+      "marula_oil",
+      "squalane"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dryness", "dullness"],
-    "suitable_skin_types": ["dry", "normal"],
-    "climate_suitability": ["temperate", "dry", "cold"],
+    "suitable_for_concerns": [
+      "dryness",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "cold"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dryness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-marula-moisturiser",
       "brand_direct": "https://beminimalist.co"
@@ -388,13 +683,29 @@
     "category": "moisturizer",
     "price_inr": 449,
     "price_tier": "entry",
-    "actives": ["sepicalm", "colloidal_oat", "niacinamide"],
+    "actives": [
+      "sepicalm",
+      "colloidal_oat",
+      "niacinamide"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_skin", "redness", "compromised_barrier"],
-    "suitable_skin_types": ["sensitive", "normal", "dry"],
-    "climate_suitability": ["temperate", "humid", "dry"],
+    "suitable_for_concerns": [
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "sensitive",
+      "normal",
+      "dry"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "humid",
+      "dry"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-sepicalm-moisturiser",
       "brand_direct": "https://beminimalist.co"
@@ -408,13 +719,27 @@
     "category": "moisturizer",
     "price_inr": 525,
     "price_tier": "mid",
-    "actives": ["green_tea_extract", "niacinamide"],
+    "actives": [
+      "green_tea_extract",
+      "niacinamide"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["oily_skin", "acne", "enlarged_pores"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/plum-green-tea-moisturiser",
       "amazon": "https://www.amazon.in/s?k=plum+green+tea+moisturiser"
@@ -428,13 +753,28 @@
     "category": "moisturizer",
     "price_inr": 545,
     "price_tier": "mid",
-    "actives": ["hyaluronic_acid", "niacinamide"],
+    "actives": [
+      "hyaluronic_acid",
+      "niacinamide"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dehydration", "oily_skin"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "dehydration",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/dot-key-hyaluronic-water-cream",
       "amazon": "https://www.amazon.in/s?k=dot+key+hyaluronic+water+cream"
@@ -448,13 +788,29 @@
     "category": "moisturizer",
     "price_inr": 475,
     "price_tier": "entry",
-    "actives": ["hyaluronic_acid", "vitamin_e"],
+    "actives": [
+      "hyaluronic_acid",
+      "vitamin_e"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dehydration", "dryness"],
-    "suitable_skin_types": ["dry", "normal", "combination"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "dehydration",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/derma-co-hyaluronic-moisturizer",
       "amazon": "https://www.amazon.in/s?k=derma+co+hyaluronic+moisturizer"
@@ -468,13 +824,28 @@
     "category": "moisturizer",
     "price_inr": 950,
     "price_tier": "mid",
-    "actives": ["hyaluronic_acid", "glycerin"],
+    "actives": [
+      "hyaluronic_acid",
+      "glycerin"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dehydration", "oily_skin"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "dehydration",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/neutrogena-hydro-boost",
       "amazon": "https://www.amazon.in/s?k=neutrogena+hydro+boost"
@@ -488,13 +859,30 @@
     "category": "moisturizer",
     "price_inr": 545,
     "price_tier": "mid",
-    "actives": ["hyaluronic_acid", "ceramides", "glycerin"],
+    "actives": [
+      "hyaluronic_acid",
+      "ceramides",
+      "glycerin"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dryness", "dehydration", "sensitive_skin"],
-    "suitable_skin_types": ["dry", "normal", "sensitive"],
-    "climate_suitability": ["temperate", "dry"],
+    "suitable_for_concerns": [
+      "dryness",
+      "dehydration",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/foxtale-hydrating-moisturizer",
       "brand_direct": "https://foxtale.in"
@@ -508,13 +896,30 @@
     "category": "moisturizer",
     "price_inr": 1850,
     "price_tier": "premium",
-    "actives": ["ceramides", "niacinamide", "glycerin"],
+    "actives": [
+      "ceramides",
+      "niacinamide",
+      "glycerin"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_skin", "compromised_barrier", "dryness"],
-    "suitable_skin_types": ["dry", "sensitive", "normal"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "sensitive",
+      "normal"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/la-roche-posay-toleriane",
       "amazon": "https://www.amazon.in/s?k=la+roche+posay+toleriane"
@@ -528,13 +933,28 @@
     "category": "moisturizer",
     "price_inr": 250,
     "price_tier": "entry",
-    "actives": ["hyaluronic_acid", "vitamin_e"],
+    "actives": [
+      "hyaluronic_acid",
+      "vitamin_e"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["oily_skin", "dehydration"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/ponds-super-light-gel",
       "amazon": "https://www.amazon.in/s?k=ponds+super+light+gel"
@@ -548,13 +968,32 @@
     "category": "moisturizer",
     "price_inr": 3950,
     "price_tier": "premium",
-    "actives": ["24k_gold", "sandalwood", "saffron", "kokum_butter"],
+    "actives": [
+      "24k_gold",
+      "sandalwood_oil",
+      "saffron",
+      "kokum_butter"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dullness", "dryness", "anti_aging"],
-    "suitable_skin_types": ["dry", "normal", "mature"],
-    "climate_suitability": ["temperate", "dry", "cold"],
+    "suitable_for_concerns": [
+      "dullness",
+      "dryness",
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "mature"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "cold"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": true,
+    "primary_concern_target": "dullness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/forest-essentials-soundarya-cream",
       "brand_direct": "https://www.forestessentialsindia.com"
@@ -568,13 +1007,30 @@
     "category": "serum_niacinamide",
     "price_inr": 549,
     "price_tier": "entry",
-    "actives": ["niacinamide", "zinc"],
+    "actives": [
+      "niacinamide",
+      "zinc"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["oily_skin", "enlarged_pores", "acne", "uneven_tone"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-niacinamide-10",
       "brand_direct": "https://beminimalist.co"
@@ -588,13 +1044,31 @@
     "category": "serum_hyaluronic_acid",
     "price_inr": 599,
     "price_tier": "entry",
-    "actives": ["hyaluronic_acid", "vitamin_b5"],
+    "actives": [
+      "hyaluronic_acid",
+      "panthenol"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dehydration", "dryness", "fine_lines"],
-    "suitable_skin_types": ["dry", "normal", "sensitive", "oily"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "dehydration",
+      "dryness",
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "sensitive",
+      "oily"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-hyaluronic-acid",
       "brand_direct": "https://beminimalist.co"
@@ -608,13 +1082,30 @@
     "category": "serum_vitamin_c",
     "price_inr": 649,
     "price_tier": "entry",
-    "actives": ["ethyl_ascorbic_acid", "vitamin_e"],
+    "actives": [
+      "ethyl_ascorbic_acid",
+      "vitamin_e"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dullness", "hyperpigmentation", "uneven_tone"],
-    "suitable_skin_types": ["normal", "combination", "oily"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "dullness",
+      "hyperpigmentation",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination",
+      "oily"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-vitamin-c-10",
       "brand_direct": "https://beminimalist.co"
@@ -628,13 +1119,28 @@
     "category": "serum_retinol",
     "price_inr": 799,
     "price_tier": "entry",
-    "actives": ["retinol", "squalane"],
+    "actives": [
+      "retinol",
+      "squalane"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["fine_lines", "anti_aging", "uneven_texture"],
-    "suitable_skin_types": ["normal", "combination"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "fine_lines",
+      "uneven_texture"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "fine_lines",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-retinol-serum",
       "brand_direct": "https://beminimalist.co"
@@ -648,13 +1154,29 @@
     "category": "serum_azelaic_acid",
     "price_inr": 899,
     "price_tier": "mid",
-    "actives": ["azelaic_acid"],
+    "actives": [
+      "azelaic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["acne", "rosacea", "hyperpigmentation", "sensitive_skin"],
-    "suitable_skin_types": ["sensitive", "oily", "combination"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "acne",
+      "sensitivity",
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "sensitive",
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-azelaic-acid",
       "brand_direct": "https://beminimalist.co"
@@ -668,13 +1190,27 @@
     "category": "serum_brightening",
     "price_inr": 649,
     "price_tier": "entry",
-    "actives": ["alpha_arbutin", "hyaluronic_acid"],
+    "actives": [
+      "alpha_arbutin",
+      "hyaluronic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["hyperpigmentation", "dark_spots", "uneven_tone"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "hyperpigmentation",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-alpha-arbutin",
       "brand_direct": "https://beminimalist.co"
@@ -688,13 +1224,29 @@
     "category": "serum_niacinamide",
     "price_inr": 750,
     "price_tier": "mid",
-    "actives": ["niacinamide", "zinc_pca"],
+    "actives": [
+      "niacinamide",
+      "zinc_pca"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["oily_skin", "enlarged_pores", "acne"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/the-ordinary-niacinamide",
       "amazon": "https://www.amazon.in/s?k=the+ordinary+niacinamide"
@@ -708,13 +1260,27 @@
     "category": "serum_hyaluronic_acid",
     "price_inr": 750,
     "price_tier": "mid",
-    "actives": ["hyaluronic_acid", "vitamin_b5"],
+    "actives": [
+      "hyaluronic_acid",
+      "panthenol"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dehydration", "dryness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "dehydration",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/the-ordinary-hyaluronic",
       "amazon": "https://www.amazon.in/s?k=the+ordinary+hyaluronic"
@@ -728,13 +1294,29 @@
     "category": "serum_retinol",
     "price_inr": 1150,
     "price_tier": "mid",
-    "actives": ["hydroxypinacolone_retinoate", "squalane"],
+    "actives": [
+      "hydroxypinacolone_retinoate",
+      "squalane"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["fine_lines", "anti_aging", "sensitive_skin"],
-    "suitable_skin_types": ["sensitive", "normal", "combination"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "fine_lines",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "sensitive",
+      "normal",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "fine_lines",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/the-ordinary-retinoid",
       "amazon": "https://www.amazon.in/s?k=the+ordinary+retinoid"
@@ -748,13 +1330,26 @@
     "category": "serum_salicylic_acid",
     "price_inr": 890,
     "price_tier": "mid",
-    "actives": ["salicylic_acid"],
+    "actives": [
+      "salicylic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["acne", "blackheads", "oily_skin"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/the-ordinary-salicylic",
       "amazon": "https://www.amazon.in/s?k=the+ordinary+salicylic"
@@ -768,13 +1363,30 @@
     "category": "serum_salicylic_acid",
     "price_inr": 2850,
     "price_tier": "premium",
-    "actives": ["salicylic_acid", "green_tea_extract"],
+    "actives": [
+      "salicylic_acid",
+      "green_tea_extract"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["acne", "blackheads", "enlarged_pores", "uneven_texture"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness",
+      "uneven_texture"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/paulas-choice-bha",
       "amazon": "https://www.amazon.in/s?k=paulas+choice+bha"
@@ -788,13 +1400,30 @@
     "category": "serum_niacinamide",
     "price_inr": 4200,
     "price_tier": "premium",
-    "actives": ["niacinamide", "hyaluronic_acid"],
+    "actives": [
+      "niacinamide",
+      "hyaluronic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["enlarged_pores", "uneven_tone", "fine_lines"],
-    "suitable_skin_types": ["normal", "combination", "oily"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "uneven_tone",
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination",
+      "oily"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/paulas-choice-niacinamide",
       "amazon": "https://www.amazon.in/s?k=paulas+choice+niacinamide"
@@ -808,13 +1437,27 @@
     "category": "serum_niacinamide",
     "price_inr": 599,
     "price_tier": "entry",
-    "actives": ["niacinamide", "zinc"],
+    "actives": [
+      "niacinamide",
+      "zinc"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["oily_skin", "enlarged_pores", "acne"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/derma-co-niacinamide",
       "amazon": "https://www.amazon.in/s?k=derma+co+niacinamide"
@@ -828,13 +1471,28 @@
     "category": "serum_brightening",
     "price_inr": 699,
     "price_tier": "mid",
-    "actives": ["alpha_arbutin", "kojic_acid", "niacinamide"],
+    "actives": [
+      "alpha_arbutin",
+      "kojic_acid",
+      "niacinamide"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["hyperpigmentation", "dark_spots", "uneven_tone"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "hyperpigmentation",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/derma-co-alpha-arbutin",
       "amazon": "https://www.amazon.in/s?k=derma+co+alpha+arbutin"
@@ -848,13 +1506,30 @@
     "category": "serum_vitamin_c",
     "price_inr": 795,
     "price_tier": "mid",
-    "actives": ["vitamin_c", "vitamin_e", "ferulic_acid"],
+    "actives": [
+      "vitamin_c",
+      "vitamin_e",
+      "ferulic_acid"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dullness", "hyperpigmentation", "uneven_tone"],
-    "suitable_skin_types": ["normal", "combination"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "dullness",
+      "hyperpigmentation",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/dot-key-vitamin-c-serum",
       "amazon": "https://www.amazon.in/s?k=dot+key+vitamin+c+serum"
@@ -868,13 +1543,27 @@
     "category": "serum_vitamin_c",
     "price_inr": 795,
     "price_tier": "mid",
-    "actives": ["ethyl_ascorbic_acid", "ferulic_acid"],
+    "actives": [
+      "ethyl_ascorbic_acid",
+      "ferulic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dullness", "hyperpigmentation"],
-    "suitable_skin_types": ["normal", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "dullness",
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/foxtale-vitamin-c-serum",
       "brand_direct": "https://foxtale.in"
@@ -888,13 +1577,28 @@
     "category": "serum_soothing",
     "price_inr": 695,
     "price_tier": "mid",
-    "actives": ["chamomile_extract", "centella_asiatica", "panthenol"],
+    "actives": [
+      "chamomile_extract",
+      "centella_asiatica",
+      "panthenol"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["redness", "sensitive_skin", "compromised_barrier"],
-    "suitable_skin_types": ["sensitive", "dry", "normal"],
-    "climate_suitability": ["temperate", "humid"],
+    "suitable_for_concerns": [
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "sensitive",
+      "dry",
+      "normal"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/plum-chamomile-serum",
       "amazon": "https://www.amazon.in/s?k=plum+chamomile+serum"
@@ -908,13 +1612,29 @@
     "category": "spf_sunscreen",
     "price_inr": 548,
     "price_tier": "entry",
-    "actives": ["zinc_oxide", "titanium_dioxide"],
+    "actives": [
+      "zinc_oxide",
+      "titanium_dioxide"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["oily_skin", "acne", "sensitive_skin"],
-    "suitable_skin_types": ["oily", "combination", "sensitive"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/reequil-ultra-matte-spf",
       "amazon": "https://www.amazon.in/s?k=reequil+ultra+matte+spf"
@@ -928,13 +1648,27 @@
     "category": "spf_sunscreen",
     "price_inr": 449,
     "price_tier": "entry",
-    "actives": ["zinc_oxide", "niacinamide", "vitamin_e"],
+    "actives": [
+      "zinc_oxide",
+      "niacinamide",
+      "vitamin_e"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["uv_protection", "anti_aging"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "fine_lines",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-sunscreen-spf-50",
       "brand_direct": "https://beminimalist.co"
@@ -948,13 +1682,29 @@
     "category": "spf_sunscreen",
     "price_inr": 545,
     "price_tier": "mid",
-    "actives": ["zinc_oxide", "titanium_dioxide", "niacinamide"],
+    "actives": [
+      "zinc_oxide",
+      "titanium_dioxide",
+      "niacinamide"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["oily_skin", "sensitive_skin"],
-    "suitable_skin_types": ["oily", "combination", "sensitive"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/foxtale-mineral-sunscreen",
       "brand_direct": "https://foxtale.in"
@@ -968,13 +1718,26 @@
     "category": "spf_sunscreen",
     "price_inr": 1975,
     "price_tier": "premium",
-    "actives": ["mexoryl_xl", "mexoryl_sx"],
+    "actives": [
+      "mexoryl_xl",
+      "mexoryl_sx"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_skin", "uv_protection"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/la-roche-posay-anthelios",
       "amazon": "https://www.amazon.in/s?k=la+roche+posay+anthelios"
@@ -988,13 +1751,28 @@
     "category": "spf_sunscreen",
     "price_inr": 1650,
     "price_tier": "premium",
-    "actives": ["avobenzone", "octocrylene"],
+    "actives": [
+      "avobenzone",
+      "octocrylene"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["oily_skin", "sensitive_skin", "uv_protection"],
-    "suitable_skin_types": ["oily", "combination", "sensitive"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/bioderma-photoderm-aquafluide",
       "amazon": "https://www.amazon.in/s?k=bioderma+photoderm"
@@ -1008,13 +1786,28 @@
     "category": "spf_sunscreen",
     "price_inr": 525,
     "price_tier": "entry",
-    "actives": ["hyaluronic_acid", "zinc_oxide"],
+    "actives": [
+      "hyaluronic_acid",
+      "zinc_oxide"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dehydration", "uv_protection"],
-    "suitable_skin_types": ["dry", "normal", "combination"],
-    "climate_suitability": ["temperate", "dry", "humid"],
+    "suitable_for_concerns": [
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/derma-co-hyaluronic-sunscreen",
       "amazon": "https://www.amazon.in/s?k=derma+co+hyaluronic+sunscreen"
@@ -1028,13 +1821,25 @@
     "category": "spf_sunscreen",
     "price_inr": 445,
     "price_tier": "entry",
-    "actives": ["zinc_oxide", "titanium_dioxide"],
+    "actives": [
+      "zinc_oxide",
+      "titanium_dioxide"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["uv_protection"],
-    "suitable_skin_types": ["normal", "oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "normal",
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dullness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/lotus-safe-sun-spf-70",
       "amazon": "https://www.amazon.in/s?k=lotus+safe+sun"
@@ -1048,13 +1853,28 @@
     "category": "spf_sunscreen",
     "price_inr": 2995,
     "price_tier": "premium",
-    "actives": ["zinc_oxide", "titanium_dioxide", "antioxidants"],
+    "actives": [
+      "zinc_oxide",
+      "titanium_dioxide",
+      "antioxidants"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["oily_skin", "anti_aging", "uv_protection"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/paulas-choice-resist-spf",
       "amazon": "https://www.amazon.in/s?k=paulas+choice+resist+spf"
@@ -1068,13 +1888,29 @@
     "category": "toner",
     "price_inr": 499,
     "price_tier": "entry",
-    "actives": ["gluconolactone", "lactobionic_acid"],
+    "actives": [
+      "gluconolactone",
+      "lactobionic_acid"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["uneven_texture", "sensitive_skin", "dullness"],
-    "suitable_skin_types": ["sensitive", "dry", "normal"],
-    "climate_suitability": ["temperate", "humid"],
+    "suitable_for_concerns": [
+      "uneven_texture",
+      "sensitivity",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "sensitive",
+      "dry",
+      "normal"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "uneven_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-pha-toner",
       "brand_direct": "https://beminimalist.co"
@@ -1088,13 +1924,27 @@
     "category": "toner",
     "price_inr": 375,
     "price_tier": "entry",
-    "actives": ["witch_hazel", "aloe_vera"],
+    "actives": [
+      "witch_hazel",
+      "aloe_vera"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["oily_skin", "acne", "enlarged_pores"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/plum-witch-hazel-toner",
       "amazon": "https://www.amazon.in/s?k=plum+witch+hazel+toner"
@@ -1108,13 +1958,29 @@
     "category": "toner",
     "price_inr": 1295,
     "price_tier": "premium",
-    "actives": ["witch_hazel", "rose_water", "aloe_vera"],
+    "actives": [
+      "witch_hazel",
+      "rose_water",
+      "aloe_vera"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["oily_skin", "sensitive_skin"],
-    "suitable_skin_types": ["oily", "combination", "sensitive"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/thayers-witch-hazel-toner",
       "amazon": "https://www.amazon.in/s?k=thayers+rose+toner"
@@ -1128,13 +1994,27 @@
     "category": "toner",
     "price_inr": 395,
     "price_tier": "entry",
-    "actives": ["rose_water", "witch_hazel"],
+    "actives": [
+      "rose_water",
+      "witch_hazel"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dullness", "dehydration"],
-    "suitable_skin_types": ["normal", "dry"],
-    "climate_suitability": ["temperate", "humid"],
+    "suitable_for_concerns": [
+      "dullness",
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/pilgrim-rose-toner",
       "amazon": "https://www.amazon.in/s?k=pilgrim+rose+toner"
@@ -1148,13 +2028,30 @@
     "category": "toner",
     "price_inr": 1050,
     "price_tier": "mid",
-    "actives": ["glycolic_acid", "amino_acids"],
+    "actives": [
+      "glycolic_acid",
+      "amino_acids"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["uneven_texture", "dullness", "hyperpigmentation"],
-    "suitable_skin_types": ["normal", "combination", "oily"],
-    "climate_suitability": ["humid", "tropical", "temperate"],
+    "suitable_for_concerns": [
+      "uneven_texture",
+      "dullness",
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination",
+      "oily"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/ordinary-glycolic-acid",
       "amazon": "https://www.amazon.in/s?k=the+ordinary+glycolic"
@@ -1168,13 +2065,26 @@
     "category": "toner",
     "price_inr": 199,
     "price_tier": "entry",
-    "actives": ["cucumber_extract", "arnica"],
+    "actives": [
+      "cucumber_extract",
+      "arnica"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["enlarged_pores", "oily_skin"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": true,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/biotique-cucumber-toner",
       "amazon": "https://www.amazon.in/s?k=biotique+cucumber+toner"
@@ -1188,13 +2098,27 @@
     "category": "eye_cream",
     "price_inr": 499,
     "price_tier": "entry",
-    "actives": ["retinol", "caffeine", "peptides"],
+    "actives": [
+      "retinol",
+      "caffeine",
+      "peptides"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dark_circles", "fine_lines", "puffiness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dark_circles",
+      "fine_lines",
+      "puffiness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/derma-co-retinol-eye-cream",
       "amazon": "https://www.amazon.in/s?k=derma+co+retinol+eye"
@@ -1208,13 +2132,27 @@
     "category": "eye_cream",
     "price_inr": 495,
     "price_tier": "entry",
-    "actives": ["vitamin_c", "caffeine", "niacinamide"],
+    "actives": [
+      "vitamin_c",
+      "caffeine",
+      "niacinamide"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dark_circles", "dullness", "puffiness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dark_circles",
+      "dullness",
+      "puffiness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/dot-key-vitamin-c-eye-cream",
       "amazon": "https://www.amazon.in/s?k=dot+key+vitamin+c+eye"
@@ -1228,13 +2166,27 @@
     "category": "eye_cream",
     "price_inr": 449,
     "price_tier": "entry",
-    "actives": ["caffeine", "matrixyl", "peptides"],
+    "actives": [
+      "caffeine",
+      "matrixyl",
+      "peptides"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dark_circles", "puffiness", "fatigue"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dark_circles",
+      "puffiness",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-caffeine-eye",
       "brand_direct": "https://beminimalist.co"
@@ -1248,13 +2200,25 @@
     "category": "eye_cream",
     "price_inr": 1050,
     "price_tier": "mid",
-    "actives": ["hyaluronic_acid", "licorice_root"],
+    "actives": [
+      "hyaluronic_acid",
+      "licorice_root"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["dehydration", "sensitive_skin"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dehydration",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/cetaphil-eye-gel",
       "amazon": "https://www.amazon.in/s?k=cetaphil+eye+gel"
@@ -1268,13 +2232,26 @@
     "category": "eye_cream",
     "price_inr": 5600,
     "price_tier": "premium",
-    "actives": ["hyaluronic_acid", "peptides", "chronolux_technology"],
+    "actives": [
+      "hyaluronic_acid",
+      "peptides",
+      "chronolux_technology"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["fine_lines", "dark_circles", "anti_aging"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "fine_lines",
+      "dark_circles"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/estee-lauder-anr-eye",
       "amazon": "https://www.amazon.in/s?k=estee+lauder+eye"
@@ -1288,13 +2265,26 @@
     "category": "eye_cream",
     "price_inr": 450,
     "price_tier": "entry",
-    "actives": ["caffeine", "cucumber_extract", "hyaluronic_acid"],
+    "actives": [
+      "caffeine",
+      "cucumber_extract",
+      "hyaluronic_acid"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dark_circles", "puffiness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dark_circles",
+      "puffiness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/plum-under-eye-gel",
       "amazon": "https://www.amazon.in/s?k=plum+under+eye+gel"
@@ -1308,13 +2298,24 @@
     "category": "beard_wash",
     "price_inr": 299,
     "price_tier": "entry",
-    "actives": ["aloe_vera", "vitamin_e"],
+    "actives": [
+      "aloe_vera",
+      "vitamin_e"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_cleansing", "itchy_beard"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "itchiness_beard"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "itchiness_beard",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/bombay-shaving-beard-wash",
       "amazon": "https://www.amazon.in/s?k=bombay+shaving+beard+wash"
@@ -1328,13 +2329,24 @@
     "category": "beard_wash",
     "price_inr": 345,
     "price_tier": "entry",
-    "actives": ["argan_oil", "aloe_vera"],
+    "actives": [
+      "argan_oil",
+      "aloe_vera"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_cleansing", "beard_softness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "rough_texture"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/beardo-godfather-beard-wash",
       "amazon": "https://www.amazon.in/s?k=beardo+godfather+beard+wash"
@@ -1348,13 +2360,23 @@
     "category": "beard_wash",
     "price_inr": 349,
     "price_tier": "entry",
-    "actives": ["activated_charcoal", "argan_oil"],
+    "actives": [
+      "activated_charcoal",
+      "argan_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_cleansing", "dirty_beard"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/man-company-charcoal-beard-wash",
       "amazon": "https://www.amazon.in/s?k=man+company+beard+wash"
@@ -1368,13 +2390,25 @@
     "category": "beard_wash",
     "price_inr": 245,
     "price_tier": "entry",
-    "actives": ["menthol", "aloe_vera"],
+    "actives": [
+      "menthol",
+      "aloe_vera"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_cleansing", "itchy_beard"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "itchiness_beard"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "itchiness_beard",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/ustraa-beard-wash",
       "amazon": "https://www.amazon.in/s?k=ustraa+beard+wash"
@@ -1388,13 +2422,23 @@
     "category": "beard_wash",
     "price_inr": 1295,
     "price_tier": "premium",
-    "actives": ["lime_extract", "glycerin"],
+    "actives": [
+      "lime_extract",
+      "glycerin"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_cleansing"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/proraso-beard-wash",
       "amazon": "https://www.amazon.in/s?k=proraso+beard+wash"
@@ -1408,13 +2452,27 @@
     "category": "beard_oil",
     "price_inr": 395,
     "price_tier": "entry",
-    "actives": ["sandalwood_oil", "jojoba_oil", "argan_oil"],
+    "actives": [
+      "sandalwood_oil",
+      "jojoba_oil",
+      "argan_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_softness", "itchy_beard", "beard_growth"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "rough_texture",
+      "itchiness_beard",
+      "patchiness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/bsc-sandalwood-beard-oil",
       "amazon": "https://www.amazon.in/s?k=bsc+sandalwood+beard+oil"
@@ -1428,13 +2486,25 @@
     "category": "beard_oil",
     "price_inr": 425,
     "price_tier": "entry",
-    "actives": ["almond_oil", "argan_oil"],
+    "actives": [
+      "almond_oil",
+      "argan_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_softness", "beard_growth"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "rough_texture",
+      "patchiness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/beardo-godfather-oil",
       "amazon": "https://www.amazon.in/s?k=beardo+godfather+oil"
@@ -1448,13 +2518,26 @@
     "category": "beard_oil",
     "price_inr": 449,
     "price_tier": "entry",
-    "actives": ["almond_oil", "thyme_oil", "jojoba_oil"],
+    "actives": [
+      "almond_oil",
+      "thyme_oil",
+      "jojoba_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_softness", "itchy_beard"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "rough_texture",
+      "itchiness_beard"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/man-company-almond-thyme-oil",
       "amazon": "https://www.amazon.in/s?k=man+company+beard+oil"
@@ -1468,13 +2551,25 @@
     "category": "beard_oil",
     "price_inr": 699,
     "price_tier": "mid",
-    "actives": ["redensyl", "jojoba_oil", "sesame_oil"],
+    "actives": [
+      "redensyl",
+      "jojoba_oil",
+      "sesame_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_growth", "patchy_beard"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "patchiness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "patchiness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/ustraa-beard-growth-oil",
       "amazon": "https://www.amazon.in/s?k=ustraa+beard+growth+oil"
@@ -1488,13 +2583,25 @@
     "category": "beard_oil",
     "price_inr": 2800,
     "price_tier": "premium",
-    "actives": ["jojoba_oil", "sweet_almond_oil", "argan_oil"],
+    "actives": [
+      "jojoba_oil",
+      "sweet_almond_oil",
+      "argan_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_softness", "premium_grooming"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "rough_texture"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/murdock-london-beard-oil",
       "amazon": "https://www.amazon.in/s?k=murdock+london+beard+oil"
@@ -1508,13 +2615,23 @@
     "category": "beard_balm",
     "price_inr": 499,
     "price_tier": "entry",
-    "actives": ["shea_butter", "beeswax", "argan_oil"],
+    "actives": [
+      "shea_butter",
+      "beeswax",
+      "argan_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_styling", "beard_shape"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/beardo-beard-balm",
       "amazon": "https://www.amazon.in/s?k=beardo+beard+balm"
@@ -1528,13 +2645,25 @@
     "category": "beard_balm",
     "price_inr": 499,
     "price_tier": "entry",
-    "actives": ["shea_butter", "beeswax", "cedarwood_oil"],
+    "actives": [
+      "shea_butter",
+      "beeswax",
+      "cedarwood_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_styling", "beard_softness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "rough_texture"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/man-company-beard-balm",
       "amazon": "https://www.amazon.in/s?k=man+company+beard+balm"
@@ -1548,13 +2677,25 @@
     "category": "beard_balm",
     "price_inr": 399,
     "price_tier": "entry",
-    "actives": ["shea_butter", "beeswax", "coconut_oil"],
+    "actives": [
+      "shea_butter",
+      "beeswax",
+      "coconut_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_styling", "beard_softness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "rough_texture"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/bsc-beard-balm",
       "amazon": "https://www.amazon.in/s?k=bsc+beard+balm"
@@ -1568,13 +2709,23 @@
     "category": "beard_balm",
     "price_inr": 1595,
     "price_tier": "premium",
-    "actives": ["shea_butter", "beeswax", "cypress_oil"],
+    "actives": [
+      "shea_butter",
+      "beeswax",
+      "cypress_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["beard_styling", "premium_grooming"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/proraso-beard-balm",
       "amazon": "https://www.amazon.in/s?k=proraso+beard+balm"
@@ -1588,13 +2739,25 @@
     "category": "hair_shampoo",
     "price_inr": 349,
     "price_tier": "entry",
-    "actives": ["onion_extract", "plant_keratin", "biotin"],
+    "actives": [
+      "onion_oil",
+      "plant_keratin",
+      "biotin"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "hair_thinning", "hair_growth"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/mamaearth-onion-shampoo",
       "amazon": "https://www.amazon.in/s?k=mamaearth+onion+shampoo"
@@ -1608,13 +2771,27 @@
     "category": "hair_shampoo",
     "price_inr": 399,
     "price_tier": "entry",
-    "actives": ["apple_cider_vinegar", "sweet_almond_oil"],
+    "actives": [
+      "apple_cider_vinegar",
+      "sweet_almond_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["scalp_buildup", "dandruff", "dullness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oily_scalp",
+      "dandruff",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dandruff",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/wow-apple-cider-shampoo",
       "amazon": "https://www.amazon.in/s?k=wow+apple+cider+shampoo"
@@ -1628,13 +2805,25 @@
     "category": "hair_shampoo",
     "price_inr": 325,
     "price_tier": "entry",
-    "actives": ["zinc_pyrithione"],
+    "actives": [
+      "zinc_pyrithione"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dandruff", "itchy_scalp", "flaking"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dandruff",
+      "itchy_scalp",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dandruff",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/head-shoulders-shampoo",
       "amazon": "https://www.amazon.in/s?k=head+shoulders+shampoo"
@@ -1648,13 +2837,25 @@
     "category": "hair_shampoo",
     "price_inr": 2200,
     "price_tier": "premium",
-    "actives": ["ginger_root_extract", "edelweiss_stem_cells"],
+    "actives": [
+      "ginger_root_extract",
+      "edelweiss_stem_cells"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "weakened_hair", "premium_care"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall",
+      "damage"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/kerastase-genesis-shampoo",
       "amazon": "https://www.amazon.in/s?k=kerastase+genesis"
@@ -1668,13 +2869,25 @@
     "category": "hair_shampoo",
     "price_inr": 385,
     "price_tier": "entry",
-    "actives": ["pro_vitamin_b5", "niacinamide"],
+    "actives": [
+      "pro_vitamin_b5",
+      "niacinamide"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "weakened_hair"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall",
+      "damage"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/pantene-hair-fall-shampoo",
       "amazon": "https://www.amazon.in/s?k=pantene+hair+fall"
@@ -1688,13 +2901,26 @@
     "category": "hair_shampoo",
     "price_inr": 310,
     "price_tier": "entry",
-    "actives": ["keratin_actives", "glycerin"],
+    "actives": [
+      "keratin_actives",
+      "glycerin"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["damaged_hair", "dryness", "frizz"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "damage",
+      "dryness",
+      "frizz"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/dove-intense-repair",
       "amazon": "https://www.amazon.in/s?k=dove+intense+repair+shampoo"
@@ -1708,13 +2934,24 @@
     "category": "hair_shampoo",
     "price_inr": 1495,
     "price_tier": "premium",
-    "actives": ["allantoin", "panthenol"],
+    "actives": [
+      "allantoin",
+      "panthenol"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_scalp", "itchy_scalp"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "itchy_scalp"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "itchy_scalp",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/wella-invigo-sensitive",
       "amazon": "https://www.amazon.in/s?k=wella+invigo+sensitive"
@@ -1728,13 +2965,25 @@
     "category": "hair_shampoo",
     "price_inr": 325,
     "price_tier": "entry",
-    "actives": ["ceramide", "arginine"],
+    "actives": [
+      "ceramides",
+      "arginine"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["damaged_hair", "split_ends", "dullness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "damage",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/loreal-total-repair",
       "amazon": "https://www.amazon.in/s?k=loreal+total+repair"
@@ -1748,13 +2997,27 @@
     "category": "hair_shampoo",
     "price_inr": 245,
     "price_tier": "entry",
-    "actives": ["amla_extract", "bhringraj", "brahmi"],
+    "actives": [
+      "amla",
+      "bhringraj",
+      "brahmi"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "premature_greying", "dullness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "hair_fall",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": true,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/khadi-amla-bhringraj-shampoo",
       "amazon": "https://www.amazon.in/s?k=khadi+amla+bhringraj"
@@ -1768,13 +3031,26 @@
     "category": "hair_conditioner",
     "price_inr": 349,
     "price_tier": "entry",
-    "actives": ["onion_extract", "plant_keratin"],
+    "actives": [
+      "onion_oil",
+      "plant_keratin"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "dryness", "tangles"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall",
+      "dryness",
+      "frizz"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/mamaearth-onion-conditioner",
       "amazon": "https://www.amazon.in/s?k=mamaearth+onion+conditioner"
@@ -1788,13 +3064,25 @@
     "category": "hair_conditioner",
     "price_inr": 230,
     "price_tier": "entry",
-    "actives": ["keratin_actives"],
+    "actives": [
+      "keratin_actives"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["damaged_hair", "dryness", "frizz"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "damage",
+      "dryness",
+      "frizz"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/dove-intense-repair-conditioner",
       "amazon": "https://www.amazon.in/s?k=dove+intense+repair+conditioner"
@@ -1808,13 +3096,25 @@
     "category": "hair_conditioner",
     "price_inr": 2495,
     "price_tier": "premium",
-    "actives": ["oleo_complex", "inula_flower_extract"],
+    "actives": [
+      "oleo_complex",
+      "inula_flower_extract"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dryness", "damaged_hair", "premium_care"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dryness",
+      "damage"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "dryness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/kerastase-nutritive-conditioner",
       "amazon": "https://www.amazon.in/s?k=kerastase+nutritive"
@@ -1828,13 +3128,24 @@
     "category": "hair_conditioner",
     "price_inr": 395,
     "price_tier": "entry",
-    "actives": ["hyaluronic_acid"],
+    "actives": [
+      "hyaluronic_acid"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dryness", "dehydration"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dryness",
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/loreal-hyaluron-conditioner",
       "amazon": "https://www.amazon.in/s?k=loreal+hyaluron+conditioner"
@@ -1848,13 +3159,23 @@
     "category": "hair_conditioner",
     "price_inr": 1650,
     "price_tier": "premium",
-    "actives": ["cotton_seed_extract"],
+    "actives": [
+      "cotton_seed_extract"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["damaged_hair", "split_ends"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "damage"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/wella-elements-conditioner",
       "amazon": "https://www.amazon.in/s?k=wella+elements"
@@ -1868,13 +3189,24 @@
     "category": "hair_oil",
     "price_inr": 225,
     "price_tier": "entry",
-    "actives": ["amla_extract", "mineral_oil"],
+    "actives": [
+      "amla",
+      "mineral_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "premature_greying", "scalp_health"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": true,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/dabur-amla-hair-oil",
       "amazon": "https://www.amazon.in/s?k=dabur+amla+hair+oil"
@@ -1888,13 +3220,25 @@
     "category": "hair_oil",
     "price_inr": 155,
     "price_tier": "entry",
-    "actives": ["coconut_oil", "jasmine_extract"],
+    "actives": [
+      "coconut_oil",
+      "jasmine_extract"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dryness", "dullness", "scalp_health"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dryness",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dryness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/parachute-advansed-oil",
       "amazon": "https://www.amazon.in/s?k=parachute+jasmine+coconut"
@@ -1908,13 +3252,25 @@
     "category": "hair_oil",
     "price_inr": 385,
     "price_tier": "entry",
-    "actives": ["bhringraj", "amla", "coconut_oil"],
+    "actives": [
+      "bhringraj",
+      "amla",
+      "coconut_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "thinning", "scalp_health"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": true,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/indulekha-bringha-oil",
       "amazon": "https://www.amazon.in/s?k=indulekha+bringha"
@@ -1928,13 +3284,25 @@
     "category": "hair_oil",
     "price_inr": 495,
     "price_tier": "entry",
-    "actives": ["onion_oil", "black_seed_oil", "argan_oil"],
+    "actives": [
+      "onion_oil",
+      "black_seed_oil",
+      "argan_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "hair_growth", "scalp_health"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/wow-onion-hair-oil",
       "amazon": "https://www.amazon.in/s?k=wow+onion+hair+oil"
@@ -1948,13 +3316,26 @@
     "category": "hair_serum",
     "price_inr": 749,
     "price_tier": "mid",
-    "actives": ["redensyl", "anagain", "procapil", "baicapil"],
+    "actives": [
+      "redensyl",
+      "anagain",
+      "procapil",
+      "baicapil"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["hair_fall", "thinning", "hair_growth"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/minimalist-hair-growth",
       "brand_direct": "https://beminimalist.co"
@@ -1968,13 +3349,26 @@
     "category": "hair_serum",
     "price_inr": 185,
     "price_tier": "entry",
-    "actives": ["argan_oil", "vitamin_e"],
+    "actives": [
+      "argan_oil",
+      "vitamin_e"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["frizz", "dryness", "tangles"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "frizz",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "frizz",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/livon-hair-serum",
       "amazon": "https://www.amazon.in/s?k=livon+hair+serum"
@@ -1988,13 +3382,26 @@
     "category": "hair_serum",
     "price_inr": 210,
     "price_tier": "entry",
-    "actives": ["walnut_oil", "vitamin_e"],
+    "actives": [
+      "walnut_oil",
+      "vitamin_e"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["frizz", "dullness"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "frizz",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "frizz",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/streax-pro-vitariche-serum",
       "amazon": "https://www.amazon.in/s?k=streax+vitariche"
@@ -2008,13 +3415,24 @@
     "category": "hair_mask",
     "price_inr": 1395,
     "price_tier": "mid",
-    "actives": ["quinoa_protein", "gold_quinoa"],
+    "actives": [
+      "quinoa_protein",
+      "gold_quinoa"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["damaged_hair", "split_ends"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "damage"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/loreal-absolut-repair-mask",
       "amazon": "https://www.amazon.in/s?k=loreal+absolut+repair+mask"
@@ -2028,13 +3446,26 @@
     "category": "hair_mask",
     "price_inr": 449,
     "price_tier": "entry",
-    "actives": ["argan_oil", "avocado_oil"],
+    "actives": [
+      "argan_oil",
+      "avocado_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["damaged_hair", "dryness", "frizz"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "damage",
+      "dryness",
+      "frizz"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/mamaearth-argan-mask",
       "amazon": "https://www.amazon.in/s?k=mamaearth+argan+mask"
@@ -2048,13 +3479,24 @@
     "category": "hair_mask",
     "price_inr": 1995,
     "price_tier": "premium",
-    "actives": ["amino_acids", "ceramide"],
+    "actives": [
+      "amino_acids",
+      "ceramides"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["damaged_hair", "chemical_damage"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "damage"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/wella-fusion-mask",
       "amazon": "https://www.amazon.in/s?k=wella+fusion+mask"
@@ -2068,13 +3510,27 @@
     "category": "hair_mask",
     "price_inr": 1095,
     "price_tier": "premium",
-    "actives": ["bhringraj", "indigo", "sesame_oil", "amla"],
+    "actives": [
+      "bhringraj",
+      "indigo",
+      "sesame_oil",
+      "amla"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "premature_greying", "dandruff"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall",
+      "dandruff"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": true,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/kama-bringadi-oil",
       "brand_direct": "https://www.kamaayurveda.in"
@@ -2088,13 +3544,25 @@
     "category": "hair_mask",
     "price_inr": 1950,
     "price_tier": "premium",
-    "actives": ["hibiscus", "brahmi", "sesame_oil"],
+    "actives": [
+      "hibiscus",
+      "brahmi",
+      "sesame_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["hair_fall", "scalp_health", "premium_care"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "hair_fall"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": true,
+    "primary_concern_target": "hair_fall",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/forest-essentials-japapatti",
       "brand_direct": "https://www.forestessentialsindia.com"
@@ -2110,11 +3578,17 @@
     "price_tier": "entry",
     "actives": [],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sparse_brows", "brow_definition"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "uneven_tone",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/maybelline-brow-ultra-slim",
       "amazon": "https://www.amazon.in/s?k=maybelline+brow+ultra+slim"
@@ -2130,11 +3604,17 @@
     "price_tier": "entry",
     "actives": [],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sparse_brows", "brow_definition"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "uneven_tone",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/lakme-9to5-brow-gel",
       "amazon": "https://www.amazon.in/s?k=lakme+9+to+5+brow"
@@ -2150,11 +3630,17 @@
     "price_tier": "premium",
     "actives": [],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sparse_brows", "precise_brow_definition"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "uneven_tone",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/anastasia-brow-wiz",
       "amazon": "https://www.amazon.in/s?k=anastasia+brow+wiz"
@@ -2168,13 +3654,24 @@
     "category": "concealer",
     "price_inr": 699,
     "price_tier": "entry",
-    "actives": ["goji_berry", "haloxyl"],
+    "actives": [
+      "goji_berry",
+      "haloxyl"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dark_circles", "under_eye_hollows"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dark_circles"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/maybelline-age-rewind-concealer",
       "amazon": "https://www.amazon.in/s?k=maybelline+age+rewind"
@@ -2188,13 +3685,26 @@
     "category": "concealer",
     "price_inr": 3200,
     "price_tier": "premium",
-    "actives": ["chamomile_extract", "grape_seed_extract"],
+    "actives": [
+      "chamomile_extract",
+      "grape_seed_extract"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dark_circles", "hyperpigmentation", "blemishes"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "dark_circles",
+      "hyperpigmentation",
+      "acne"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/nars-radiant-creamy",
       "amazon": "https://www.amazon.in/s?k=nars+radiant+creamy"
@@ -2210,11 +3720,19 @@
     "price_tier": "mid",
     "actives": [],
     "fragrance_free": false,
-    "suitable_for_concerns": ["uneven_tone", "light_coverage"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["all"],
+    "suitable_for_concerns": [
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "all"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "uneven_tone",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/lakme-absolute-skin-mousse",
       "amazon": "https://www.amazon.in/s?k=lakme+absolute+mousse"
@@ -2230,11 +3748,21 @@
     "price_tier": "entry",
     "actives": [],
     "fragrance_free": false,
-    "suitable_for_concerns": ["oily_skin", "enlarged_pores"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/maybelline-fit-me-foundation",
       "amazon": "https://www.amazon.in/s?k=maybelline+fit+me+matte"
@@ -2248,13 +3776,26 @@
     "category": "bb_cream",
     "price_inr": 395,
     "price_tier": "entry",
-    "actives": ["hyaluronic_acid", "niacinamide"],
+    "actives": [
+      "hyaluronic_acid",
+      "niacinamide"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["light_coverage", "hydration"],
-    "suitable_skin_types": ["normal", "dry"],
-    "climate_suitability": ["temperate", "humid"],
+    "suitable_for_concerns": [
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "humid"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/plum-bb-cream",
       "amazon": "https://www.amazon.in/s?k=plum+bb+cream"
@@ -2268,13 +3809,26 @@
     "category": "foundation_base",
     "price_inr": 2650,
     "price_tier": "premium",
-    "actives": ["white_leaf_tea_extract"],
+    "actives": [
+      "white_leaf_tea_extract"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["oily_skin", "long_wear"],
-    "suitable_skin_types": ["oily", "combination", "normal"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/laneige-neo-cushion-matte",
       "amazon": "https://www.amazon.in/s?k=laneige+neo+cushion"
@@ -2288,13 +3842,30 @@
     "category": "face_mask",
     "price_inr": 1695,
     "price_tier": "premium",
-    "actives": ["turmeric", "sandalwood", "vetiver"],
+    "actives": [
+      "turmeric",
+      "sandalwood_oil",
+      "vetiver"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dullness", "uneven_tone", "anti_aging"],
-    "suitable_skin_types": ["normal", "dry", "combination"],
-    "climate_suitability": ["temperate", "dry"],
+    "suitable_for_concerns": [
+      "dullness",
+      "uneven_tone",
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": true,
+    "primary_concern_target": "dullness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/kama-suvarna-mask",
       "brand_direct": "https://www.kamaayurveda.in"
@@ -2308,13 +3879,29 @@
     "category": "face_oil",
     "price_inr": 3250,
     "price_tier": "premium",
-    "actives": ["24k_gold", "sandalwood", "kesar"],
+    "actives": [
+      "24k_gold",
+      "sandalwood_oil",
+      "kesar"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["anti_aging", "dullness", "premium_care"],
-    "suitable_skin_types": ["dry", "normal", "mature"],
-    "climate_suitability": ["temperate", "dry"],
+    "suitable_for_concerns": [
+      "fine_lines",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "mature"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": true,
+    "primary_concern_target": "fine_lines",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/forest-tejasvi-emulsion",
       "brand_direct": "https://www.forestessentialsindia.com"
@@ -2328,13 +3915,28 @@
     "category": "face_mask",
     "price_inr": 199,
     "price_tier": "entry",
-    "actives": ["nutmeg", "basil", "manjishtha"],
+    "actives": [
+      "nutmeg",
+      "basil",
+      "manjishtha"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["acne", "blemishes", "dark_spots"],
-    "suitable_skin_types": ["oily", "combination"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "acne",
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": true,
+    "primary_concern_target": "acne",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/biotique-myristica-pack",
       "amazon": "https://www.amazon.in/s?k=biotique+myristica"
@@ -2348,13 +3950,29 @@
     "category": "face_oil",
     "price_inr": 1895,
     "price_tier": "premium",
-    "actives": ["kumkumadi_tailam", "saffron", "sandalwood"],
+    "actives": [
+      "kumkumadi_tailam",
+      "saffron",
+      "sandalwood_oil"
+    ],
     "fragrance_free": false,
-    "suitable_for_concerns": ["dullness", "uneven_tone", "anti_aging"],
-    "suitable_skin_types": ["normal", "dry"],
-    "climate_suitability": ["temperate", "dry"],
+    "suitable_for_concerns": [
+      "dullness",
+      "uneven_tone",
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "dry"
+    ],
     "trusted_by_beginners": false,
     "is_ayurvedic": true,
+    "primary_concern_target": "dullness",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/soultree-kumkumadi-oil",
       "amazon": "https://www.amazon.in/s?k=soultree+kumkumadi"
@@ -2368,16 +3986,1676 @@
     "category": "face_gel",
     "price_inr": 165,
     "price_tier": "entry",
-    "actives": ["aloe_vera"],
+    "actives": [
+      "aloe_vera"
+    ],
     "fragrance_free": true,
-    "suitable_for_concerns": ["sensitive_skin", "hydration", "sunburn"],
-    "suitable_skin_types": ["all"],
-    "climate_suitability": ["humid", "tropical"],
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
     "trusted_by_beginners": true,
     "is_ayurvedic": true,
+    "primary_concern_target": "dehydration",
+    "hero_line": null,
     "retailer_urls": {
       "nykaa": "https://www.nykaa.com/khadi-aloe-vera-gel",
       "amazon": "https://www.amazon.in/s?k=khadi+aloe+vera"
+    }
+  },
+  {
+    "id": "n001",
+    "name": "Niacinamide 5% Face Serum",
+    "brand": "Foxtale",
+    "brand_tier": "indian_d2c",
+    "category": "serum_niacinamide",
+    "price_inr": 595,
+    "price_tier": "entry",
+    "actives": [
+      "niacinamide",
+      "zinc_pca",
+      "hyaluronic_acid"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "oiliness",
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": "Five percent niacinamide. Gentler than ten percent if your skin is reactive.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=foxtale+niacinamide+5"
+    }
+  },
+  {
+    "id": "n002",
+    "name": "Niacinamide & Zinc Serum",
+    "brand": "Dot & Key",
+    "brand_tier": "indian_d2c",
+    "category": "serum_niacinamide",
+    "price_inr": 595,
+    "price_tier": "entry",
+    "actives": [
+      "niacinamide",
+      "zinc_pca",
+      "centella_asiatica"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne",
+      "uneven_texture"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": "Ten percent niacinamide with centella. For skin that reacts to acids.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=dot+key+niacinamide+zinc"
+    }
+  },
+  {
+    "id": "n003",
+    "name": "Hyaluronic Acid + B5 Serum",
+    "brand": "The Derma Co",
+    "brand_tier": "indian_d2c",
+    "category": "serum_hyaluronic_acid",
+    "price_inr": 499,
+    "price_tier": "entry",
+    "actives": [
+      "hyaluronic_acid",
+      "panthenol"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "dehydration",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": "Multi-weight hyaluronic acid. Works on skin that feels tight after cleansing.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=derma+co+hyaluronic+b5"
+    }
+  },
+  {
+    "id": "n004",
+    "name": "Hyaluronic Acid Serum 2%",
+    "brand": "Foxtale",
+    "brand_tier": "indian_d2c",
+    "category": "serum_hyaluronic_acid",
+    "price_inr": 525,
+    "price_tier": "entry",
+    "actives": [
+      "hyaluronic_acid",
+      "glycerin"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": "A plain hydrating serum. No additional actives to react with.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=foxtale+hyaluronic+acid"
+    }
+  },
+  {
+    "id": "n005",
+    "name": "Hyaluronic Acid Hydrating Serum",
+    "brand": "Plum",
+    "brand_tier": "indian_d2c",
+    "category": "serum_hyaluronic_acid",
+    "price_inr": 745,
+    "price_tier": "mid",
+    "actives": [
+      "hyaluronic_acid",
+      "vitamin_e"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "dehydration",
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": "Light serum with vitamin E. Added antioxidant protection alongside hydration.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=plum+hyaluronic+acid+serum"
+    }
+  },
+  {
+    "id": "n006",
+    "name": "Retinal 0.05% Advanced Anti-Aging Serum",
+    "brand": "Minimalist",
+    "brand_tier": "indian_d2c",
+    "category": "serum_retinol",
+    "price_inr": 899,
+    "price_tier": "mid",
+    "actives": [
+      "retinal",
+      "squalane"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "fine_lines",
+      "uneven_texture",
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination",
+      "oily"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "fine_lines",
+    "hero_line": "Retinaldehyde, not retinol. Faster results than entry-level retinol serums.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=minimalist+retinal+0.05"
+    }
+  },
+  {
+    "id": "n007",
+    "name": "Granactive Retinoid 2% Emulsion",
+    "brand": "The Ordinary",
+    "brand_tier": "international_available_in_india",
+    "category": "serum_retinol",
+    "price_inr": 1150,
+    "price_tier": "mid",
+    "actives": [
+      "hydroxypinacolone_retinoate",
+      "squalane"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "fine_lines",
+      "uneven_texture"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "fine_lines",
+    "hero_line": "Granactive retinoid is gentler than classic retinol. Good for sensitive skin starting retinoids.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=the+ordinary+granactive+retinoid"
+    }
+  },
+  {
+    "id": "n008",
+    "name": "Retinol 0.3% Serum",
+    "brand": "Deconstruct",
+    "brand_tier": "indian_d2c",
+    "category": "serum_retinol",
+    "price_inr": 575,
+    "price_tier": "entry",
+    "actives": [
+      "retinol",
+      "vitamin_e"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "fine_lines",
+      "acne",
+      "uneven_texture"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "combination",
+      "oily"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "fine_lines",
+    "hero_line": "Entry-level retinol at 0.3%. Start twice weekly; build up.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=deconstruct+retinol"
+    }
+  },
+  {
+    "id": "n009",
+    "name": "Vitamin C 15% Face Serum",
+    "brand": "Foxtale",
+    "brand_tier": "indian_d2c",
+    "category": "serum_vitamin_c",
+    "price_inr": 649,
+    "price_tier": "entry",
+    "actives": [
+      "ethyl_ascorbic_acid",
+      "vitamin_e",
+      "ferulic_acid"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "hyperpigmentation",
+      "dullness",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": "Ethyl ascorbic acid is stable and less irritating than L-ascorbic. Morning use.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=foxtale+vitamin+c+15"
+    }
+  },
+  {
+    "id": "n010",
+    "name": "Vitamin C Day Serum",
+    "brand": "Plum",
+    "brand_tier": "indian_d2c",
+    "category": "serum_vitamin_c",
+    "price_inr": 945,
+    "price_tier": "mid",
+    "actives": [
+      "ethyl_ascorbic_acid",
+      "vitamin_e",
+      "niacinamide"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "hyperpigmentation",
+      "dullness"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": "Vitamin C with niacinamide. Handles both brightening and oil balance in one step.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=plum+vitamin+c+day+serum"
+    }
+  },
+  {
+    "id": "n011",
+    "name": "Salicylic Acid 2% Anti-Acne Serum",
+    "brand": "Minimalist",
+    "brand_tier": "indian_d2c",
+    "category": "serum_salicylic_acid",
+    "price_inr": 599,
+    "price_tier": "entry",
+    "actives": [
+      "salicylic_acid",
+      "niacinamide",
+      "centella_asiatica"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": "Two percent salicylic with centella. Addresses acne without stripping the barrier.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=minimalist+salicylic+acid+2"
+    }
+  },
+  {
+    "id": "n012",
+    "name": "BHA Anti-Acne Serum",
+    "brand": "Foxtale",
+    "brand_tier": "indian_d2c",
+    "category": "serum_salicylic_acid",
+    "price_inr": 595,
+    "price_tier": "entry",
+    "actives": [
+      "salicylic_acid",
+      "bha"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "acne",
+      "oiliness",
+      "uneven_texture"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "acne",
+    "hero_line": "Salicylic acid focused. No extra actives to complicate the routine.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=foxtale+bha+serum"
+    }
+  },
+  {
+    "id": "n013",
+    "name": "Azelaic Acid Suspension 10%",
+    "brand": "The Ordinary",
+    "brand_tier": "international_available_in_india",
+    "category": "serum_azelaic_acid",
+    "price_inr": 1050,
+    "price_tier": "mid",
+    "actives": [
+      "azelaic_acid"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "hyperpigmentation",
+      "acne",
+      "sensitivity"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": "Azelaic acid works on acne and dark marks at once. Thick texture takes getting used to.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=the+ordinary+azelaic+acid"
+    }
+  },
+  {
+    "id": "n014",
+    "name": "Alpha Arbutin Brightening Serum",
+    "brand": "Minimalist",
+    "brand_tier": "indian_d2c",
+    "category": "serum_brightening",
+    "price_inr": 699,
+    "price_tier": "mid",
+    "actives": [
+      "alpha_arbutin",
+      "hyaluronic_acid"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "hyperpigmentation",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": "Alpha arbutin alternative to kojic or vitamin C. Gentler for sensitive skin.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=minimalist+alpha+arbutin"
+    }
+  },
+  {
+    "id": "n015",
+    "name": "Tranexamic Acid 3% Face Serum",
+    "brand": "Minimalist",
+    "brand_tier": "indian_d2c",
+    "category": "serum_brightening",
+    "price_inr": 849,
+    "price_tier": "mid",
+    "actives": [
+      "tranexamic_acid",
+      "niacinamide"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "hyperpigmentation",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": "Tranexamic acid for stubborn pigmentation. Use when arbutin or vitamin C plateau.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=minimalist+tranexamic+acid"
+    }
+  },
+  {
+    "id": "n016",
+    "name": "Centella Asiatica Soothing Serum",
+    "brand": "Dot & Key",
+    "brand_tier": "indian_d2c",
+    "category": "serum_soothing",
+    "price_inr": 545,
+    "price_tier": "entry",
+    "actives": [
+      "centella_asiatica",
+      "madecassoside",
+      "panthenol"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "sensitive",
+      "dry",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": "Centella and panthenol. For when the barrier is reacting.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=dot+key+centella+serum"
+    }
+  },
+  {
+    "id": "n017",
+    "name": "Oil Control Face Wash",
+    "brand": "Foxtale",
+    "brand_tier": "indian_d2c",
+    "category": "face_cleanser",
+    "price_inr": 345,
+    "price_tier": "entry",
+    "actives": [
+      "salicylic_acid",
+      "niacinamide",
+      "zinc_pca"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "oiliness",
+      "acne"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": "Low-foam gel cleanser with salicylic. Doesn't leave skin squeaky.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=foxtale+oil+control+face+wash"
+    }
+  },
+  {
+    "id": "n018",
+    "name": "Gentle Cleanser",
+    "brand": "Deconstruct",
+    "brand_tier": "indian_d2c",
+    "category": "face_cleanser",
+    "price_inr": 295,
+    "price_tier": "entry",
+    "actives": [
+      "glycerin",
+      "panthenol"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "sensitive",
+      "dry",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": "Low pH cleanser with no actives. For skin that reacts to most face washes.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=deconstruct+gentle+cleanser"
+    }
+  },
+  {
+    "id": "n019",
+    "name": "Probiotic Hydrating Face Cleanser",
+    "brand": "Dot & Key",
+    "brand_tier": "indian_d2c",
+    "category": "face_cleanser",
+    "price_inr": 475,
+    "price_tier": "entry",
+    "actives": [
+      "hyaluronic_acid",
+      "glycerin",
+      "panthenol"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "dehydration",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal",
+      "combination"
+    ],
+    "climate_suitability": [
+      "cold",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": "Cream cleanser for dry winters. Rinses without tightness.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=dot+key+probiotic+cleanser"
+    }
+  },
+  {
+    "id": "n020",
+    "name": "Anua Heartleaf 77% Toner",
+    "brand": "Anua",
+    "brand_tier": "international_available_in_india",
+    "category": "toner",
+    "price_inr": 1400,
+    "price_tier": "mid",
+    "actives": [
+      "centella_asiatica",
+      "madecassoside"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "sensitivity",
+      "acne",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "sensitive"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": "Korean toner that calms active acne. Good before niacinamide.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=anua+heartleaf+77+toner"
+    }
+  },
+  {
+    "id": "n021",
+    "name": "Oil-Free Moisturizer with Hyaluronic Acid",
+    "brand": "Neutrogena",
+    "brand_tier": "international_available_in_india",
+    "category": "moisturizer",
+    "price_inr": 525,
+    "price_tier": "entry",
+    "actives": [
+      "hyaluronic_acid",
+      "glycerin"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "oiliness",
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": "Gel moisturizer for oily skin in humid weather. Doesn't sit on top.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=neutrogena+oil+free+moisturiser+hyaluronic"
+    }
+  },
+  {
+    "id": "n022",
+    "name": "Barrier Repair Moisturizer",
+    "brand": "Dot & Key",
+    "brand_tier": "indian_d2c",
+    "category": "moisturizer",
+    "price_inr": 725,
+    "price_tier": "mid",
+    "actives": [
+      "ceramides",
+      "niacinamide",
+      "squalane"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "sensitivity",
+      "dryness",
+      "dehydration"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "sensitive",
+      "normal"
+    ],
+    "climate_suitability": [
+      "cold",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "sensitivity",
+    "hero_line": "Ceramides and niacinamide. Helps when retinol or acids compromise the barrier.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=dot+key+barrier+repair+moisturizer"
+    }
+  },
+  {
+    "id": "n023",
+    "name": "Squalane + Ceramides Moisturizer",
+    "brand": "Minimalist",
+    "brand_tier": "indian_d2c",
+    "category": "moisturizer",
+    "price_inr": 399,
+    "price_tier": "entry",
+    "actives": [
+      "squalane",
+      "ceramides"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "dehydration",
+      "dryness"
+    ],
+    "suitable_skin_types": [
+      "dry",
+      "normal"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dehydration",
+    "hero_line": "Plain moisturizer. Ceramides and squalane, nothing else to react.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=minimalist+squalane+ceramides"
+    }
+  },
+  {
+    "id": "n024",
+    "name": "Matte Fluid SPF 50 PA++++",
+    "brand": "Re'equil",
+    "brand_tier": "indian_d2c",
+    "category": "spf_sunscreen",
+    "price_inr": 695,
+    "price_tier": "mid",
+    "actives": [
+      "tinosorb_s",
+      "avobenzone",
+      "uvinul_a_plus"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "hyperpigmentation",
+      "oiliness"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination",
+      "normal"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": "Matte finish without white cast. Rare combination at this price.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=reequil+matte+sunscreen+spf+50"
+    }
+  },
+  {
+    "id": "n025",
+    "name": "Aqualogica Glow+ Dewy Sunscreen SPF 50",
+    "brand": "Aqualogica",
+    "brand_tier": "indian_d2c",
+    "category": "spf_sunscreen",
+    "price_inr": 499,
+    "price_tier": "entry",
+    "actives": [
+      "avobenzone",
+      "octocrylene",
+      "vitamin_c",
+      "niacinamide"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "dullness",
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": "Dewy sunscreen with vitamin C added. Leaves skin looking alive, not flat.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=aqualogica+glow+sunscreen"
+    }
+  },
+  {
+    "id": "n026",
+    "name": "Dewy Sunscreen SPF 50 PA+++",
+    "brand": "The Derma Co",
+    "brand_tier": "indian_d2c",
+    "category": "spf_sunscreen",
+    "price_inr": 499,
+    "price_tier": "entry",
+    "actives": [
+      "avobenzone",
+      "octocrylene",
+      "niacinamide"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hyperpigmentation",
+    "hero_line": "Creamy finish sunscreen. For dry climates or after retinol.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=derma+co+dewy+sunscreen"
+    }
+  },
+  {
+    "id": "n027",
+    "name": "Caffeine Under-Eye Cream",
+    "brand": "The Derma Co",
+    "brand_tier": "indian_d2c",
+    "category": "eye_cream",
+    "price_inr": 525,
+    "price_tier": "entry",
+    "actives": [
+      "caffeine",
+      "niacinamide",
+      "hyaluronic_acid"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "dark_circles",
+      "puffiness"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": "Caffeine for the morning puffiness. Not a pigmentation treatment.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=derma+co+caffeine+under+eye"
+    }
+  },
+  {
+    "id": "n028",
+    "name": "Vitamin K + Retinol Under Eye Cream",
+    "brand": "Dot & Key",
+    "brand_tier": "indian_d2c",
+    "category": "eye_cream",
+    "price_inr": 795,
+    "price_tier": "mid",
+    "actives": [
+      "retinol",
+      "vitamin_e",
+      "peptides"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "dark_circles",
+      "fine_lines"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry",
+      "combination"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": "Low-dose retinol in the eye area. For the pigmentation component of dark circles.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=dot+key+vitamin+k+retinol+eye"
+    }
+  },
+  {
+    "id": "n029",
+    "name": "Kumkumadi Glow Oil",
+    "brand": "Forest Essentials",
+    "brand_tier": "indian_ayurvedic_premium",
+    "category": "face_oil",
+    "price_inr": 1895,
+    "price_tier": "premium",
+    "actives": [
+      "kumkumadi_tailam",
+      "saffron",
+      "sesame_oil"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "dullness",
+      "hyperpigmentation"
+    ],
+    "suitable_skin_types": [
+      "normal",
+      "dry"
+    ],
+    "climate_suitability": [
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": true,
+    "primary_concern_target": "dullness",
+    "hero_line": "Classic Ayurvedic facial oil. Use at night only; yellows fabric.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=forest+essentials+kumkumadi"
+    }
+  },
+  {
+    "id": "n030",
+    "name": "BB+ Cream with SPF 30",
+    "brand": "Lakmé",
+    "brand_tier": "indian_legacy",
+    "category": "bb_cream",
+    "price_inr": 475,
+    "price_tier": "entry",
+    "actives": [
+      "niacinamide",
+      "titanium_dioxide"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "dullness",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "uneven_tone",
+    "hero_line": "Light everyday BB cream with SPF. For quick daytime coverage.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=lakme+bb+cream+spf"
+    }
+  },
+  {
+    "id": "n031",
+    "name": "Skin Perfecting Concealer",
+    "brand": "Sugar",
+    "brand_tier": "indian_d2c",
+    "category": "concealer",
+    "price_inr": 499,
+    "price_tier": "entry",
+    "actives": [
+      "hyaluronic_acid",
+      "vitamin_e"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "dark_circles",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dark_circles",
+    "hero_line": "Full coverage concealer for under eyes. Sets without caking.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=sugar+skin+perfecting+concealer"
+    }
+  },
+  {
+    "id": "n032",
+    "name": "MatteAttack Transferproof Lipstick",
+    "brand": "Sugar",
+    "brand_tier": "indian_d2c",
+    "category": "foundation_base",
+    "price_inr": 599,
+    "price_tier": "entry",
+    "actives": [
+      "vitamin_e"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "uneven_tone",
+    "hero_line": "Matte liquid lipstick that actually doesn't transfer. Indian skin tones well-represented.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=sugar+matteattack+lipstick"
+    }
+  },
+  {
+    "id": "n033",
+    "name": "Infallible Pro-Matte Foundation",
+    "brand": "L'Oréal Paris",
+    "brand_tier": "international_available_in_india",
+    "category": "foundation_base",
+    "price_inr": 1149,
+    "price_tier": "mid",
+    "actives": [],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "oiliness",
+      "uneven_tone"
+    ],
+    "suitable_skin_types": [
+      "oily",
+      "combination"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "oiliness",
+    "hero_line": "24-hour matte foundation. For events in humid weather.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=loreal+infallible+pro+matte+foundation"
+    }
+  },
+  {
+    "id": "n034",
+    "name": "Brow Pomade",
+    "brand": "Anastasia Beverly Hills",
+    "brand_tier": "international_premium",
+    "category": "brow_pencil",
+    "price_inr": 2400,
+    "price_tier": "premium",
+    "actives": [],
+    "fragrance_free": true,
+    "suitable_for_concerns": [],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "uneven_tone",
+    "hero_line": "Gel pomade for brows. Lasts through humidity; needs a brush to apply.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=anastasia+brow+pomade"
+    }
+  },
+  {
+    "id": "n035",
+    "name": "Anti-Dandruff Shampoo",
+    "brand": "Minimalist",
+    "brand_tier": "indian_d2c",
+    "category": "hair_shampoo",
+    "price_inr": 345,
+    "price_tier": "entry",
+    "actives": [
+      "piroctone_olamine",
+      "salicylic_acid_scalp",
+      "niacinamide"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "dandruff",
+      "itchy_scalp"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dandruff",
+    "hero_line": "Piroctone olamine instead of zinc pyrithione. Less stripping over time.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=minimalist+anti+dandruff+shampoo"
+    }
+  },
+  {
+    "id": "n036",
+    "name": "Ketoconazole 2% Anti-Dandruff Shampoo",
+    "brand": "Nizoral",
+    "brand_tier": "international_available_in_india",
+    "category": "hair_shampoo",
+    "price_inr": 475,
+    "price_tier": "entry",
+    "actives": [
+      "ketoconazole"
+    ],
+    "fragrance_free": true,
+    "suitable_for_concerns": [
+      "dandruff",
+      "itchy_scalp"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "dandruff",
+    "hero_line": "Anti-fungal shampoo for persistent dandruff. Twice weekly, not daily.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=nizoral+ketoconazole+shampoo"
+    }
+  },
+  {
+    "id": "n037",
+    "name": "Anti-Hair Fall Shampoo",
+    "brand": "The Derma Co",
+    "brand_tier": "indian_d2c",
+    "category": "hair_shampoo",
+    "price_inr": 399,
+    "price_tier": "entry",
+    "actives": [
+      "redensyl",
+      "biotin",
+      "caffeine"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "hair_fall"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hair_fall",
+    "hero_line": "Redensyl and caffeine for shedding concerns. Use alongside a scalp oil.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=derma+co+anti+hair+fall+shampoo"
+    }
+  },
+  {
+    "id": "n038",
+    "name": "Hairfall Control Shampoo with Onion",
+    "brand": "Mamaearth",
+    "brand_tier": "indian_d2c",
+    "category": "hair_shampoo",
+    "price_inr": 349,
+    "price_tier": "entry",
+    "actives": [
+      "onion_oil",
+      "plant_keratin"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "hair_fall",
+      "damage"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "hair_fall",
+    "hero_line": "Popular onion oil shampoo. If you're curious about the trend, start here.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=mamaearth+onion+shampoo"
+    }
+  },
+  {
+    "id": "n039",
+    "name": "Smoothing Shampoo",
+    "brand": "Olaplex",
+    "brand_tier": "international_premium",
+    "category": "hair_shampoo",
+    "price_inr": 2000,
+    "price_tier": "premium",
+    "actives": [
+      "amino_acids",
+      "peptides"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "damage",
+      "frizz"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": "Bond-rebuilding shampoo. For colored, chemically-treated, or heat-damaged hair.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=olaplex+smoothing+shampoo"
+    }
+  },
+  {
+    "id": "n040",
+    "name": "Bhringraj Hair Oil",
+    "brand": "Kama Ayurveda",
+    "brand_tier": "indian_ayurvedic_premium",
+    "category": "hair_oil",
+    "price_inr": 1295,
+    "price_tier": "premium",
+    "actives": [
+      "bhringraj",
+      "brahmi",
+      "sesame_oil",
+      "amla"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "hair_fall",
+      "dullness_hair"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": true,
+    "primary_concern_target": "hair_fall",
+    "hero_line": "Heavy Ayurvedic oil. Overnight application; wash out thoroughly the next morning.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=kama+ayurveda+bhringraj+hair+oil"
+    }
+  },
+  {
+    "id": "n041",
+    "name": "Moroccan Argan Hair Oil",
+    "brand": "WOW Skin Science",
+    "brand_tier": "indian_d2c",
+    "category": "hair_oil",
+    "price_inr": 499,
+    "price_tier": "entry",
+    "actives": [
+      "argan_oil",
+      "jojoba_oil",
+      "vitamin_e"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "frizz",
+      "damage",
+      "dullness_hair"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "frizz",
+    "hero_line": "Light leave-in oil for finished hair. Not for heavy scalp massage.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=wow+argan+hair+oil"
+    }
+  },
+  {
+    "id": "n042",
+    "name": "Scalp Detox Oil",
+    "brand": "Arata",
+    "brand_tier": "indian_d2c",
+    "category": "hair_oil",
+    "price_inr": 625,
+    "price_tier": "mid",
+    "actives": [
+      "rosemary_oil",
+      "tea_tree_oil",
+      "peppermint_oil"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "oily_scalp",
+      "dandruff"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "oily_scalp",
+    "hero_line": "Rosemary and tea tree. Stimulating without heavy oil residue.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=arata+scalp+detox+oil"
+    }
+  },
+  {
+    "id": "n043",
+    "name": "Deep Conditioner for Damaged Hair",
+    "brand": "Kérastase",
+    "brand_tier": "international_premium",
+    "category": "hair_conditioner",
+    "price_inr": 2800,
+    "price_tier": "premium",
+    "actives": [
+      "ceramides",
+      "keratin_actives"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "damage",
+      "frizz"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": false,
+    "is_ayurvedic": false,
+    "primary_concern_target": "damage",
+    "hero_line": "Salon-grade conditioner. For chemically processed hair specifically.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=kerastase+deep+conditioner"
+    }
+  },
+  {
+    "id": "n044",
+    "name": "Keratin Smooth Hair Mask",
+    "brand": "Minimalist",
+    "brand_tier": "indian_d2c",
+    "category": "hair_mask",
+    "price_inr": 499,
+    "price_tier": "entry",
+    "actives": [
+      "plant_keratin",
+      "argan_oil",
+      "panthenol"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "frizz",
+      "damage"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "frizz",
+    "hero_line": "Weekly mask for frizz. Fifteen minutes, rinse well.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=minimalist+keratin+hair+mask"
+    }
+  },
+  {
+    "id": "n045",
+    "name": "Beard Growth Oil",
+    "brand": "The Man Company",
+    "brand_tier": "indian_d2c_men",
+    "category": "beard_oil",
+    "price_inr": 399,
+    "price_tier": "entry",
+    "actives": [
+      "argan_oil",
+      "jojoba_oil",
+      "castor_oil",
+      "vitamin_e"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "patchiness",
+      "rough_texture"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "patchiness",
+    "hero_line": "Light beard oil for daily use. No strong scent.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=man+company+beard+growth+oil"
+    }
+  },
+  {
+    "id": "n046",
+    "name": "Beard Oil with Sandalwood",
+    "brand": "Beardo",
+    "brand_tier": "indian_d2c_men",
+    "category": "beard_oil",
+    "price_inr": 349,
+    "price_tier": "entry",
+    "actives": [
+      "sandalwood_oil",
+      "sweet_almond_oil",
+      "argan_oil"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "rough_texture",
+      "itchiness_beard"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": "Sandalwood scent, softening oils. Apply after wash; work into skin.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=beardo+sandalwood+beard+oil"
+    }
+  },
+  {
+    "id": "n047",
+    "name": "Beard & Face Wash",
+    "brand": "Ustraa",
+    "brand_tier": "indian_d2c_men",
+    "category": "beard_wash",
+    "price_inr": 299,
+    "price_tier": "entry",
+    "actives": [
+      "glycerin",
+      "aloe_vera"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "itchiness_beard"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "itchiness_beard",
+    "hero_line": "Daily wash for beard and underlying skin. Less stripping than face wash alone.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=ustraa+beard+face+wash"
+    }
+  },
+  {
+    "id": "n048",
+    "name": "Beard Balm with Shea Butter",
+    "brand": "Bombay Shaving Company",
+    "brand_tier": "indian_d2c_men",
+    "category": "beard_balm",
+    "price_inr": 495,
+    "price_tier": "entry",
+    "actives": [
+      "shea_butter",
+      "jojoba_oil",
+      "beeswax"
+    ],
+    "fragrance_free": false,
+    "suitable_for_concerns": [
+      "rough_texture"
+    ],
+    "suitable_skin_types": [
+      "all"
+    ],
+    "climate_suitability": [
+      "humid",
+      "tropical",
+      "temperate",
+      "cold"
+    ],
+    "trusted_by_beginners": true,
+    "is_ayurvedic": false,
+    "primary_concern_target": "rough_texture",
+    "hero_line": "Medium-hold balm. For shaping; won't replace morning conditioning.",
+    "retailer_urls": {
+      "nykaa": "https://www.nykaa.com/search/result/?q=bombay+shaving+company+beard+balm"
     }
   }
 ]

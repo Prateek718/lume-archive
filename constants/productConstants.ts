@@ -41,6 +41,8 @@ export interface Product {
   climate_suitability:    string[];
   trusted_by_beginners:   boolean;
   is_ayurvedic:           boolean;
+  primary_concern_target: string;
+  hero_line:              string | null;
   retailer_urls:          { nykaa?: string; amazon?: string; brand_direct?: string };
 
   // Runtime-only flag, set by match helpers.
@@ -70,6 +72,8 @@ function isNewSchemaProduct(raw: unknown): raw is Product {
     Array.isArray(r.climate_suitability) &&
     typeof r.trusted_by_beginners === 'boolean' &&
     typeof r.is_ayurvedic === 'boolean' &&
+    typeof r.primary_concern_target === 'string' &&
+    (r.hero_line === null || typeof r.hero_line === 'string') &&
     !!r.retailer_urls && typeof r.retailer_urls === 'object'
   );
 }
@@ -92,31 +96,6 @@ if (rawList.length > 0 && PRODUCTS.length === 0) {
     `match the new schema. Scoring will return empty lists until swapped.`,
   );
 }
-
-// ─── Brand-tier heuristic buckets ──────────────────────────────────────────────
-// Used by the budget inference helper. Case-sensitive exact matches against the
-// names as they appear in the brand-picker screen.
-
-const ENTRY_TIER_BRANDS = new Set<string>([
-  'Minimalist', 'Himalaya', 'The Derma Co', 'Plum', 'Dot & Key',
-  'Pilgrim', 'Foxtale', 'Mamaearth', 'WOW Skin Science', 'WOW',
-  'Biotique', 'Good Vibes', 'Nivea', 'Garnier',
-]);
-
-const PREMIUM_TIER_BRANDS = new Set<string>([
-  'CeraVe', 'Cetaphil', 'La Roche-Posay', "Paula's Choice", 'Bioderma',
-  'Kama Ayurveda', 'Forest Essentials', 'Kérastase', 'Kerastase',
-  'Laneige', 'NARS', 'Estée Lauder', 'Estee Lauder',
-  'SK-II', 'La Mer', 'Shiseido', 'Sulwhasoo', 'Tatcha',
-  'Charlotte Tilbury', 'Dior', 'Chanel', 'YSL Beauty',
-  'Giorgio Armani', 'Lancôme', 'Clinique', 'Drunk Elephant',
-  'Sunday Riley', 'SkinCeuticals', 'Fresh',
-]);
-
-const AYURVEDIC_BRANDS = new Set<string>([
-  'Kama Ayurveda', 'Forest Essentials', 'Himalaya', 'Biotique',
-  'Indulekha', 'Good Vibes', 'WOW Skin Science', 'WOW', 'Mamaearth',
-]);
 
 // ─── Canonical category enum ───────────────────────────────────────────────────
 // The full set of category IDs the scoring engine and prompts agree on. Any
@@ -265,14 +244,19 @@ export function normalizeCategory(input: string | null | undefined): string {
 // ─── Budget inference ──────────────────────────────────────────────────────────
 
 // Takes a flat list of brand names and returns the likely budget band.
-// - any premium brand → 'premium'
-// - >50% entry-tier   → 'entry'
-// - else              → 'mid'
+// Derives the tier from each brand's actual catalog products — no phantom
+// allowlists. Brands with any premium product → 'premium'. Brands that are
+// mostly entry-tier → 'entry'. Everything else → 'mid'.
 export function inferBudgetFromBrandList(brandList: string[]): PriceTier {
   if (!brandList || brandList.length === 0) return 'mid';
-  if (brandList.some(b => PREMIUM_TIER_BRANDS.has(b))) return 'premium';
-  const entryCount = brandList.filter(b => ENTRY_TIER_BRANDS.has(b)).length;
-  if (entryCount / brandList.length > 0.5) return 'entry';
+  const lowerSet = new Set(brandList.map(b => b.toLowerCase()));
+  const matchingTiers = PRODUCTS
+    .filter(p => lowerSet.has(p.brand.toLowerCase()))
+    .map(p => p.price_tier);
+  if (matchingTiers.length === 0) return 'mid';
+  if (matchingTiers.some(t => t === 'premium')) return 'premium';
+  const entryCount = matchingTiers.filter(t => t === 'entry').length;
+  if (entryCount / matchingTiers.length > 0.5) return 'entry';
   return 'mid';
 }
 
@@ -337,7 +321,10 @@ export function getScoredProducts(params: {
   const inferredBudget   = inferBudgetFromBrandList(brandPrefs);
   const primaryConcerns  = userProfile.primary_concerns ?? [];
   const brandSet         = new Set(brandPrefs.map(b => b.toLowerCase()));
-  const hasAyurvedicPref = brandPrefs.some(b => AYURVEDIC_BRANDS.has(b));
+  const ayurvedicBrandSet = new Set(
+    PRODUCTS.filter(p => p.is_ayurvedic).map(p => p.brand.toLowerCase()),
+  );
+  const hasAyurvedicPref = brandPrefs.some(b => ayurvedicBrandSet.has(b.toLowerCase()));
 
   const scored = PRODUCTS
     .filter(p => p.category === canonical)
@@ -419,8 +406,15 @@ function toMatchedProduct(p: Product): MatchedProduct {
   };
 }
 
-// Template-based rationale. Kept short — the UI truncates to ~2 lines.
+// Rationale for "why this one". Prefers hand-authored hero_line on the
+// product; falls back to a short templated line derived from the product's
+// tier, primary active, skin-type fit, and concern match. The UI truncates
+// to ~2 lines regardless.
 function buildWhyThisOne(p: Product, profile: UserProfileForScoring): string {
+  if (p.hero_line && typeof p.hero_line === 'string' && p.hero_line.trim()) {
+    return p.hero_line;
+  }
+
   const tierLabel =
     p.price_tier === 'entry'   ? 'Entry-tier' :
     p.price_tier === 'premium' ? 'Premium'    :
