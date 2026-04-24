@@ -1,18 +1,21 @@
-// Three-phase scan screen.
-//   intro    — cream-bg consent / what-to-expect, gates camera permission.
-//   align    — dark-bg live camera with oval guide and capture button.
-//   analyzing — dark-bg waiting state while Gemini phase 1 runs.
+// Three-phase scan screen — unified dark three-zone layout.
+//
+// All three phases (intro, align, analyzing) share the same structure:
+//   TOP    : BackButton + ChapterLabel + Display title
+//   MIDDLE : Oval guide, always centered on dark bg. CameraView + 55% dark
+//            overlay are rendered ONLY in the align phase — mounted on
+//            intro→align, unmounted on align→analyzing. Intro and analyzing
+//            both show the oval on a solid scanBg with no camera preview.
+//   BOTTOM : italic body line + phase-specific CTA
 //
 // useScan owns the state machine. This screen pushes a photo into it via
 // start(), then watches state for success / branching screens.
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   Easing,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -50,13 +53,20 @@ export default function Scan() {
       return;
     }
     if (scan.state === 'success') {
-      router.replace('/(scan)/complete' as never);
+      if (scan.result?.id) {
+        router.replace({
+          pathname: '/(scan)/observation',
+          params:   { scanId: scan.result.id },
+        } as never);
+      } else {
+        router.replace('/(scan)/complete' as never);
+      }
       return;
     }
     if (scan.state === 'phase1' || scan.state === 'phase2') {
       setPhase('analyzing');
     }
-  }, [scan.state, router]);
+  }, [scan.state, scan.result, router]);
 
   const onBegin = async () => {
     if (!permission) return;
@@ -93,193 +103,241 @@ export default function Scan() {
     }
   };
 
+  const onBack = () => {
+    if (phase === 'intro') {
+      router.back();
+    } else if (phase === 'align') {
+      setPhase('intro');
+    }
+    // analyzing: no back — scan is in-flight.
+  };
+
+  const onRetry = () => {
+    scan.reset();
+    captureLockRef.current = false;
+    setPhase('intro');
+  };
+
+  // Error state gets its own full-screen layout.
+  if (scan.state === 'error') {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ErrorView error={scan.error} onRetry={onRetry} />
+      </>
+    );
+  }
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      {phase === 'intro' ? (
-        <IntroPhase onBegin={onBegin} onBack={() => router.back()} />
-      ) : phase === 'align' ? (
-        <AlignPhase
-          cameraRef={cameraRef}
-          onCapture={onCapture}
-          onBack={() => setPhase('intro')}
-        />
-      ) : (
-        <AnalyzingPhase error={scan.state === 'error' ? scan.error : null} onRetry={() => {
-          scan.reset();
-          captureLockRef.current = false;
-          setPhase('intro');
-        }} />
-      )}
+      <ScanLayout
+        phase={phase}
+        permissionGranted={permission?.granted ?? false}
+        cameraRef={cameraRef}
+        onBack={onBack}
+        onBegin={onBegin}
+        onCapture={onCapture}
+      />
     </>
   );
 }
 
-// ── Intro ────────────────────────────────────────────────────────────────
+// ── Three-zone layout (intro / align / analyzing) ─────────────────────────
 
-function IntroPhase({ onBegin, onBack }: { onBegin: () => void; onBack: () => void }) {
+interface ScanLayoutProps {
+  phase:             LocalPhase;
+  permissionGranted: boolean;
+  cameraRef:         React.MutableRefObject<CameraView | null>;
+  onBack:            () => void;
+  onBegin:           () => void;
+  onCapture:         () => void;
+}
+
+function ScanLayout({
+  phase,
+  permissionGranted,
+  cameraRef,
+  onBack,
+  onBegin,
+  onCapture,
+}: ScanLayoutProps) {
+  const { width: screenWidth } = Dimensions.get('window');
+  const ovalWidth  = Math.min(280, screenWidth * 0.72);
+  const ovalHeight = ovalWidth * 1.32;
+
+  const chapter =
+    phase === 'intro'     ? 'First reading' :
+    phase === 'align'     ? 'Hold steady'   :
+                            'Reading';
+
+  const body =
+    phase === 'intro'     ? 'Find a window with soft daylight. No filter, no makeup.' :
+    phase === 'align'     ? 'Eyes level \u00B7 shoulders relaxed \u00B7 three seconds.' :
+                            'This takes about twenty seconds. Breathe normally.';
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Palette.bg }}>
-      <View style={{ paddingTop: 8, paddingHorizontal: 28 }}>
-        <BackButton onPress={onBack} style={{ marginLeft: -8 }} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: Palette.scanBg }}>
+      {/* TOP — solid dark */}
+      <View
+        style={{
+          paddingHorizontal: 28,
+          paddingTop:        8,
+          paddingBottom:     18,
+          backgroundColor:   Palette.scanBg,
+        }}
+      >
+        {phase === 'analyzing' ? (
+          <View style={{ height: 30 }} />
+        ) : (
+          <BackButton dark onPress={onBack} style={{ marginLeft: -8 }} />
+        )}
+        <View style={{ paddingHorizontal: 4, marginTop: 12 }}>
+          <ChapterLabel dark>{chapter}</ChapterLabel>
+          <View style={{ height: 12 }} />
+          <TitleForPhase phase={phase} />
+        </View>
       </View>
 
-      <View style={{ flex: 1, paddingHorizontal: 32, paddingTop: 22, paddingBottom: 30 }}>
-        <ChapterLabel>Your reading</ChapterLabel>
-        <View style={{ height: 14 }} />
-        <Display>
-          <Display italic>Let's begin</Display>
-          {'\n'}your first scan.
-        </Display>
+      {/* MIDDLE — oval always; camera + overlay only during align */}
+      <View style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        {phase === 'align' && permissionGranted ? (
+          <>
+            <CameraView
+              ref={cameraRef}
+              facing="front"
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            />
+            {/* 55% dark overlay dims camera so top/bottom text stays legible */}
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(28, 19, 12, 0.55)',
+              }}
+            />
+          </>
+        ) : null}
 
-        <View style={{ height: 24 }} />
-        <Body serif size={14.5} style={{ lineHeight: 22 }}>
-          Find good natural light. Hold the phone an arm's length away. We read tone, texture
-          and a handful of small things — then build a care plan around them.
-        </Body>
-
-        <View style={{ height: 30 }} />
         <View
+          pointerEvents="none"
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <View
+            style={{
+              width:        ovalWidth,
+              height:       ovalHeight,
+              borderRadius: ovalWidth / 2,
+              borderWidth:  1,
+              borderStyle:  'solid',
+              borderColor:  'rgba(243, 239, 230, 0.5)',
+              overflow:     'hidden',
+            }}
+          >
+            {phase === 'analyzing' ? <SweepBar ovalHeight={ovalHeight} /> : null}
+          </View>
+        </View>
+      </View>
+
+      {/* BOTTOM — solid dark */}
+      <View
+        style={{
+          paddingHorizontal: 32,
+          paddingTop:        22,
+          paddingBottom:     26,
+          backgroundColor:   Palette.scanBg,
+        }}
+      >
+        <Body
+          serif
+          dark
+          size={14.5}
           style={{
-            backgroundColor: Palette.bgElev,
-            borderLeftWidth: 2,
-            borderLeftColor: Palette.accent,
-            paddingVertical: 18,
-            paddingHorizontal: 20,
+            fontStyle:   'italic',
+            textAlign:   'center',
+            color:       'rgba(243, 239, 230, 0.75)',
+            marginBottom: 22,
           }}
         >
-          <ChapterLabel style={{ marginBottom: 8 }}>Privacy note</ChapterLabel>
-          <Body serif size={13} style={{ fontStyle: 'italic' }}>
-            Your photograph never leaves your phone. Only the numbers we derive from it do.
-          </Body>
-        </View>
+          {body}
+        </Body>
 
-        <View style={{ flex: 1 }} />
-        <PrimaryButton label="Begin →" onPress={onBegin} />
+        {phase === 'intro'     ? <PrimaryButton dark label="I'm ready" onPress={onBegin} /> : null}
+        {phase === 'align'     ? <CaptureButtonRow onCapture={onCapture} />                : null}
+        {phase === 'analyzing' ? <AnalyzingDots />                                         : null}
       </View>
     </SafeAreaView>
   );
 }
 
-// ── Align (camera live view) ─────────────────────────────────────────────
+// ── Title (per phase, reused inside ScanLayout) ───────────────────────────
 
-function AlignPhase({
-  cameraRef,
-  onCapture,
-  onBack,
-}: {
-  cameraRef: React.MutableRefObject<CameraView | null>;
-  onCapture: () => void;
-  onBack: () => void;
-}) {
-  const { width: screenWidth } = Dimensions.get('window');
-  const ovalWidth  = Math.min(280, screenWidth * 0.72);
-  const ovalHeight = ovalWidth * 1.32;
-
+function TitleForPhase({ phase }: { phase: LocalPhase }) {
+  if (phase === 'intro') {
+    return (
+      <Display dark size="small">
+        <Display dark size="small" italic>Settle in.</Display>
+        {'\n'}Let&apos;s take a look.
+      </Display>
+    );
+  }
+  if (phase === 'align') {
+    return (
+      <Display dark size="small">
+        Bring your face{'\n'}into the{' '}
+        <Display dark size="small" italic>frame</Display>.
+      </Display>
+    );
+  }
   return (
-    <View style={{ flex: 1, backgroundColor: Palette.scanBg }}>
-      <CameraView
-        ref={cameraRef}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        facing="front"
-      />
+    <Display dark size="small">
+      <Display dark size="small" italic>A quiet</Display>
+      {'\n'}observation.
+    </Display>
+  );
+}
 
-      {/* Top scrim with chapter + back */}
-      <SafeAreaView edges={['top']} style={{ backgroundColor: 'rgba(28,19,12,0.55)' }}>
-        <View
-          style={{
-            paddingHorizontal: 28,
-            paddingTop: 8,
-            paddingBottom: 14,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <BackButton dark onPress={onBack} style={{ marginLeft: -8 }} />
-          <ChapterLabel dark>Hold steady</ChapterLabel>
-          <View style={{ width: 60 }} />
-        </View>
-      </SafeAreaView>
+// ── Capture button ───────────────────────────────────────────────────────
 
-      {/* Oval guide — solid thin translucent border, sized relative to screen */}
-      <View
-        pointerEvents="none"
+function CaptureButtonRow({ onCapture }: { onCapture: () => void }) {
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <TouchableOpacity
+        onPress={onCapture}
+        activeOpacity={0.8}
         style={{
-          flex: 1,
-          alignItems: 'center',
+          width:          78,
+          height:         78,
+          borderRadius:   99,
+          borderWidth:    2,
+          borderColor:    Palette.onScanBg,
+          alignItems:     'center',
           justifyContent: 'center',
         }}
       >
         <View
           style={{
-            width: ovalWidth,
-            height: ovalHeight,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: 'rgba(243,239,230,0.5)',
+            width:           60,
+            height:          60,
+            borderRadius:    99,
+            backgroundColor: Palette.onScanBg,
           }}
         />
-      </View>
-
-      {/* Bottom scrim with caption + capture */}
-      <SafeAreaView edges={['bottom']} style={{ backgroundColor: 'rgba(28,19,12,0.55)' }}>
-        <View style={{ paddingHorizontal: 32, paddingTop: 22, paddingBottom: 26, alignItems: 'center' }}>
-          <Text
-            style={{
-              fontFamily: 'CormorantGaramond_400Regular_Italic',
-              fontStyle: 'italic',
-              fontSize: 15,
-              color: 'rgba(243,239,230,0.85)',
-              textAlign: 'center',
-              marginBottom: 22,
-            }}
-          >
-            Center your face within the frame.
-          </Text>
-
-          <TouchableOpacity
-            onPress={onCapture}
-            activeOpacity={0.8}
-            style={{
-              width: 78,
-              height: 78,
-              borderRadius: 99,
-              borderWidth: 2,
-              borderColor: Palette.onScanBg,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <View
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 99,
-                backgroundColor: Palette.onScanBg,
-              }}
-            />
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      </TouchableOpacity>
     </View>
   );
 }
 
-// ── Analyzing ────────────────────────────────────────────────────────────
+// ── Analyzing dots ───────────────────────────────────────────────────────
 
-function AnalyzingPhase({
-  error,
-  onRetry,
-}: {
-  error: string | null;
-  onRetry: () => void;
-}) {
-  // Three pulsing dots, staggered.
-  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+function AnalyzingDots() {
+  const a = useRef(new Animated.Value(0)).current;
+  const b = useRef(new Animated.Value(0)).current;
+  const c = useRef(new Animated.Value(0)).current;
+  const dots = [a, b, c];
 
   useEffect(() => {
-    if (error) return;
     const loops = dots.map((v, i) =>
       Animated.loop(
         Animated.sequence([
@@ -291,58 +349,116 @@ function AnalyzingPhase({
     );
     loops.forEach(l => l.start());
     return () => loops.forEach(l => l.stop());
-  }, [error, dots]);
-
-  if (error) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Palette.scanBg }}>
-        <View style={{ flex: 1, paddingHorizontal: 32, paddingTop: 60, paddingBottom: 30 }}>
-          <ChapterLabel dark>Something went wrong</ChapterLabel>
-          <View style={{ height: 16 }} />
-          <Display dark>
-            <Display dark italic>The reading</Display>
-            {'\n'}didn't complete.
-          </Display>
-          <View style={{ height: 20 }} />
-          <Body serif dark size={14} style={{ fontStyle: 'italic', color: 'rgba(243,239,230,0.75)' }}>
-            {error}
-          </Body>
-          <View style={{ flex: 1 }} />
-          <PrimaryButton dark label="Try again" onPress={onRetry} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
+    <View style={{ alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {dots.map((v, i) => (
+          <Animated.View
+            key={i}
+            style={{
+              width:           8,
+              height:          8,
+              borderRadius:    99,
+              backgroundColor: Palette.onScanBg,
+              opacity:         v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+              transform:       [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.2] }) }],
+            }}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ── Sweep bar (shown inside oval during analyzing) ────────────────────────
+
+function SweepBar({ ovalHeight }: { ovalHeight: number }) {
+  const translateY = useRef(new Animated.Value(20)).current;
+  const opacity    = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const translateLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateY, {
+          toValue:        ovalHeight - 40,
+          duration:       2400,
+          easing:         Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue:        20,
+          duration:       0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    const opacityLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue:        0.9,
+          duration:       1200,
+          easing:         Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue:        0.3,
+          duration:       1200,
+          easing:         Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    translateLoop.start();
+    opacityLoop.start();
+    return () => {
+      translateLoop.stop();
+      opacityLoop.stop();
+    };
+  }, [ovalHeight, translateY, opacity]);
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position:        'absolute',
+        left:            0,
+        right:           0,
+        height:          2,
+        backgroundColor: Palette.accent,
+        transform:       [{ translateY }],
+        opacity,
+      }}
+    />
+  );
+}
+
+// ── Error state ──────────────────────────────────────────────────────────
+
+function ErrorView({
+  error,
+  onRetry,
+}: {
+  error:   string | null;
+  onRetry: () => void;
+}) {
+  return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Palette.scanBg }}>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
-        <ChapterLabel dark>Reading your scan</ChapterLabel>
-        <View style={{ height: 18 }} />
-        <Display dark size="small" style={{ textAlign: 'center' }}>
-          <Display dark italic size="small">A moment,</Display>
-          {'\n'}while we look closely.
+      <View style={{ flex: 1, paddingHorizontal: 32, paddingTop: 60, paddingBottom: 30 }}>
+        <ChapterLabel dark>Something went wrong</ChapterLabel>
+        <View style={{ height: 16 }} />
+        <Display dark>
+          <Display dark italic>The reading</Display>
+          {'\n'}didn&apos;t complete.
         </Display>
-
-        <View style={{ height: 36 }} />
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          {dots.map((v, i) => (
-            <Animated.View
-              key={i}
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 99,
-                backgroundColor: Palette.onScanBg,
-                opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
-                transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.2] }) }],
-              }}
-            />
-          ))}
-        </View>
-
-        <View style={{ height: 28 }} />
-        <ActivityIndicator color={Palette.onScanBg} style={{ opacity: 0 }} />
+        <View style={{ height: 20 }} />
+        <Body serif dark size={14} style={{ fontStyle: 'italic', color: 'rgba(243,239,230,0.75)' }}>
+          {error}
+        </Body>
+        <View style={{ flex: 1 }} />
+        <PrimaryButton dark label="Try again" onPress={onRetry} />
       </View>
     </SafeAreaView>
   );

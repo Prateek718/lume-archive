@@ -268,7 +268,27 @@ export interface MakeupRecommendation {
   summary?:    string;
 }
 
+// ─── Observation (Phase 3B) ──────────────────────────────────────────────────
+// Editorial first-reveal shown immediately after a scan. Three numbered
+// insights + trait chips. Emitted first in the recs response so it streams
+// first — the UX win we bought the streaming infrastructure for.
+
+export interface ScanInsight {
+  number:   '01' | '02' | '03';
+  headline: string;    // 2-4 words, editorial — e.g. "Mostly well" or "Oil is louder"
+  body:     string;    // 1-2 sentences, max ~150 chars
+}
+
+export interface ScanObservation {
+  title:        string;              // Display text, e.g. "A first observation."
+  issue_label:  string;              // ChapterLabel text, e.g. "Issue one · cover"
+  dek:          string;              // italic sub-title, 6-10 words
+  insights:     [ScanInsight, ScanInsight, ScanInsight];  // always exactly 3
+  trait_chips:  string[];            // 4-7 short lowercase descriptors
+}
+
 export interface Recommendations {
+  observation: ScanObservation;            // always present — first reveal after scan
   skin:     SkinRecommendation;
   beard:    BeardRecommendation | null;    // men only
   makeup:   MakeupRecommendation | null;  // women only

@@ -84,6 +84,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
         phase1.scanType,
         genderRef.current,
         userId,
+        phase1.scanNumber,
         undefined,
         phase1.partialScan,
       );
@@ -215,6 +216,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
           analysis:       phase1.analysis,
           userProfile:    phase1.userProfile,
           scanType:       phase1.scanType,
+          scanNumber:     phase1.scanNumber,
           existingTraits: phase1.existingTraits,
           gender:         genderRef.current,
         },

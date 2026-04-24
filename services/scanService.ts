@@ -371,6 +371,7 @@ export interface Phase1Result {
   };
   previousContext: string;
   scanType:        'first' | 'rescan';
+  scanNumber:      number;   // 1 for first scan, 2 for second rescan, etc.
   compressedUri:   string;
 }
 
@@ -396,6 +397,7 @@ export async function runScanPhase1(
     .eq('user_id', userId);
   const scanType: 'first' | 'rescan' =
     (priorScanCount && priorScanCount > 0) ? 'rescan' : 'first';
+  const scanNumber = (priorScanCount ?? 0) + 1;
 
   const { data: scanRow, error: insertErr } = await supabase
     .from('scans')
@@ -525,6 +527,7 @@ export async function runScanPhase1(
     },
     previousContext: previousScanSummary ?? '',
     scanType,
+    scanNumber,
     compressedUri:   base64,
   };
 }
@@ -546,6 +549,7 @@ export async function runScanPhase2(
   scanType:        'first' | 'rescan',
   gender:          string,
   userId:          string,
+  scanNumber:      number,
   onProgress?:     ProgressCallback,
   partialScan?:    PartialScan,
   getUserFeedback?: () => RescanFeedback | undefined,
@@ -631,6 +635,7 @@ export async function runScanPhase2(
       userProfile.careCategories,
       userProfile.ageRange,
       beardGoal,
+      scanNumber,
       { scanId },
     ),
     hairRecsPromise,
@@ -788,6 +793,7 @@ export async function runScan(
       phase1Result.scanType,
       gender,
       userId,
+      phase1Result.scanNumber,
       onProgress,
       phase1Result.partialScan,
     );
@@ -818,6 +824,7 @@ export async function finalizeTraitsAndRunPhase2(
       careCategories:  string[];
     };
     scanType:        'first' | 'rescan';
+    scanNumber:      number;
     existingTraits:  UserTraits | undefined;
     gender:          string;
   },
@@ -851,6 +858,7 @@ export async function finalizeTraitsAndRunPhase2(
     phase1Context.scanType,
     phase1Context.gender,
     userId,
+    phase1Context.scanNumber,
     onProgress,
     partialScan,
     getUserFeedback,
@@ -937,6 +945,14 @@ export async function refreshRecommendations(
 
     console.log('[refreshRecommendations] step: generating recs');
     onProgress?.('Generating recommendations…');
+    // Ordinal position of the scan being refreshed = number of user's scans at
+    // or before its created_at. (This is the latest scan, so it equals total.)
+    const { count: totalScanCount } = await supabase
+      .from('scans')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    const scanNumber = totalScanCount && totalScanCount > 0 ? totalScanCount : 1;
+
     const recommendations = await getRecommendationsFromGemini(
       gender,
       analysis,
@@ -944,6 +960,7 @@ export async function refreshRecommendations(
       careCategories,
       ageRange,
       beardGoal,
+      scanNumber,
       { scanId: latestScan.id as string },
     );
 

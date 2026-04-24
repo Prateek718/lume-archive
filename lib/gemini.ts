@@ -650,6 +650,26 @@ function tryParsePartialJson(raw: string): unknown | null {
 // ═══════════════════════════════════════════════════════════════════════════════
 // SKIN / BEARD / MAKEUP RECS PROMPT
 // ═══════════════════════════════════════════════════════════════════════════════
+// Ordinal + cardinal helpers for the observation's title and issue label.
+// Kept in JS (not prompt rules) so output shape is deterministic.
+function ordinal(n: number): string {
+  if (n === 1) return 'first';
+  if (n === 2) return 'second';
+  if (n === 3) return 'third';
+  if (n === 4) return 'fourth';
+  if (n === 5) return 'fifth';
+  return `${n}th`;
+}
+
+function cardinal(n: number): string {
+  if (n === 1) return 'one';
+  if (n === 2) return 'two';
+  if (n === 3) return 'three';
+  if (n === 4) return 'four';
+  if (n === 5) return 'five';
+  return String(n);
+}
+
 function buildSkinRecsPrompt(
   gender:          string,
   analysis:        GeminiAnalysis,
@@ -657,6 +677,7 @@ function buildSkinRecsPrompt(
   careCategories:  string[],
   ageRange:        string | null,
   beardGoal:       BeardGoal | null,
+  scanNumber:      number,
 ): string {
   const wantsSkin   = true;                                     // always on
   const wantsMakeup = careCategories.includes('makeup') && gender === 'woman';
@@ -792,10 +813,93 @@ techniques: 2 short, concrete techniques — imperative voice, no trait-naming o
 `
     : '';
 
+  // ── Observation section — emitted FIRST so it streams first ──────────────
+  const observationTitle      = `A ${ordinal(scanNumber)} observation.`;
+  const observationIssueLabel = `Issue ${cardinal(scanNumber)} · cover`;
+
+  const observationBlock = `
+OBSERVATION — the editorial first-reveal shown immediately after the scan.
+This section MUST appear FIRST in the JSON output (before skin, beard, makeup, products) so it streams first and the user sees it while the rest generates.
+
+Three insights, always. Narrate the scan in editorial order:
+
+  01 — Start positive. What's working? What's healthy? Lead with genuine strength.
+       Example headlines: "Mostly well", "Healthy foundation", "A balanced start"
+
+  02 — Main friction. The single most important concern. If multiple concerns
+       exist, pick the one with highest severity + clearest path to improvement.
+       Example headlines: "A little thirsty" (dehydration), "Oil is louder"
+       (oiliness), "Shadow returns" (dark circles)
+
+  03 — Secondary observation OR forward-looking note. A second concern, a
+       positive trajectory comment, or a nod to what the routine will address.
+       Example headlines: "Pores speak up", "Scalp needs attention", "Ready for texture work"
+
+HEADLINE RULES:
+  - 2-4 words.
+  - No "Your".
+  - No sentence-enders (no periods, no exclamations).
+  - Words that stand as editorial magazine section titles.
+
+BODY RULES:
+  - 1-2 sentences. Max 150 characters total.
+  - Tied to specific observations in the analysis JSON (zones, severity, traits).
+  - Use severity language gently — "mild dehydration is the single friction point" not "you have significant dehydration".
+  - No clinical jargon:
+      "sebum regulation"  → say "oil settles"
+      "barrier function"  → say "skin holding strong"
+      "hyperpigmentation" → say "uneven tone" or "tone patches"
+  - Voice anchor for observation: thoughtful print magazine profile of the
+    person's skin. Each insight is a short paragraph of consequence, not a
+    diagnostic note.
+
+TRAIT CHIPS — 4-7 short lowercase descriptors, drawn from analysis JSON +
+hair_profile (if provided) + care_categories scope. Sources per chip type:
+  - Skin   (always):                   "<type> skin"              e.g. "oily skin", "combination skin"
+  - Tone   (only if makeup selected):  "<undertone> <depth> tone" e.g. "warm medium tone"
+  - Hair   (only if hair_profile):     "<texture> <length> hair"  e.g. "wavy medium hair", or "bald" if bald
+  - Scalp  (only if hair_profile):     "<scalp_type> scalp"       e.g. "oily scalp"
+  - Beard  (only if beard_density present and not 'none'): "<density>-density beard"
+
+Never include trait chips for categories the user did not select. A woman with
+skin+hair+makeup gets no beard chip. A man with skin+hair+beard but no hair
+profile passed in gets no hair/scalp chips.
+
+EXCLUSIONS:
+  - Do NOT include face_shape in trait_chips (e.g. no "oval face", "oblong face",
+    "round face", "square face", "heart face", "diamond face"). Face shape drives
+    hair/beard/makeup recommendations internally but is not surfaced as a
+    user-facing descriptor — users disagree with categorical face-shape labels
+    and it erodes trust.
+
+TITLE + ISSUE LABEL are computed for you — use these EXACT strings:
+  observation.title       = "${observationTitle}"
+  observation.issue_label = "${observationIssueLabel}"
+
+Do not invent or modify them. Copy them verbatim.
+
+DEK — one line, italic voice, 6-10 words. Examples of the register:
+  "What we saw, in three short movements."
+  "Three observations, read in order."
+  "A quiet reading, in three parts."
+Pick one that fits this scan's tone. No trait-naming openings.
+`;
+
   // ── Output JSON schema ────────────────────────────────────────────────────
   const schemaBlock = `
 OUTPUT JSON SHAPE (return ONLY valid JSON, no markdown, no preamble):
 {
+  "observation": {
+    "title":       "${observationTitle}",
+    "issue_label": "${observationIssueLabel}",
+    "dek":         "italic-voice sub-title, 6-10 words",
+    "insights": [
+      { "number": "01", "headline": "2-4 words", "body": "1-2 sentences, max 150 chars" },
+      { "number": "02", "headline": "2-4 words", "body": "1-2 sentences, max 150 chars" },
+      { "number": "03", "headline": "2-4 words", "body": "1-2 sentences, max 150 chars" }
+    ],
+    "trait_chips": ["oily skin", "..."]
+  },
   "skin": {
     "advice": "max 2 sentences, first stands alone as preview, imperative",
     "steps":  [ ... ]
@@ -807,6 +911,7 @@ OUTPUT JSON SHAPE (return ONLY valid JSON, no markdown, no preamble):
   ]
 }
 
+observation MUST be the first key in the JSON (it streams first).
 products.name is a generic descriptor. products.brand is ALWAYS the literal string "category".`;
 
   // ── Few-shot examples ─────────────────────────────────────────────────────
@@ -822,6 +927,35 @@ FEW-SHOT — skin routine for combination skin with moderate dehydration (cheeks
     { "step_id": "skin_protect",   "label": "Protect",    "time_of_day": ["am"],      "order": 5, "category": "spf_sunscreen",          "clinical_reasoning": "Fitzpatrick IV in Mumbai — high PIH risk on any unprotected pigment. SPF 50 with iron oxides shields visible light too.",                      "product": "Mineral SPF 50" }
   ]
 }`;
+
+  const observationExample = `
+
+FEW-SHOT — observation for a man in Kolkata, skin+hair+beard, oily skin with moderate oiliness, dark circles, medium beard (scan number 1):
+
+"observation": {
+  "title": "A first observation.",
+  "issue_label": "Issue one · cover",
+  "dek": "What we saw, in three short movements.",
+  "insights": [
+    {
+      "number": "01",
+      "headline": "Healthy foundation",
+      "body": "Skin structure reads well — oval face, even proportions. The fundamentals are here; this is an easy base to work with."
+    },
+    {
+      "number": "02",
+      "headline": "Oil is louder",
+      "body": "T-zone and cheeks show moderate shine, amplified by Kolkata's humidity. Regulating this is the first move."
+    },
+    {
+      "number": "03",
+      "headline": "Shadow returns",
+      "body": "Periorbital darkening, a few shades deeper than surrounding skin. Consistent sleep and a targeted treatment will soften it."
+    }
+  ],
+  "trait_chips": ["oily skin", "medium-density beard"]
+}
+`;
 
   const makeupExample = wantsMakeup ? `
 
@@ -862,9 +996,9 @@ ${CANONICAL_CATEGORY_LIST}
 Use these IDs verbatim. Never invent new categories or use synonyms.
 
 step_id values are stable keys for adherence tracking — they must match the documented format EXACTLY.
-${skinBlock}${beardBlock}${makeupBlock}
+${observationBlock}${skinBlock}${beardBlock}${makeupBlock}
 ${schemaBlock}
-${skinExample}${makeupExample}
+${observationExample}${skinExample}${makeupExample}
 `.trim();
 }
 
@@ -876,6 +1010,7 @@ export async function getRecommendationsFromGemini(
   careCategories:  string[],
   ageRange:        string | null,
   beardGoal:       BeardGoal | null = null,
+  scanNumber:      number = 1,
   options?: {
     onPartial?: (partial: Partial<Recommendations>) => void;
     scanId?:    string | null;
@@ -892,7 +1027,7 @@ export async function getRecommendationsFromGemini(
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: buildSkinRecsPrompt(gender, analysis, matchedProducts, careCategories, ageRange, beardGoal),
+            text: buildSkinRecsPrompt(gender, analysis, matchedProducts, careCategories, ageRange, beardGoal, scanNumber),
           }],
         }],
         generationConfig: {
@@ -930,6 +1065,16 @@ export async function getRecommendationsFromGemini(
     }
 
     const parsed = JSON.parse(cleaned) as Recommendations;
+
+    // Defense in depth: strip any face-shape chip Gemini emitted despite the
+    // prompt rule. face_shape drives recommendations internally; surfacing it
+    // as a chip erodes trust when users disagree with the classification.
+    const FACE_SHAPE_PATTERNS = /\b(oval|round|square|heart|oblong|diamond|triangle)\s+face\b/i;
+    if (parsed.observation?.trait_chips) {
+      parsed.observation.trait_chips = parsed.observation.trait_chips.filter(
+        chip => !FACE_SHAPE_PATTERNS.test(chip),
+      );
+    }
 
     // Inject palette swatches from the static lookup. Gemini outputs swatches: []
     // and we fill them in here based on undertone + fitzpatrick from the analysis.

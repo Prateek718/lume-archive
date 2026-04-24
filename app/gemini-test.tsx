@@ -147,6 +147,7 @@ export default function GeminiTest() {
         SKIN_RECS_INPUT.careCategories,
         SKIN_RECS_INPUT.ageRange,
         SKIN_RECS_INPUT.beardGoal,
+        1,
         { scanId: null },
       );
       setSkinOut(JSON.stringify(result, null, 2));
