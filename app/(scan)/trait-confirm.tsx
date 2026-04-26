@@ -20,6 +20,16 @@ const FIELD_LABEL: Record<TraitKey, string> = {
   skin_undertone: 'Skin undertone',
 };
 
+const FACE_SHAPE_CYCLE = ['oval', 'round', 'square', 'heart', 'oblong'] as const;
+const UNDERTONE_CYCLE  = ['warm', 'cool', 'neutral'] as const;
+
+function cycleNext(current: string, options: readonly string[]): string {
+  if (options.length === 0) return current;
+  const idx = options.indexOf(current);
+  const next = idx === -1 ? 0 : (idx + 1) % options.length;
+  return options[next];
+}
+
 interface TraitRowProps {
   label:    string;
   value:    string;
@@ -112,7 +122,7 @@ export default function TraitConfirm() {
   const [undertone, setUndertone] = useState<string>(initialUndertone);
   const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = async () => {
+  const onSubmit = () => {
     if (submitting) return;
     setSubmitting(true);
     const confirmations: Record<string, { value: string; source: UserTrait['source'] }> = {};
@@ -122,9 +132,12 @@ export default function TraitConfirm() {
     if (pendingUndertone && undertone) {
       confirmations.skin_undertone = { value: undertone, source: 'user_confirmed' };
     }
-    await confirmTraits(confirmations);
-    // confirmTraits sets state to 'success' or 'error'; the analyzing screen
-    // observes that and routes. We just hand control back.
+    // Fire-and-forget: confirmTraits kicks off Gemini phase 2 (10-20s) and
+    // updates state to 'success' or 'error' when done. Navigate immediately
+    // so /scan's analyzing screen is what the user sees during the wait —
+    // awaiting here would freeze trait-confirm with the button dimmed and
+    // no progress indicator. confirmTraits handles errors internally.
+    void confirmTraits(confirmations);
     router.replace('/scan');
   };
 
@@ -156,10 +169,16 @@ export default function TraitConfirm() {
                 label={FIELD_LABEL.face_shape}
                 value={faceShape || '—'}
                 onChange={() => {
-                  if (!altFaceShape) return;
-                  setFaceShape(prev =>
-                    prev === initialFaceShape ? altFaceShape : initialFaceShape,
-                  );
+                  // Prefer the model's alternative when available (toggle
+                  // between primary and alternative). Fall back to cycling
+                  // through the canonical face shape list.
+                  if (altFaceShape && altFaceShape !== initialFaceShape) {
+                    setFaceShape(prev =>
+                      prev === initialFaceShape ? altFaceShape : initialFaceShape,
+                    );
+                  } else {
+                    setFaceShape(prev => cycleNext(prev, FACE_SHAPE_CYCLE));
+                  }
                 }}
                 first={idx === 0}
                 last={idx === rows.length - 1}
@@ -172,10 +191,13 @@ export default function TraitConfirm() {
               label={FIELD_LABEL.skin_undertone}
               value={undertone || '—'}
               onChange={() => {
-                if (!altUndertone) return;
-                setUndertone(prev =>
-                  prev === initialUndertone ? altUndertone : initialUndertone,
-                );
+                if (altUndertone && altUndertone !== initialUndertone) {
+                  setUndertone(prev =>
+                    prev === initialUndertone ? altUndertone : initialUndertone,
+                  );
+                } else {
+                  setUndertone(prev => cycleNext(prev, UNDERTONE_CYCLE));
+                }
               }}
               first={idx === 0}
               last={idx === rows.length - 1}

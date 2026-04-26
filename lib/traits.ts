@@ -182,3 +182,34 @@ export async function saveUserTraits(userId: string, traits: UserTraits): Promis
     console.warn('[traits] saveUserTraits failed:', error.message);
   }
 }
+
+// Stamp users.face_shape_confirmed_at the moment the user explicitly
+// confirms (or overrides) face_shape via TraitConfirmScreen. The presence of
+// this timestamp is what gates whether future scans surface the face_shape
+// row again — see useScan.start().
+//
+// TODO (Phase 7): when Profile editing lets the user change face_shape
+// outside the scan flow, that handler must call this same helper so the
+// timestamp moves forward and reflects the latest user-asserted value.
+export async function markFaceShapeConfirmed(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('users')
+    .update({ face_shape_confirmed_at: new Date().toISOString() })
+    .eq('id', userId);
+  if (error) {
+    console.warn('[traits] markFaceShapeConfirmed failed:', error.message);
+  }
+}
+
+export async function fetchFaceShapeConfirmedAt(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('face_shape_confirmed_at')
+    .eq('id', userId)
+    .single();
+  if (error) {
+    console.warn('[traits] fetchFaceShapeConfirmedAt failed:', error.message);
+    return null;
+  }
+  return (data as { face_shape_confirmed_at?: string | null } | null)?.face_shape_confirmed_at ?? null;
+}

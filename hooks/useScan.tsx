@@ -112,22 +112,39 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
       userIdRef.current = user.id;
 
       // Prefer the gender on the users row over the value the screen passed in.
-      let resolvedGender = gender;
+      // Also pull face_shape_confirmed_at so we can skip that row in trait
+      // confirm if the user has already locked it in a prior scan.
+      let resolvedGender              = gender;
+      let faceShapeConfirmedAt: string | null = null;
       try {
         const { data: profile } = await supabase
           .from('users')
-          .select('gender')
+          .select('gender, face_shape_confirmed_at')
           .eq('id', user.id)
           .single();
         if (profile?.gender) resolvedGender = profile.gender as string;
+        faceShapeConfirmedAt = (profile as { face_shape_confirmed_at?: string | null } | null)
+          ?.face_shape_confirmed_at ?? null;
       } catch (profileErr) {
-        console.warn('[useScan] failed to fetch gender:',
+        console.warn('[useScan] failed to fetch user profile:',
           profileErr instanceof Error ? profileErr.message : String(profileErr));
       }
       genderRef.current = resolvedGender;
 
       const phase1 = await runScanPhase1(photoUri, resolvedGender, user.id);
       phase1Ref.current = phase1;
+
+      // If face_shape was confirmed in a prior scan, drop any pending
+      // face_shape decision so the user is never re-asked. skin_undertone
+      // continues to follow the Gemini-confidence flow (Phase 7 will revisit).
+      if (faceShapeConfirmedAt) {
+        const pd = phase1.partialScan._pendingTraitDecisions;
+        if (pd) {
+          pd.confirmations = pd.confirmations.filter(d => d.trait !== 'face_shape');
+          pd.overrides     = pd.overrides.filter(d => d.trait !== 'face_shape');
+        }
+      }
+
       setPartialScan(phase1.partialScan);
 
       // Branching:

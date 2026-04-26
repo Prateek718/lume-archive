@@ -152,7 +152,13 @@ import type { RescanFeedback } from '../types';
 import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
 import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier, BeardGoal } from '../types';
 import { isBaldProfile } from '../types';
-import { resolveTraits, buildTraitsToSave, fetchUserTraits, saveUserTraits } from '../lib/traits';
+import {
+  resolveTraits,
+  buildTraitsToSave,
+  fetchUserTraits,
+  saveUserTraits,
+  markFaceShapeConfirmed,
+} from '../lib/traits';
 import { hasValidHairProfile } from '../lib/hair';
 
 const RECOMMENDATIONS_KEY = (scanId: string) => `@lume/recommendations_${scanId}`;
@@ -657,25 +663,26 @@ export async function runScanPhase2(
   const season   = getSeason(now, userProfile.city ?? '');
 
   const scanUpdate = {
-    image_url:         null,
-    face_shape:        analysis.face_shape,
-    skin_type:         analysis.skin_type,
-    skin_concerns:     analysis.skin_concerns,
-    beard_density:     analysis.beard_density,
-    beard_condition:   analysis.beard_condition,
-    brow_condition:    analysis.brow_condition,
-    undereye:          analysis.undereye,
-    score_skin:        analysis.score_skin,
-    score_beard:       analysis.score_beard,
-    score_makeup:      analysis.score_makeup,
-    score_overall:     scoreOverall,
-    fitzpatrick_scale: analysis.fitzpatrick_scale ?? null,
-    skin_tone:         analysis.skin_tone ?? null,
-    skin_undertone:    analysis.skin_undertone ?? null,
-    recommendations:   recommendations ?? null,
-    scan_hour:         scanHour,
+    image_url:               null,
+    face_shape:              analysis.face_shape,
+    skin_type:               analysis.skin_type,
+    skin_concerns:           analysis.skin_concerns,
+    skin_concerns_detailed:  analysis.skin_concerns_detailed ?? [],
+    beard_density:           analysis.beard_density,
+    beard_condition:         analysis.beard_condition,
+    brow_condition:          analysis.brow_condition,
+    undereye:                analysis.undereye,
+    score_skin:              analysis.score_skin,
+    score_beard:             analysis.score_beard,
+    score_makeup:            analysis.score_makeup,
+    score_overall:           scoreOverall,
+    fitzpatrick_scale:       analysis.fitzpatrick_scale ?? null,
+    skin_tone:               analysis.skin_tone ?? null,
+    skin_undertone:          analysis.skin_undertone ?? null,
+    recommendations:         recommendations ?? null,
+    scan_hour:               scanHour,
     season,
-    scan_type:         scanType,
+    scan_type:               scanType,
   };
 
   const { data, error } = await supabase
@@ -843,6 +850,9 @@ export async function finalizeTraitsAndRunPhase2(
   if (confirmations.face_shape) {
     partialScan.face_shape        = confirmations.face_shape.value;
     applied.face_shape            = confirmations.face_shape.value as GeminiAnalysis['face_shape'];
+    // Stamp users.face_shape_confirmed_at so future scans skip the face_shape
+    // row in TraitConfirmScreen. Phase 7 profile-edit must call this too.
+    await markFaceShapeConfirmed(userId);
   }
   if (confirmations.skin_undertone) {
     partialScan.skin_undertone    = confirmations.skin_undertone.value;

@@ -13,10 +13,11 @@ export type DepthTier = 'fair' | 'light_medium' | 'medium' | 'tan' | 'deep';
 export type SkinConcernSeverity = 'mild' | 'moderate' | 'significant';
 
 export interface SkinConcernObservation {
-  concern:   string;                          // e.g. "dehydration", "acne"
-  severity:  SkinConcernSeverity;
-  zones?:    string[];                        // e.g. ["t_zone", "cheeks"]
-  notes?:    string;                          // short evidence description
+  concern:       string;                      // e.g. "dehydration", "acne"
+  severity:      SkinConcernSeverity;
+  zones?:        string[];                    // e.g. ["t_zone", "cheeks"]
+  notes?:        string;                      // short evidence description
+  display_label?: string;                     // 2-5 word human-readable label for UI, context-aware (severity + zones)
 }
 
 // ─── Brand preferences ────────────────────────────────────────────────────────
@@ -217,8 +218,9 @@ export interface RoutineStep {
 }
 
 export interface SkinRecommendation {
-  advice:   string;
-  steps?:   RoutineStep[];
+  advice:        string;
+  steps?:        RoutineStep[];
+  routine_note?: string;   // 2-3 sentence editorial meta-observation on the routine itself, pulled-quote style
 
   /** @deprecated — pre-2026-04-21 scans store routine as { morning, evening }. New scans use `steps`. Read both for back-compat. */
   routine?: { morning: RoutineStep[]; evening: RoutineStep[] };

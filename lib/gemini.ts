@@ -304,7 +304,7 @@ dryness:
     `"face_shape": one of ["oval","round","square","heart","oblong","diamond"]`,
     `"skin_type": one of ["oily","dry","combination","normal","sensitive"]`,
     `"skin_concerns": array of concern names (subset of acne, dryness, oiliness, dark_circles, uneven_texture, dehydration, hyperpigmentation) — mirror names from skin_concerns_detailed`,
-    `"skin_concerns_detailed": array of objects { "concern": string, "severity": "mild"|"moderate"|"significant", "zones": string[] (optional), "notes": string (optional) }`,
+    `"skin_concerns_detailed": array of objects { "concern": string, "severity": "mild"|"moderate"|"significant", "zones": string[] (optional), "notes": string (optional), "display_label": string (REQUIRED — 2-5 words, sentence case, context-aware) }`,
     gender === 'woman'
       ? `"beard_density": null, "beard_condition": null`
       : `"beard_density": one of ["none","light","medium","heavy"]\n  "beard_condition": one of ["well_groomed","needs_shaping","patchy","untrimmed"]`,
@@ -352,6 +352,22 @@ Step 3 — IDENTIFY specific concerns. Only flag concerns you can see evidence o
 
 ${severityBlock}
 
+DISPLAY LABEL RULES (skin_concerns_detailed[].display_label):
+- 2-5 words, sentence case. This string is shown to users directly.
+- Context-aware: combine severity + zone cues from the same object. Examples:
+    "dehydration" + mild                       → "Mild dehydration"
+    "dehydration" + moderate + ["cheeks"]      → "Dehydration · cheeks"
+    "hyperpigmentation" + mild + ["cheeks"]    → "Post-acne marks · cheeks"
+    "hyperpigmentation" + moderate             → "Uneven tone"
+    "dark_circles" + mild                      → "Early dark circles"
+    "dark_circles" + moderate                  → "Dark circles"
+    "uneven_texture" + mild + ["t_zone"]       → "Rough texture · t-zone"
+    "oiliness" + significant                   → "Persistent oiliness"
+    "acne" + moderate + ["jawline"]            → "Breakouts · jawline"
+- NEVER use medical-sounding terms in display_label: "hyperpigmentation", "sebum", "comedones", "periorbital", "erythema". Users see this text directly.
+- Zone chips inside display_label should read naturally ("cheeks", "t-zone", "jawline") — not the underscored enum ("t_zone").
+- Keep it short enough to fit on one line next to the severity dots.
+
 ${fitzpatrickBlock}
 
 Step 6 — ASSESS care evidence.
@@ -377,8 +393,8 @@ Example A — woman in Mumbai, skin+hair+makeup selected:
   "skin_type": "combination",
   "skin_concerns": ["dehydration", "hyperpigmentation"],
   "skin_concerns_detailed": [
-    { "concern": "dehydration", "severity": "moderate", "zones": ["cheeks"], "notes": "fine surface lines visible when skin moves" },
-    { "concern": "hyperpigmentation", "severity": "mild", "zones": ["cheeks"], "notes": "two post-acne marks on right cheek" }
+    { "concern": "dehydration", "severity": "moderate", "zones": ["cheeks"], "notes": "fine surface lines visible when skin moves", "display_label": "Dehydration · cheeks" },
+    { "concern": "hyperpigmentation", "severity": "mild", "zones": ["cheeks"], "notes": "two post-acne marks on right cheek", "display_label": "Post-acne marks · cheeks" }
   ],
   "fitzpatrick_scale": 4,
   "skin_tone": "Olive",
@@ -397,8 +413,8 @@ Example B — man in Delhi, skin+hair+beard selected (no makeup → no Fitzpatri
   "skin_type": "oily",
   "skin_concerns": ["acne", "oiliness"],
   "skin_concerns_detailed": [
-    { "concern": "acne", "severity": "moderate", "zones": ["t_zone", "jawline"], "notes": "five active spots across T-zone, two on jawline" },
-    { "concern": "oiliness", "severity": "moderate", "zones": ["t_zone", "cheeks"] }
+    { "concern": "acne", "severity": "moderate", "zones": ["t_zone", "jawline"], "notes": "five active spots across T-zone, two on jawline", "display_label": "Breakouts · jawline" },
+    { "concern": "oiliness", "severity": "moderate", "zones": ["t_zone", "cheeks"], "display_label": "Oiliness across face" }
   ],
   "beard_density": "medium",
   "beard_condition": "needs_shaping",
@@ -483,6 +499,17 @@ export async function analyseWithGemini(
     // Backward compat: derive legacy skin_concerns[] from the new detailed array.
     if (parsed.skin_concerns_detailed && parsed.skin_concerns_detailed.length > 0) {
       parsed.skin_concerns = parsed.skin_concerns_detailed.map(o => o.concern);
+
+      // Synthesize display_label for any entry that Gemini forgot to emit one for.
+      // Falls back to a human-readable title-cased version of the canonical concern id.
+      for (const c of parsed.skin_concerns_detailed) {
+        if (!c.display_label || !c.display_label.trim()) {
+          c.display_label = c.concern
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        }
+      }
     }
 
     void logUsage({
@@ -758,6 +785,21 @@ Step shape (skin):
   "clinical_reasoning": "1-2 sentences tied to this user's scan",
   "product":           generic descriptor (e.g. "Niacinamide serum")
 }
+
+ROUTINE NOTE (skin.routine_note) — REQUIRED. A single editorial meta-observation
+about the shape of the routine itself, rendered as a pulled quote in the UI.
+Rules:
+  - Voice: editorial, meta, observational — like an editor's footnote on the plan.
+  - Length: 2-3 sentences, max ~160 characters total.
+  - Can use first-person narrator voice sparingly ("we") — but NEVER "your" or "you".
+  - Reads at a level above the individual steps: observes the approach, does not
+    repeat what individual steps already say.
+  - No medical claims. No trait-naming openings.
+  - Examples of the register:
+      "Keep it short. Five steps, done consistently, will outperform twelve steps done some of the time."
+      "Layer slowly. Vitamin C wants a clean canvas; everything else follows."
+      "Less, but every day. A routine you skip is not really a routine."
+      "The order matters more than the ingredients. Build up from thin to thick."
 `;
 
   // ── Beard section — only when requested ───────────────────────────────────
@@ -875,12 +917,21 @@ Never include trait chips for categories the user did not select. A woman with
 skin+hair+makeup gets no beard chip. A man with skin+hair+beard but no hair
 profile passed in gets no hair/scalp chips.
 
-EXCLUSIONS:
+EXCLUSIONS — face_shape is INTERNAL-ONLY and must NEVER surface in observation output:
   - Do NOT include face_shape in trait_chips (e.g. no "oval face", "oblong face",
-    "round face", "square face", "heart face", "diamond face"). Face shape drives
-    hair/beard/makeup recommendations internally but is not surfaced as a
-    user-facing descriptor — users disagree with categorical face-shape labels
-    and it erodes trust.
+    "round face", "square face", "heart face", "diamond face", "triangle face").
+  - Do NOT include face_shape in any insight headline ("01", "02", "03").
+  - Do NOT include face_shape in any insight body. Never write "oval face",
+    "your oblong face shape", "round facial shape", "heart-shaped face",
+    or any phrase that names a categorical face shape.
+  - Do NOT include face_shape in the dek.
+  - Face shape drives hair/beard/makeup recommendations internally but is NOT
+    surfaced to the user as a descriptor — users disagree with categorical
+    face-shape labels and it erodes trust.
+  - If you want to reference structural proportions, use descriptive language
+    instead: "balanced proportions", "even structure", "strong jawline",
+    "defined cheekbones". These describe observed features without assigning
+    a category.
 
 TITLE + ISSUE LABEL are computed for you — use these EXACT strings:
   observation.title       = "${observationTitle}"
@@ -911,8 +962,9 @@ OUTPUT JSON SHAPE (return ONLY valid JSON, no markdown, no preamble):
     "trait_chips": ["oily skin", "..."]
   },
   "skin": {
-    "advice": "max 2 sentences, first stands alone as preview, imperative",
-    "steps":  [ ... ]
+    "advice":       "max 2 sentences, first stands alone as preview, imperative",
+    "routine_note": "2-3 sentences, max ~160 chars, editorial meta-observation. No 'your' or 'you'.",
+    "steps":        [ ... ]
   },
   ${wantsBeard  ? '"beard":  { "advice": "...", "steps": [ ... ], "beard_styles": [ ... ] },' : '"beard":  null,'}
   ${wantsMakeup ? '"makeup": { "advice": "...", "techniques": [ ... ], "palette": { ... } | null },' : '"makeup": null,'}
@@ -930,6 +982,7 @@ FEW-SHOT — skin routine for combination skin with moderate dehydration (cheeks
 
 "skin": {
   "advice": "Lead with hydration — the cheeks show moderate surface lines, and plumping that barrier unlocks everything else. Layer a brightening active before the moisturiser to start softening the post-acne marks.",
+  "routine_note": "Keep it short. Four steps, done consistently, will outperform twelve steps done some of the time.",
   "steps": [
     { "step_id": "skin_cleanse",   "label": "Cleanse",    "time_of_day": ["am","pm"], "order": 1, "category": "face_cleanser",          "clinical_reasoning": "Combination skin with a moderately dehydrated barrier on the cheeks. A low-pH gel cleanser lifts oil from the T-zone without stripping the cheeks.", "product": "Low-pH gel cleanser" },
     { "step_id": "skin_treat_1",   "label": "Treat",      "time_of_day": ["am"],      "order": 2, "target_concern": "hyperpigmentation", "category": "serum_vitamin_c",        "clinical_reasoning": "Two post-acne marks on the right cheek, rated mild. Vitamin C 10% nudges pigment turnover without provoking the already-dehydrated barrier.",           "product": "Vitamin C serum (10%)" },
@@ -950,7 +1003,7 @@ FEW-SHOT — observation for a man in Kolkata, skin+hair+beard, oily skin with m
     {
       "number": "01",
       "headline": "Healthy foundation",
-      "body": "Skin structure reads well — oval face, even proportions. The fundamentals are here; this is an easy base to work with."
+      "body": "Skin structure reads well — balanced proportions, even tone across the forehead. The fundamentals are here; this is an easy base to work with."
     },
     {
       "number": "02",
@@ -1086,6 +1139,28 @@ export async function getRecommendationsFromGemini(
       );
     }
 
+    // Defense in depth (prose): strip any sentence that names a categorical
+    // face shape from insight bodies and the dek. The prompt forbids this but
+    // Gemini still leaks it occasionally — same trust concern as the trait_chips.
+    // Non-global regex so .test() is stateless; fresh each call.
+    const faceShapeProse = () =>
+      /\b(oval|round|square|heart|oblong|diamond|triangle)[\s-]+(face|facial|shape)\b/i;
+    const stripFaceShapeSentences = (text: string): string => {
+      const sentences = text.split(/(?<=[.!?])\s+/);
+      const cleaned = sentences.filter(s => !faceShapeProse().test(s));
+      return cleaned.join(' ').replace(/\s+/g, ' ').trim();
+    };
+    if (parsed.observation?.insights) {
+      for (const insight of parsed.observation.insights) {
+        if (insight.body && faceShapeProse().test(insight.body)) {
+          insight.body = stripFaceShapeSentences(insight.body);
+        }
+      }
+    }
+    if (parsed.observation?.dek && faceShapeProse().test(parsed.observation.dek)) {
+      parsed.observation.dek = stripFaceShapeSentences(parsed.observation.dek);
+    }
+
     // Normalize target_concern on every routine step to the canonical enum.
     // Catalog scoring relies on exact string equality against CANONICAL_CONCERNS;
     // an un-normalizable value would silently miss the +15 target-match boost,
@@ -1107,6 +1182,16 @@ export async function getRecommendationsFromGemini(
     normalizeSteps(parsed.skin?.steps);
     normalizeSteps(parsed.skin?.routine?.morning);
     normalizeSteps(parsed.skin?.routine?.evening);
+
+    // Fallback for routine_note — if Gemini forgot to emit it, synthesize from
+    // the first sentence of advice so the NarratorQuote isn't empty on the UI.
+    if (parsed.skin && (!parsed.skin.routine_note || !parsed.skin.routine_note.trim())) {
+      const advice = parsed.skin.advice ?? '';
+      const firstSentence = advice.match(/^[^.!?]*[.!?]/)?.[0]?.trim();
+      parsed.skin.routine_note = firstSentence && firstSentence.length > 0
+        ? firstSentence
+        : 'A short, consistent routine beats a long inconsistent one.';
+    }
 
     // Inject palette swatches from the static lookup. Gemini outputs swatches: []
     // and we fill them in here based on undertone + fitzpatrick from the analysis.
