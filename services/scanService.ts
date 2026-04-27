@@ -142,7 +142,7 @@ import { scheduleRescanNudge, cancelRescanNudge } from './notificationService';
 import { scheduleRoutineForScan, supersedePreviousScanRows } from './habitService';
 import { computeAndStoreScanDelta } from './deltaService';
 import { checkMilestonesForScan } from '../lib/milestones';
-import { analyseWithGemini } from '../lib/gemini';
+import { analyseWithGemini, fitzpatrickToDepthTier } from '../lib/gemini';
 import {
   getRecommendationsFromGemini,
   getHairRecommendationsFromGemini,
@@ -150,7 +150,7 @@ import {
 import type { GeminiAnalysis } from '../lib/gemini';
 import type { RescanFeedback } from '../types';
 import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
-import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier, BeardGoal } from '../types';
+import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier, BeardGoal, MakeupRecommendation, Recommendations } from '../types';
 import { isBaldProfile } from '../types';
 import {
   resolveTraits,
@@ -160,6 +160,7 @@ import {
   markFaceShapeConfirmed,
 } from '../lib/traits';
 import { hasValidHairProfile } from '../lib/hair';
+import { getStoredMakeupRecs, saveMakeupRecs, shouldRegenerateMakeup } from '../lib/makeupRecs';
 
 const RECOMMENDATIONS_KEY = (scanId: string) => `@lume/recommendations_${scanId}`;
 const LATEST_SCAN_KEY    = '@lume/latest_scan';
@@ -577,16 +578,20 @@ export async function runScanPhase2(
     gender === 'woman' ? 'women' :
     gender === 'man'   ? 'men'   : 'all';
 
-  // Read beard_goal + hair_profile once — no polling.
+  // Read beard_goal + hair_profile + care_categories once — no polling.
   const { data: userRowForPhase2 } = await supabase
     .from('users')
-    .select('beard_goal, hair_profile')
+    .select('beard_goal, hair_profile, hair_recommendations, care_categories')
     .eq('id', userId)
     .single();
   const beardGoal: BeardGoal | null =
     (userRowForPhase2 as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
   const hairProfile: HairProfile | null =
     (userRowForPhase2 as { hair_profile?: HairProfile | null } | null)?.hair_profile ?? null;
+  const existingHairRecs: HairRecommendations | null =
+    (userRowForPhase2 as { hair_recommendations?: HairRecommendations | null } | null)?.hair_recommendations ?? null;
+  const careCategories: string[] =
+    (userRowForPhase2 as { care_categories?: string[] } | null)?.care_categories ?? userProfile.careCategories;
 
   const skinCategories   = buildSkinCategories(analysis);
   const beardCategories  = buildBeardCategories(gender);
@@ -604,37 +609,38 @@ export async function runScanPhase2(
   });
   const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
 
-  // Hair recs — only when the user already has a hair profile saved.
-  // For new users (Phase 3A first scan) hair_profile is null/{} and this
-  // branch is skipped. Phase 4 hair-setup will populate the profile and
-  // generate hair recs separately.
-  const hairRecsPromise: Promise<HairRecommendations | null> = hasValidHairProfile(hairProfile)
-    ? (() => {
-        const hairCategories = buildHairCategories(hairProfile!);
-        const hairProductMap = getProductsForProfile({
-          categories:      hairCategories,
-          preferredBrands: userProfile.preferredBrands,
-          gender:          productGender,
-          budget:          userProfile.budget as BudgetTier,
-          city:            userProfile.city ?? undefined,
-        });
-        const matchedHairProducts: MatchedProduct[] = Object.values(hairProductMap).map(arr => arr[0]);
-        return getHairRecommendationsFromGemini(
-          hairProfile!,
-          analysis.face_shape ?? null,
-          gender,
-          userProfile.city ?? null,
-          userProfile.budget,
-          matchedHairProducts,
-          { scanId },
-        );
-      })()
-    : Promise.resolve(null);
+  // Hair recs regenerate ONLY when hair_profile changes (during the hair
+  // setup flow's analyzing screen — see generateAndSaveHairProfile). Scans
+  // must never trigger hair recs generation: density/scalp drift is captured
+  // in the next hair-setup edit, not the rescan. Reuse whatever's stored.
+  const missingHairRecs =
+    careCategories.includes('hair') &&
+    !existingHairRecs &&
+    hasValidHairProfile(hairProfile);
+  if (missingHairRecs) {
+    // Safety net: hair-setup should have produced these. Log so we notice.
+    console.warn('[scanService] hair_profile present but hair_recommendations missing — user should complete hair setup');
+  }
+
+  // Makeup recs live at the user level — only regenerate when undertone,
+  // depth_tier, or fitzpatrick_scale shifts. Most rescans reuse the stored
+  // recs, which keeps Gemini output small (avoids JSON truncation) and
+  // skips the expensive makeup section entirely.
+  let needsMakeup = false;
+  if (careCategories.includes('makeup') && gender === 'woman') {
+    const { meta } = await getStoredMakeupRecs(userId);
+    needsMakeup = shouldRegenerateMakeup(meta, {
+      undertone:   analysis.skin_undertone ?? 'neutral',
+      depth_tier:  fitzpatrickToDepthTier(analysis.fitzpatrick_scale) ?? 'medium',
+      fitzpatrick: analysis.fitzpatrick_scale ?? 4,
+    });
+  }
 
   onProgress?.('Generating recommendations…');
-  console.log('[scanService] Calling getRecommendationsFromGemini in parallel with hair recs (hair:', hasValidHairProfile(hairProfile), ')');
-  const [recommendations, hairRecs] = await Promise.all([
-    getRecommendationsFromGemini(
+  console.log('[scanService] Calling getRecommendationsFromGemini (makeup:', needsMakeup, ', hair-reused:', !!existingHairRecs, ')');
+  let recommendations: Recommendations;
+  try {
+    recommendations = await getRecommendationsFromGemini(
       gender,
       analysis,
       matchedProducts,
@@ -642,11 +648,34 @@ export async function runScanPhase2(
       userProfile.ageRange,
       beardGoal,
       scanNumber,
-      { scanId },
-    ),
-    hairRecsPromise,
-  ]);
+      { scanId, includeMakeup: needsMakeup },
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Surface the truncated tail of the raw response so future schema growth
+    // is easier to diagnose. The error message itself carries the last 100
+    // chars from the truncation guard in lib/gemini.ts; log a wider window
+    // here to capture surrounding structure.
+    console.error('[scanService] getRecommendationsFromGemini failed:', msg);
+    if (msg.length > 500) {
+      console.error('[scanService] error tail (last 500):', msg.slice(-500));
+    }
+    throw err;
+  }
   console.log('[scanService] Gemini recommendations received');
+
+  // Persist newly-generated makeup recs to the user level so subsequent
+  // scans can reuse them. Existing scan.recommendations.makeup remains
+  // populated as a backward-compat path for legacy rendering.
+  if (needsMakeup && recommendations.makeup) {
+    await saveMakeupRecs(
+      userId,
+      recommendations.makeup as MakeupRecommendation,
+      analysis.skin_undertone ?? 'neutral',
+      fitzpatrickToDepthTier(analysis.fitzpatrick_scale) ?? 'medium',
+      analysis.fitzpatrick_scale ?? 4,
+    );
+  }
 
   onProgress?.('Calculating your score…');
   const scoreOverall = calcOverallScore(
@@ -699,12 +728,9 @@ export async function runScanPhase2(
   }
   console.log('[scanService] Saved successfully');
 
-  if (hairRecs) {
-    await supabase
-      .from('users')
-      .update({ hair_recommendations: hairRecs })
-      .eq('id', userId);
-  }
+  // Note: hair_recommendations is no longer written here. Scans reuse the
+  // recs already stored on users (see hair-setup's analyzing screen for the
+  // generation path) — writing them back would be a no-op.
 
   if (data) {
     await supabase

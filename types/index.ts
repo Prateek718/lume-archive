@@ -239,20 +239,36 @@ export interface BeardStyleItem {
 }
 
 export interface BeardRecommendation {
-  advice:        string;    // imperative voice, 2 sentences max
-  beard_styles?: BeardStyleItem[];
+  advice:             string;    // imperative voice, 2 sentences max
+  beard_shape_intro?: string | null;  // optional editorial bridge sentence; null when missing or face-shape contaminated
+  beard_styles?:      BeardStyleItem[];
+  steps?:             RoutineStep[]; // beard routine steps (beard_wash, beard_oil, beard_balm)
 
   /** @deprecated — removed from Gemini schema on 2026-04-20. Still present on scans created before this date. Preview now derives from first sentence of `advice`. */
-  summary?:      string;
+  summary?:           string;
+}
+
+// One swatch in the makeup palette. New-schema scans (post 2026-04-26) emit
+// MakeupSwatch objects with category + searchable name + descriptive prose.
+// Pre-2026-04-26 scans store swatches as bare hex strings — see
+// MakeupPalette.swatches below for the union and the legacy detector.
+export interface MakeupSwatch {
+  hex:          string;     // e.g. "#C58A6E"
+  category:     'foundation' | 'lip' | 'blush' | 'eye' | 'highlighter' | 'bronzer';
+  name:         string;     // searchable shade name, e.g. "Warm Beige Foundation"
+  description:  string;     // 2-3 sentences, italic-serif body — why it flatters
+  search_query: string;     // exact Nykaa search string
 }
 
 export interface MakeupPalette {
   undertone:     Undertone;
   depth_tier:    DepthTier;
-  hero_line:     string;                    // "A warm, medium palette."
-  trait_chips:   string[];                  // exactly 3 short chips
-  prose:         string;                    // 2-3 sentence paragraph
-  swatches:      string[];                  // 6 hex values from PALETTE_SWATCHES lookup
+  hero_line:     string;                       // "A warm, medium palette."
+  trait_chips:   string[];                     // exactly 3 short chips
+  prose:         string;                       // 2-3 sentence paragraph
+  // Legacy scans store swatches as `string[]` (bare hex). New scans store
+  // `MakeupSwatch[]`. Detect at the call site via `typeof s[0] === 'string'`.
+  swatches:      MakeupSwatch[] | string[];
   shade_families: {
     foundation:  string;
     lip:         string;

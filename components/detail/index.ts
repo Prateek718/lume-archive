@@ -8,3 +8,5 @@ export { NarratorQuote }                     from './NarratorQuote';
 export { TraitChip }                         from './TraitChip';
 export { ProductDetailSheet }                from './ProductDetailSheet';
 export type { ProductDetailSheetProduct }    from './ProductDetailSheet';
+export { ShadeFamilyRow }                    from './ShadeFamilyRow';
+export { SwatchDetailSheet }                 from './SwatchDetailSheet';

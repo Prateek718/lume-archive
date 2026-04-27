@@ -9,6 +9,7 @@ interface Props {
   last?: boolean;
   variant?: 'radio' | 'checkbox';
   locked?: boolean;
+  description?: string;
 }
 
 export function OptionRow({
@@ -18,6 +19,7 @@ export function OptionRow({
   last = false,
   variant = 'radio',
   locked = false,
+  description,
 }: Props) {
   const italic = selected || locked;
 
@@ -34,16 +36,32 @@ export function OptionRow({
         borderBottomColor: Palette.rule,
       }}
     >
-      <Text
-        style={{
-          fontSize: 20,
-          fontFamily: italic ? 'CormorantGaramond_400Regular_Italic' : 'CormorantGaramond_400Regular',
-          fontStyle: italic ? 'italic' : 'normal',
-          color: italic ? Palette.ink : Palette.ink2,
-        }}
-      >
-        {label}
-      </Text>
+      <View style={{ flex: 1, paddingRight: 12 }}>
+        <Text
+          style={{
+            fontSize: 20,
+            fontFamily: italic ? 'CormorantGaramond_400Regular_Italic' : 'CormorantGaramond_400Regular',
+            fontStyle: italic ? 'italic' : 'normal',
+            color: italic ? Palette.ink : Palette.ink2,
+          }}
+        >
+          {label}
+        </Text>
+        {description && (
+          <Text
+            style={{
+              marginTop: 4,
+              fontFamily: 'CormorantGaramond_400Regular_Italic',
+              fontStyle: 'italic',
+              fontSize: 12.5,
+              lineHeight: 17,
+              color: Palette.ink3,
+            }}
+          >
+            {description}
+          </Text>
+        )}
+      </View>
 
       {locked ? (
         <Text

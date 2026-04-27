@@ -21,6 +21,7 @@ import { getSkinConcernsDetailed } from '../lib/scanData';
 import type {
   HairProfile,
   HairRecommendations,
+  MakeupRecommendation,
   Recommendations,
   SkinConcernObservation,
   User,
@@ -45,7 +46,9 @@ interface ScanRow {
   skin_tone?:              string | null;
 }
 
-type UserContext = Pick<User, 'care_categories' | 'hair_profile' | 'hair_recommendations'>;
+type UserContext = Pick<User, 'care_categories' | 'hair_profile' | 'hair_recommendations'> & {
+  makeup_recommendations?: MakeupRecommendation | null;
+};
 
 // ─── Derivation helpers ─────────────────────────────────────────────────────────
 
@@ -163,8 +166,12 @@ function buildBeardArea(scan: ScanRow | null): AreaCard {
   return { cat: 'beard', label: 'Beard', focus, note, top };
 }
 
-function buildMakeupArea(scan: ScanRow | null): AreaCard {
-  const palette = scan?.recommendations?.makeup?.palette ?? null;
+function buildMakeupArea(scan: ScanRow | null, user: UserContext | null): AreaCard {
+  // Prefer the canonical user-level recs (Phase 4B.2). Fall back to the
+  // legacy per-scan recs for scans created before makeup moved to user level.
+  const makeup: MakeupRecommendation | null =
+    user?.makeup_recommendations ?? scan?.recommendations?.makeup ?? null;
+  const palette = makeup?.palette ?? null;
   const undertone = scan?.skin_undertone ?? palette?.undertone ?? null;
   const depth = palette?.depth_tier ?? null;
 
@@ -172,7 +179,7 @@ function buildMakeupArea(scan: ScanRow | null): AreaCard {
     : undertone       ? `${undertone} undertone`
     : 'Palette · technique';
 
-  const techniques = scan?.recommendations?.makeup?.techniques ?? [];
+  const techniques = makeup?.techniques ?? [];
   const note = techniques.length > 0
     ? `${numToWord(techniques.length)} techniques · daily.`
     : 'A short, intentional palette.';
@@ -226,7 +233,7 @@ export default function RecommendationsRoute() {
 
         const userPromise = supabase
           .from('users')
-          .select('care_categories, hair_profile, hair_recommendations')
+          .select('care_categories, hair_profile, hair_recommendations, makeup_recommendations')
           .eq('id', authUserId)
           .single();
 
@@ -286,7 +293,7 @@ export default function RecommendationsRoute() {
     if (categories.includes('hair'))   list.push(buildHairArea(user));
     // Makeup before beard when both present — editorial flow for unusual case
     // where a user somehow selected both (women normally get makeup, men beard).
-    if (categories.includes('makeup')) list.push(buildMakeupArea(scan));
+    if (categories.includes('makeup')) list.push(buildMakeupArea(scan, user));
     if (categories.includes('beard'))  list.push(buildBeardArea(scan));
     return list;
   }, [user, scan]);
@@ -305,11 +312,12 @@ export default function RecommendationsRoute() {
             <ActivityIndicator color={Palette.accent} />
           </View>
         ) : errorMsg || !scan || !user ? (
-          <FallbackState message={errorMsg ?? 'Your plan is still being drafted.'} onBack={() => router.back()} />
+          <FallbackState message={errorMsg ?? 'Your plan is still being drafted.'} onBack={() => router.replace('/(tabs)/routine')} />
         ) : (
           <ScrollView contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}>
             <View style={{ paddingVertical: 8, paddingHorizontal: 28 }}>
-              <BackButton onPress={() => router.back()} style={{ marginLeft: -8 }} />
+              {/* TODO Phase 7: replace with router.back() once nav stack reliably has history. */}
+              <BackButton onPress={() => router.replace('/(tabs)/routine')} style={{ marginLeft: -8 }} />
             </View>
 
             <View style={{ paddingTop: 24, paddingHorizontal: 32 }}>

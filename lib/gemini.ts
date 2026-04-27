@@ -706,9 +706,13 @@ function buildSkinRecsPrompt(
   ageRange:        string | null,
   beardGoal:       BeardGoal | null,
   scanNumber:      number,
+  includeMakeup:   boolean,
 ): string {
   const wantsSkin   = true;                                     // always on
-  const wantsMakeup = careCategories.includes('makeup') && gender === 'woman';
+  // includeMakeup is the caller-supplied gate: true only when the user has
+  // makeup in care_categories AND we've decided to regenerate this scan
+  // (first scan, or undertone/depth_tier/fitzpatrick has shifted).
+  const wantsMakeup = includeMakeup && careCategories.includes('makeup') && gender === 'woman';
   const wantsBeard  =
     careCategories.includes('beard') &&
     gender !== 'woman' &&
@@ -838,6 +842,20 @@ Steps + emphasis depend on beard_goal:
 
 beard_styles: 2-3 RECOMMENDED styles only. No "avoid" entries.
 Each: { "name", "why" (max 18 words, imperative, no trait-naming opening), "maintenance": "low"|"medium"|"high" }
+
+beard_shape_intro: Optional. 1-2 sentence personalized bridge connecting scan
+observations to the suggested beard shape. Example: "Given the patchiness on
+your cheeks and the clean line of your jaw, here's a shape that suits you."
+Sets up the suggestion without revealing the suggestion itself. Reference
+scan-specific traits (density, patchiness, jaw, etc.) but NOT face_shape directly.
+
+Rules for beard_shape_intro:
+  - 1-2 sentences max, ~140 chars total.
+  - References specifics from analysis (beard_density, zones with patchiness, etc.).
+  - Does NOT mention face_shape categorically (oval, round, square, heart, oblong, diamond, triangle).
+  - Voice: editorial, sets up a suggestion that hasn't been revealed yet.
+  - End with "...here's a shape that suits you." or a similar transitional phrase.
+  - If you cannot ground it in specific scan traits without naming face_shape, return null.
 `
     : '';
 
@@ -852,7 +870,12 @@ If analysis includes fitzpatrick_scale and skin_undertone, produce a \`palette\`
   - hero_line:    max 5 words, pattern "A {warmth}, {depth} palette." e.g. "A warm, medium palette."
   - trait_chips:  exactly 3 short tags, lowercase, 2-3 words each. [undertone label, depth label, flattering family]
   - prose:        2-3 sentences. First states the palette's character. Second names 2-3 families that harmonise. Optional third names what to avoid. Imperative, no trait-naming openings.
-  - swatches:     [] — filled by code from the static lookup, NOT by you.
+  - swatches:     EXACTLY 6 swatch objects covering a useful palette spread. Each object MUST have:
+      - hex:          a 7-char "#RRGGBB" string. Hex must read true to the named category — foundation/concealer should sit in skin-tone family for the user's depth and undertone, lip in red/brown/pink family, blush in peach/rose family, eye/highlighter/bronzer in their natural family.
+      - category:     one of "foundation" | "lip" | "blush" | "eye" | "highlighter" | "bronzer". Include a foundation and a lip in every palette; pick the other 4 from across the categories so the strip reads varied (do NOT return six lipsticks). A typical mix: 1 foundation, 1 concealer-or-bronzer, 1 blush, 1-2 lip, 1-2 eye/highlighter.
+      - name:         3-5 words, searchable on Nykaa. Pattern: "{Warmth} {Family} {Category}" — e.g. "Warm Beige Foundation", "Terracotta Brick Lipstick", "Peach Rose Blush". Avoid brand names.
+      - description:  2-3 sentences, italic-serif body voice. Why THIS shade flatters THIS user's undertone+depth. Reference the undertone/family explicitly. No clinical jargon.
+      - search_query: a Nykaa-friendly search string. Pattern: "{name} india" — e.g. "warm beige foundation india", "terracotta brick lipstick india". Lowercase. Used to deep-link to Nykaa search.
   - shade_families: four strings, each 10-15 words:
       foundation: descriptor pointing at shade codes to look for (e.g. "W3 or warm medium golden").
       lip:        warm vs cool family guidance.
@@ -966,7 +989,7 @@ OUTPUT JSON SHAPE (return ONLY valid JSON, no markdown, no preamble):
     "routine_note": "2-3 sentences, max ~160 chars, editorial meta-observation. No 'your' or 'you'.",
     "steps":        [ ... ]
   },
-  ${wantsBeard  ? '"beard":  { "advice": "...", "steps": [ ... ], "beard_styles": [ ... ] },' : '"beard":  null,'}
+  ${wantsBeard  ? '"beard":  { "advice": "...", "beard_shape_intro": "1-2 sentence bridge or null", "steps": [ ... ], "beard_styles": [ ... ] },' : '"beard":  null,'}
   ${wantsMakeup ? '"makeup": { "advice": "...", "techniques": [ ... ], "palette": { ... } | null },' : '"makeup": null,'}
   "products": [
     { "category": "<canonical enum>", "name": "<generic descriptor>", "brand": "category", "reason": "one sentence, clinical voice", "match_score": <integer 60-100> }
@@ -1033,7 +1056,14 @@ FEW-SHOT — warm, medium palette makeup output:
     "hero_line":  "A warm, medium palette.",
     "trait_chips": ["warm undertone", "medium depth", "yellow-gold flatters"],
     "prose": "The palette reads warm — gold, peach, brick, terracotta. Cool pinks and silvers fight this undertone and flatten the face. Keep every product in the warm family and the look self-harmonises.",
-    "swatches": [],
+    "swatches": [
+      { "hex": "#C58A6E", "category": "foundation",  "name": "Warm Medium Foundation",   "description": "A warm-medium base that matches the undertone without going pink. Sits true on the skin and disappears at the jawline.",                              "search_query": "warm medium foundation w3 india" },
+      { "hex": "#A05A3D", "category": "bronzer",     "name": "Warm Terracotta Bronzer",  "description": "A red-brown bronze that warms the temples and cheekbones without going orange. Skip cool taupe — it goes ashy on this undertone.",                       "search_query": "warm terracotta bronzer india" },
+      { "hex": "#E08F77", "category": "blush",       "name": "Peach Rose Blush",         "description": "Peach-rose lifts the warm undertone and reads natural in daylight. Mauves and cool pinks fight the warmth and flatten the cheek.",                          "search_query": "peach rose blush india" },
+      { "hex": "#9C3A2D", "category": "lip",         "name": "Terracotta Brick Lipstick","description": "Brick terracotta is the workhorse — warm, grown-up, photographs well. Avoid blue-based reds and cool berries; they fight this skin.",                  "search_query": "terracotta brick lipstick india" },
+      { "hex": "#B86A4E", "category": "lip",         "name": "Caramel Nude Lipstick",    "description": "A warm caramel nude for everyday — sits one shade richer than the lip's natural colour. Cool nudes turn grey on warm skin.",                                "search_query": "caramel nude lipstick india" },
+      { "hex": "#D9A87A", "category": "highlighter", "name": "Champagne Gold Highlighter","description": "Champagne-gold flatters the warm undertone on the high cheekbone. Silver and pearl-white highlighters look chalky against this depth.",                  "search_query": "champagne gold highlighter india" }
+    ],
     "shade_families": {
       "foundation": "Warm-toned bases. Look for W3 or 'warm medium golden' in any brand's range. Skip cool or pink labels.",
       "lip":        "Warm brick, terracotta, brown-red, caramel. Skip cool berry, plum, blue-based red.",
@@ -1075,10 +1105,14 @@ export async function getRecommendationsFromGemini(
   beardGoal:       BeardGoal | null = null,
   scanNumber:      number = 1,
   options?: {
-    onPartial?: (partial: Partial<Recommendations>) => void;
-    scanId?:    string | null;
+    onPartial?:     (partial: Partial<Recommendations>) => void;
+    scanId?:        string | null;
+    includeMakeup?: boolean;
   },
 ): Promise<Recommendations> {
+  // Default to true preserves prior behaviour for any caller that hasn't
+  // been updated yet (e.g. refreshRecommendations, gemini-test screen).
+  const includeMakeup = options?.includeMakeup ?? true;
   const start       = Date.now();
   let inputTokens   = 0;
   let outputTokens  = 0;
@@ -1090,12 +1124,14 @@ export async function getRecommendationsFromGemini(
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: buildSkinRecsPrompt(gender, analysis, matchedProducts, careCategories, ageRange, beardGoal, scanNumber),
+            text: buildSkinRecsPrompt(gender, analysis, matchedProducts, careCategories, ageRange, beardGoal, scanNumber, includeMakeup),
           }],
         }],
         generationConfig: {
           temperature:     0,
-          maxOutputTokens: 8192,
+          // Headroom for skin + beard sections plus optional makeup; bump if
+          // a future field push causes truncation.
+          maxOutputTokens: 6144,
         },
       }),
     };
@@ -1161,6 +1197,19 @@ export async function getRecommendationsFromGemini(
       parsed.observation.dek = stripFaceShapeSentences(parsed.observation.dek);
     }
 
+    // Sanitize beard_shape_intro — null it out if missing/blank, or if it
+    // names a categorical face_shape (which the prompt explicitly forbids).
+    if (parsed.beard) {
+      const intro = parsed.beard.beard_shape_intro;
+      if (typeof intro !== 'string' || intro.trim().length === 0) {
+        parsed.beard.beard_shape_intro = null;
+      } else if (faceShapeProse().test(intro)) {
+        parsed.beard.beard_shape_intro = null;
+      } else {
+        parsed.beard.beard_shape_intro = intro.trim();
+      }
+    }
+
     // Normalize target_concern on every routine step to the canonical enum.
     // Catalog scoring relies on exact string equality against CANONICAL_CONCERNS;
     // an un-normalizable value would silently miss the +15 target-match boost,
@@ -1193,23 +1242,48 @@ export async function getRecommendationsFromGemini(
         : 'A short, consistent routine beats a long inconsistent one.';
     }
 
-    // Inject palette swatches from the static lookup. Gemini outputs swatches: []
-    // and we fill them in here based on undertone + fitzpatrick from the analysis.
+    // Validate palette swatches. Post-2026-04-26 schema: Gemini emits 6
+    // MakeupSwatch objects ({hex, category, name, description, search_query}).
+    // If Gemini's output doesn't validate (missing fields, wrong count), fall
+    // back to the static hex lookup — older read paths must handle both shapes
+    // via `typeof swatches[0] === 'string'` detection.
     if (parsed.makeup && parsed.makeup.palette) {
-      const swatches = getPaletteSwatches(
-        parsed.makeup.palette.undertone,
-        analysis.fitzpatrick_scale,
-      );
-      if (swatches) {
-        const tier = fitzpatrickToDepthTier(analysis.fitzpatrick_scale);
+      const tier = fitzpatrickToDepthTier(analysis.fitzpatrick_scale);
+      const raw = (parsed.makeup.palette as { swatches?: unknown }).swatches;
+      const objectsValid =
+        Array.isArray(raw) &&
+        raw.length === 6 &&
+        raw.every(
+          (s: unknown) =>
+            !!s &&
+            typeof s === 'object' &&
+            typeof (s as { hex?: unknown }).hex === 'string' &&
+            typeof (s as { category?: unknown }).category === 'string' &&
+            typeof (s as { name?: unknown }).name === 'string' &&
+            typeof (s as { description?: unknown }).description === 'string' &&
+            typeof (s as { search_query?: unknown }).search_query === 'string',
+        );
+
+      if (objectsValid) {
         parsed.makeup.palette = {
           ...parsed.makeup.palette,
           depth_tier: tier ?? parsed.makeup.palette.depth_tier,
-          swatches,
         };
       } else {
-        // Can't classify — degrade gracefully.
-        parsed.makeup.palette = null;
+        // Gemini didn't emit the new schema cleanly — fall back to legacy hex array.
+        const fallback = getPaletteSwatches(
+          parsed.makeup.palette.undertone,
+          analysis.fitzpatrick_scale,
+        );
+        if (fallback) {
+          parsed.makeup.palette = {
+            ...parsed.makeup.palette,
+            depth_tier: tier ?? parsed.makeup.palette.depth_tier,
+            swatches: fallback,
+          };
+        } else {
+          parsed.makeup.palette = null;
+        }
       }
     }
 
