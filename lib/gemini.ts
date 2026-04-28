@@ -158,8 +158,6 @@ export type GeminiAnalysis = Pick<
   | 'brow_condition'
   | 'undereye'
   | 'score_skin'
-  | 'score_beard'
-  | 'score_makeup'
   | 'fitzpatrick_scale'
   | 'skin_tone'
   | 'skin_undertone'
@@ -242,13 +240,19 @@ Step 5 — ASSESS SKIN UNDERTONE.
 Do not default to cool without clear visual evidence.`
     : `Makeup analysis is not needed for this user. Do not assess Fitzpatrick scale or undertone. Omit fitzpatrick_scale, skin_tone, and skin_undertone from the output.`;
 
-  // ── Score fields — conditional on categories ──────────────────────────────
-  const scoreInstructions = [
-    `score_skin (always required): integer 0-100, based on visible care effort only (routine evidence, hydration, sun protection).`,
-    wantsBeard ? `score_beard (required): integer 0-100, based on visible beard care effort (edge definition, length consistency, cleanliness).` : null,
-    wantsMakeup ? `score_makeup (required): integer 0-100, based on brow definition + skin base quality + presentation readiness.` : null,
-    `Never penalise fixed traits — score effort only.`,
-  ].filter(Boolean).join('\n  ');
+  // ── Score field — skin condition only (Phase 6.0) ─────────────────────────
+  const scoreInstructions = `score_skin (always required): integer 0-100. Measures observable skin CONDITION as visible in the photo. Higher = clearer, more even, healthier-looking skin.
+
+ANCHORS — anchor your score to the concerns you detected in skin_concerns_detailed:
+  90-100: No concerns detected, OR all detected concerns are mild. Skin reads clear, even, balanced.
+  75-89:  1-2 mild concerns OR 1 moderate concern. Skin reads mostly well with minor observations.
+  55-74:  1 significant concern OR 2-3 moderate concerns. Several observable concerns affecting overall presentation.
+  35-54:  2+ significant concerns OR 4+ moderate concerns. Notable visible issues across multiple dimensions.
+  0-34:   Multiple significant concerns affecting most of the face. Major skin events evident.
+
+Score the skin you actually see, NOT effort, routine, or product evidence.
+
+Lighting variations should be factored neutrally — don't penalize a flatly-lit photo for "looking dull"; don't reward a well-lit photo for "looking glowing". Score the underlying skin state, not the photo quality.`;
 
   // ── Gender-specific fields ────────────────────────────────────────────────
   const genderBlock = gender === 'woman'
@@ -315,8 +319,6 @@ dryness:
     wantsMakeup ? `"skin_tone": one of ["Very fair","Fair","Medium","Olive","Brown","Dark brown"]` : null,
     wantsMakeup ? `"skin_undertone": one of ["warm","cool","neutral"]` : null,
     `"score_skin": integer 0-100`,
-    wantsBeard  ? `"score_beard": integer 0-100` : null,
-    wantsMakeup ? `"score_makeup": integer 0-100` : null,
     `"confidence": { "face_shape": number 0.0–1.0${wantsMakeup ? `, "skin_undertone": number 0.0–1.0` : ''} }`,
     `"alternatives": { "face_shape": a second-best choice OR null${wantsMakeup ? `, "skin_undertone": one of undertone values OR null` : ''} }`,
   ].filter((s): s is string => Boolean(s));
@@ -370,12 +372,8 @@ DISPLAY LABEL RULES (skin_concerns_detailed[].display_label):
 
 ${fitzpatrickBlock}
 
-Step 6 — ASSESS care evidence.
+Step 6 — SCORE skin condition.
   ${scoreInstructions}
-  85-100 = exceptional routine evident
-  70-84  = good routine
-  50-69  = basic care
-  <50    = minimal routine
 
 ${genderBlock}
 
@@ -399,8 +397,7 @@ Example A — woman in Mumbai, skin+hair+makeup selected:
   "fitzpatrick_scale": 4,
   "skin_tone": "Olive",
   "skin_undertone": "warm",
-  "score_skin": 72,
-  "score_makeup": 68,
+  "score_skin": 78,
   "brow_condition": "well_defined",
   "undereye": "normal",
   "confidence": { "face_shape": 0.88, "skin_undertone": 0.82 },
@@ -418,8 +415,7 @@ Example B — man in Delhi, skin+hair+beard selected (no makeup → no Fitzpatri
   ],
   "beard_density": "medium",
   "beard_condition": "needs_shaping",
-  "score_skin": 61,
-  "score_beard": 55,
+  "score_skin": 64,
   "confidence": { "face_shape": 0.75 },
   "alternatives": { "face_shape": "oblong" }
 }

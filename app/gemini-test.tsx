@@ -63,8 +63,6 @@ const SKIN_RECS_ANALYSIS: GeminiAnalysis = {
   brow_condition:    'well_defined',
   undereye:          'normal',
   score_skin:        72,
-  score_beard:       null,
-  score_makeup:      68,
   fitzpatrick_scale: 4,
   skin_tone:         'Olive',
   skin_undertone:    'warm',

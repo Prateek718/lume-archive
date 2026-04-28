@@ -18,10 +18,7 @@ export interface ScoreChange {
 }
 
 export interface ScoreChanges {
-  overall: ScoreChange;
-  skin?:   ScoreChange;
-  beard?:  ScoreChange | null;
-  makeup?: ScoreChange | null;
+  skin: ScoreChange;
 }
 
 export interface AdherenceByCategory {
@@ -115,7 +112,7 @@ export async function computeAndStoreScanDelta(params: {
     // Fetch the new (to) scan.
     const { data: newScanData, error: newErr } = await supabase
       .from('scans')
-      .select('id, created_at, skin_concerns, score_overall, score_skin, score_beard, score_makeup')
+      .select('id, created_at, skin_concerns, score_skin')
       .eq('id', newScanId)
       .single();
     if (newErr || !newScanData) {
@@ -123,12 +120,12 @@ export async function computeAndStoreScanDelta(params: {
       return;
     }
     const newScan = newScanData as Pick<Scan,
-      'id' | 'created_at' | 'skin_concerns' | 'score_overall' | 'score_skin' | 'score_beard' | 'score_makeup'>;
+      'id' | 'created_at' | 'skin_concerns' | 'score_skin'>;
 
     // Fetch the previous scan (most recent before the new one).
     const { data: prevScans } = await supabase
       .from('scans')
-      .select('id, created_at, skin_concerns, score_overall, score_skin, score_beard, score_makeup')
+      .select('id, created_at, skin_concerns, score_skin')
       .eq('user_id', userId)
       .lt('created_at', newScan.created_at)
       .order('created_at', { ascending: false })
@@ -139,23 +136,22 @@ export async function computeAndStoreScanDelta(params: {
       return;
     }
     const prevScan = prevScans[0] as Pick<Scan,
-      'id' | 'created_at' | 'skin_concerns' | 'score_overall' | 'score_skin' | 'score_beard' | 'score_makeup'>;
+      'id' | 'created_at' | 'skin_concerns' | 'score_skin'>;
 
     const fromDate     = new Date(prevScan.created_at);
     const toDate       = new Date(newScan.created_at);
     const daysBetween  = diffDays(fromDate, toDate);
 
     // ── Score changes ──────────────────────────────────────────────────────
-    const mkChange = (from: number | null | undefined, to: number | null | undefined): ScoreChange | null => {
-      if (from == null || to == null) return null;
-      return { from, to, delta: to - from };
+    // Phase 6.0: only skin condition is scored. beard/makeup are no longer tracked.
+    const mkChange = (from: number | null | undefined, to: number | null | undefined): ScoreChange => {
+      const f = from ?? 0;
+      const t = to ?? 0;
+      return { from: f, to: t, delta: t - f };
     };
 
     const scoreChanges: ScoreChanges = {
-      overall: mkChange(prevScan.score_overall, newScan.score_overall) ?? { from: 0, to: 0, delta: 0 },
-      skin:    mkChange(prevScan.score_skin,    newScan.score_skin)    ?? undefined,
-      beard:   mkChange(prevScan.score_beard,   newScan.score_beard),
-      makeup:  mkChange(prevScan.score_makeup,  newScan.score_makeup),
+      skin: mkChange(prevScan.score_skin, newScan.score_skin),
     };
 
     // ── Concerns delta ─────────────────────────────────────────────────────

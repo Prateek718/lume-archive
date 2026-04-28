@@ -334,10 +334,13 @@ export interface Scan {
   skin_undertone?:    'warm' | 'cool' | 'neutral' | null;
 
   // Scores
-  score_skin:        number | null;    // 0-100
-  score_beard:       number | null;    // 0-100, null for women
-  score_makeup:      number | null;    // 0-100, null for men
-  score_overall:     number | null;    // average of applicable categories
+  score_skin:        number | null;    // 0-100 — skin CONDITION (not effort)
+  // DEPRECATED Phase 6.0: score_beard and score_makeup are no longer computed
+  // by Gemini. Existing scan rows retain their original values. New scans will
+  // have null in these columns. Reads across the app should not depend on them.
+  score_beard?:      number | null;
+  score_makeup?:     number | null;
+  score_overall:     number | null;    // Phase 6.0: mirrors score_skin
 
   tier_label?:       string | null;    // kept for DB compatibility only — not used in UI
 
@@ -379,8 +382,9 @@ export interface PartialScan {
   skin_tone:         string | null;
   skin_undertone:    string | null;
   score_skin:        number | null;
-  score_beard:       number | null;
-  score_makeup:      number | null;
+  // DEPRECATED Phase 6.0: see Scan interface above.
+  score_beard?:      number | null;
+  score_makeup?:     number | null;
   score_overall:     number | null;
   recommendations:   null;
   created_at:        string;

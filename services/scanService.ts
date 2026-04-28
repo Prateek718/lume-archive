@@ -217,26 +217,6 @@ async function compressImage(uri: string): Promise<string> {
   return result.base64;
 }
 
-// Calculate the overall score from individual category scores.
-// Women: average of skin + makeup
-// Men / other: average of skin + beard
-function calcOverallScore(
-  gender:      string,
-  scoreSkin:   number | null,
-  scoreBeard:  number | null,
-  scoreMakeup: number | null,
-): number {
-  const scores: number[] = [];
-  if (scoreSkin != null) scores.push(scoreSkin);
-  if (gender === 'woman') {
-    if (scoreMakeup != null) scores.push(scoreMakeup);
-  } else {
-    if (scoreBeard != null) scores.push(scoreBeard);
-  }
-  if (scores.length === 0) return 0;
-  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-}
-
 // ── Category builders — shared by runScan and refreshRecommendations ─────────
 
 export function buildSkinCategories(
@@ -435,7 +415,7 @@ export async function runScanPhase1(
 
   const { data: previousScans } = await supabase
     .from('scans')
-    .select('score_overall, skin_concerns, score_skin, score_beard, created_at')
+    .select('score_overall, skin_concerns, score_skin, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(2);
@@ -486,10 +466,10 @@ export async function runScanPhase1(
     fitzpatrick_scale: analysis.fitzpatrick_scale ?? null,
     skin_tone:         analysis.skin_tone ?? null,
     skin_undertone:    analysis.skin_undertone ?? null,
-    score_skin:        analysis.score_skin ?? null,
-    score_beard:       analysis.score_beard ?? null,
-    score_makeup:      analysis.score_makeup ?? null,
-    score_overall:     null,
+    score_skin:    analysis.score_skin ?? null,
+    score_beard:   null,                                  // Phase 6.0: no longer scored
+    score_makeup:  null,                                  // Phase 6.0: no longer scored
+    score_overall: null,
     recommendations:   null,
     created_at:        new Date().toISOString(),
     confidence:        analysis.confidence,
@@ -678,12 +658,10 @@ export async function runScanPhase2(
   }
 
   onProgress?.('Calculating your score…');
-  const scoreOverall = calcOverallScore(
-    gender,
-    analysis.score_skin,
-    analysis.score_beard,
-    analysis.score_makeup,
-  );
+  // Phase 6.0: score_overall = score_skin. We only score skin condition;
+  // beard and makeup are no longer scored. Kept as a column write for
+  // backward compat with any existing UI reads.
+  const scoreOverall = analysis.score_skin ?? 0;
   console.log('[scanService] Score:', scoreOverall);
 
   onProgress?.('Saving your results…');
@@ -701,10 +679,10 @@ export async function runScanPhase2(
     beard_condition:         analysis.beard_condition,
     brow_condition:          analysis.brow_condition,
     undereye:                analysis.undereye,
-    score_skin:              analysis.score_skin,
-    score_beard:             analysis.score_beard,
-    score_makeup:            analysis.score_makeup,
-    score_overall:           scoreOverall,
+    score_skin:    analysis.score_skin,
+    score_beard:   null,                                  // Phase 6.0: no longer scored
+    score_makeup:  null,                                  // Phase 6.0: no longer scored
+    score_overall: scoreOverall,
     fitzpatrick_scale:       analysis.fitzpatrick_scale ?? null,
     skin_tone:               analysis.skin_tone ?? null,
     skin_undertone:          analysis.skin_undertone ?? null,
@@ -948,8 +926,6 @@ export async function refreshRecommendations(
       brow_condition:    latestScan.brow_condition,
       undereye:          latestScan.undereye,
       score_skin:        latestScan.score_skin,
-      score_beard:       latestScan.score_beard,
-      score_makeup:      latestScan.score_makeup,
       fitzpatrick_scale: latestScan.fitzpatrick_scale ?? null,
       skin_tone:         latestScan.skin_tone ?? null,
       skin_undertone:    latestScan.skin_undertone ?? null,
