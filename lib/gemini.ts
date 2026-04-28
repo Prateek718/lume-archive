@@ -429,6 +429,9 @@ Return exactly these fields:
 }
 
 // ── analyseWithGemini ─────────────────────────────────────────────────────────
+const MAX_ATTEMPTS = 3;
+const BACKOFF_MS = [0, 2000, 4000]; // first attempt has no delay
+
 export async function analyseWithGemini(
   base64Image:          string,
   city:                 string | null,
@@ -439,100 +442,135 @@ export async function analyseWithGemini(
   scanId?:              string | null,
 ): Promise<GeminiAnalysis> {
   const visionStart = Date.now();
+  // Cumulative token totals across all attempts — cost tracking should reflect
+  // actual API spend, not just the successful attempt.
   let inputTokens   = 0;
   let outputTokens  = 0;
 
-  try {
-    const response = await fetchWithRetry(ENDPOINT, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data:       base64Image,
+  let lastError:         unknown = null;
+  let lastRawResponse    = '';
+  let lastFinishReason:  string | null = null;
+  let lastSafetyRatings: unknown | null = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (BACKOFF_MS[attempt - 1] > 0) {
+      console.warn(`[gemini vision] retry attempt ${attempt}/${MAX_ATTEMPTS} after ${BACKOFF_MS[attempt - 1]}ms`);
+      await new Promise(r => setTimeout(r, BACKOFF_MS[attempt - 1]));
+    }
+
+    try {
+      const response = await fetchWithRetry(ENDPOINT, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inline_data: {
+                  mime_type: 'image/jpeg',
+                  data:       base64Image,
+                },
               },
-            },
-            { text: buildVisionPrompt(gender, city, careCategories, ageRange, previousScanSummary) },
-          ],
-        }],
-        generationConfig: {
-          temperature:     0,
-          maxOutputTokens: 2500,
-        },
-      }),
-    });
+              { text: buildVisionPrompt(gender, city, careCategories, ageRange, previousScanSummary) },
+            ],
+          }],
+          generationConfig: {
+            temperature:     0,
+            maxOutputTokens: 2500,
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Gemini API error ${response.status}: ${error}`);
-    }
+      if (!response.ok) {
+        // HTTP errors have their own retry inside fetchWithRetry — don't double-retry here.
+        const error = await response.text();
+        throw new Error(`Gemini API error ${response.status}: ${error}`);
+      }
 
-    const json = await response.json();
-    const text: string = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    inputTokens  = json?.usageMetadata?.promptTokenCount     ?? 0;
-    outputTokens = json?.usageMetadata?.candidatesTokenCount ?? 0;
+      const json = await response.json();
+      const text: string = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      inputTokens  += json?.usageMetadata?.promptTokenCount     ?? 0;
+      outputTokens += json?.usageMetadata?.candidatesTokenCount ?? 0;
+      lastFinishReason  = json?.candidates?.[0]?.finishReason  ?? lastFinishReason;
+      lastSafetyRatings = json?.candidates?.[0]?.safetyRatings ?? lastSafetyRatings;
 
-    const stripped = text
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .trim();
+      const stripped = text
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
 
-    const firstBrace = stripped.indexOf('{');
-    const lastBrace  = stripped.lastIndexOf('}');
-    const cleaned    = firstBrace !== -1 && lastBrace !== -1
-      ? stripped.slice(firstBrace, lastBrace + 1)
-      : stripped;
+      const firstBrace = stripped.indexOf('{');
+      const lastBrace  = stripped.lastIndexOf('}');
+      const cleaned    = firstBrace !== -1 && lastBrace !== -1
+        ? stripped.slice(firstBrace, lastBrace + 1)
+        : stripped;
 
-    if (!cleaned.includes('{')) {
-      throw new Error(`Gemini vision returned no JSON. Response: ${cleaned.slice(0, 200)}`);
-    }
+      lastRawResponse = cleaned;
 
-    const parsed = JSON.parse(cleaned) as GeminiAnalysis;
+      if (!cleaned || !cleaned.includes('{')) {
+        throw new Error(`Gemini vision returned no JSON. Response: ${cleaned.slice(0, 200)}`);
+      }
 
-    // Backward compat: derive legacy skin_concerns[] from the new detailed array.
-    if (parsed.skin_concerns_detailed && parsed.skin_concerns_detailed.length > 0) {
-      parsed.skin_concerns = parsed.skin_concerns_detailed.map(o => o.concern);
+      const parsed = JSON.parse(cleaned) as GeminiAnalysis;
 
-      // Synthesize display_label for any entry that Gemini forgot to emit one for.
-      // Falls back to a human-readable title-cased version of the canonical concern id.
-      for (const c of parsed.skin_concerns_detailed) {
-        if (!c.display_label || !c.display_label.trim()) {
-          c.display_label = c.concern
-            .split('_')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
+      // Backward compat: derive legacy skin_concerns[] from the new detailed array.
+      if (parsed.skin_concerns_detailed && parsed.skin_concerns_detailed.length > 0) {
+        parsed.skin_concerns = parsed.skin_concerns_detailed.map(o => o.concern);
+
+        // Synthesize display_label for any entry that Gemini forgot to emit one for.
+        // Falls back to a human-readable title-cased version of the canonical concern id.
+        for (const c of parsed.skin_concerns_detailed) {
+          if (!c.display_label || !c.display_label.trim()) {
+            c.display_label = c.concern
+              .split('_')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
+          }
         }
       }
+
+      void logUsage({
+        callType:     'vision',
+        model:        MODEL_VISION,
+        inputTokens,
+        outputTokens,
+        durationMs:   Date.now() - visionStart,
+        success:      true,
+        scanId:       scanId ?? null,
+      });
+
+      return parsed;
+    } catch (err: unknown) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[gemini vision] attempt ${attempt} failed: ${msg}`);
+      // Loop falls through to next attempt unless we've exhausted MAX_ATTEMPTS.
     }
-
-    void logUsage({
-      callType:     'vision',
-      model:        MODEL_VISION,
-      inputTokens,
-      outputTokens,
-      durationMs:   Date.now() - visionStart,
-      success:      true,
-      scanId:       scanId ?? null,
-    });
-
-    return parsed;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    void logUsage({
-      callType:     'vision',
-      model:        MODEL_VISION,
-      inputTokens,
-      outputTokens,
-      durationMs:   Date.now() - visionStart,
-      success:      false,
-      errorMessage: msg,
-      scanId:       scanId ?? null,
-    });
-    throw err;
   }
+
+  // All attempts exhausted.
+  const msg = lastError instanceof Error ? lastError.message : String(lastError);
+  console.error(`[gemini vision EXHAUSTED]`, JSON.stringify({
+    attempts:             MAX_ATTEMPTS,
+    last_error:           msg,
+    last_finish_reason:   lastFinishReason ?? 'unknown',
+    last_safety_ratings:  lastSafetyRatings ?? null,
+    last_response_length: lastRawResponse.length,
+    last_response_tail:   lastRawResponse.slice(-500),
+    scan_id:              scanId ?? null,
+  }, null, 2));
+
+  void logUsage({
+    callType:     'vision',
+    model:        MODEL_VISION,
+    inputTokens,
+    outputTokens,
+    durationMs:   Date.now() - visionStart,
+    success:      false,
+    errorMessage: msg,
+    scanId:       scanId ?? null,
+  });
+  throw lastError instanceof Error ? lastError : new Error(msg);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -540,9 +578,11 @@ export async function analyseWithGemini(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface StreamResult {
-  text:         string;
-  inputTokens:  number;
-  outputTokens: number;
+  text:           string;
+  inputTokens:    number;
+  outputTokens:   number;
+  finishReason:   string | null;
+  safetyRatings:  unknown | null;
 }
 
 // Attempts a streaming read via response.body.getReader. If the RN runtime
@@ -560,9 +600,11 @@ async function streamGeminiSSE(
     throw new Error(`Gemini streaming error ${response.status}: ${error}`);
   }
 
-  let accumulated  = '';
-  let inputTokens  = 0;
-  let outputTokens = 0;
+  let accumulated      = '';
+  let inputTokens      = 0;
+  let outputTokens     = 0;
+  let lastFinishReason: string | null = null;
+  let lastSafetyRatings: unknown | null = null;
 
   // Process one SSE line: "data: {...}". Gemini's streamGenerateContent emits
   // single-newline-delimited frames, so we operate per-line, not per-frame.
@@ -584,6 +626,10 @@ async function streamGeminiSSE(
         inputTokens  = usage.promptTokenCount     ?? inputTokens;
         outputTokens = usage.candidatesTokenCount ?? outputTokens;
       }
+      const finishReason = evt?.candidates?.[0]?.finishReason;
+      if (finishReason) lastFinishReason = finishReason;
+      const safety = evt?.candidates?.[0]?.safetyRatings;
+      if (safety) lastSafetyRatings = safety;
     } catch (err) {
       console.warn('[gemini recs] Failed to parse SSE frame:', jsonStr.slice(0, 100), err);
     }
@@ -635,7 +681,13 @@ async function streamGeminiSSE(
     ? stripped.slice(firstBrace, lastBrace + 1)
     : stripped;
 
-  return { text: cleaned, inputTokens, outputTokens };
+  return {
+    text:          cleaned,
+    inputTokens,
+    outputTokens,
+    finishReason:  lastFinishReason,
+    safetyRatings: lastSafetyRatings,
+  };
 }
 
 // Extract the largest valid JSON object from a possibly-truncated buffer.
@@ -1110,10 +1162,22 @@ export async function getRecommendationsFromGemini(
   // been updated yet (e.g. refreshRecommendations, gemini-test screen).
   const includeMakeup = options?.includeMakeup ?? true;
   const start       = Date.now();
+  // Cumulative token totals across all attempts.
   let inputTokens   = 0;
   let outputTokens  = 0;
 
-  try {
+  let lastError:         unknown = null;
+  let lastRawResponse    = '';
+  let lastFinishReason:  string | null = null;
+  let lastSafetyRatings: unknown | null = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (BACKOFF_MS[attempt - 1] > 0) {
+      console.warn(`[gemini skin_recs] retry attempt ${attempt}/${MAX_ATTEMPTS} after ${BACKOFF_MS[attempt - 1]}ms`);
+      await new Promise(r => setTimeout(r, BACKOFF_MS[attempt - 1]));
+    }
+
+    try {
     const body: RequestInit = {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1141,10 +1205,12 @@ export async function getRecommendationsFromGemini(
         }
       : undefined;
 
-    const { text, inputTokens: it, outputTokens: ot } =
+    const { text, inputTokens: it, outputTokens: ot, finishReason, safetyRatings } =
       await streamGeminiSSE(ENDPOINT_TEXT_STREAM, body, onPartialText);
-    inputTokens  = it;
-    outputTokens = ot;
+    inputTokens      += it;
+    outputTokens     += ot;
+    lastFinishReason  = finishReason ?? lastFinishReason;
+    lastSafetyRatings = safetyRatings ?? lastSafetyRatings;
 
     if (!text) throw new Error('Gemini returned empty response');
 
@@ -1152,6 +1218,8 @@ export async function getRecommendationsFromGemini(
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '')
       .trim();
+
+    lastRawResponse = cleaned;
 
     if (!cleaned.endsWith('}')) {
       throw new Error(
@@ -1294,20 +1362,37 @@ export async function getRecommendationsFromGemini(
     });
 
     return parsed;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    void logUsage({
-      callType:     'skin_recs',
-      model:        MODEL_TEXT,
-      inputTokens,
-      outputTokens,
-      durationMs:   Date.now() - start,
-      success:      false,
-      errorMessage: msg,
-      scanId:       options?.scanId ?? null,
-    });
-    throw err;
+    } catch (err: unknown) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[gemini skin_recs] attempt ${attempt} failed: ${msg}`);
+      // Loop falls through to next attempt unless we've exhausted MAX_ATTEMPTS.
+    }
   }
+
+  // All attempts exhausted.
+  const exhaustedMsg = lastError instanceof Error ? lastError.message : String(lastError);
+  console.error(`[gemini skin_recs EXHAUSTED]`, JSON.stringify({
+    attempts:             MAX_ATTEMPTS,
+    last_error:           exhaustedMsg,
+    last_finish_reason:   lastFinishReason ?? 'unknown',
+    last_safety_ratings:  lastSafetyRatings ?? null,
+    last_response_length: lastRawResponse.length,
+    last_response_tail:   lastRawResponse.slice(-500),
+    scan_id:              options?.scanId ?? null,
+  }, null, 2));
+
+  void logUsage({
+    callType:     'skin_recs',
+    model:        MODEL_TEXT,
+    inputTokens,
+    outputTokens,
+    durationMs:   Date.now() - start,
+    success:      false,
+    errorMessage: exhaustedMsg,
+    scanId:       options?.scanId ?? null,
+  });
+  throw lastError instanceof Error ? lastError : new Error(exhaustedMsg);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1519,80 +1604,112 @@ export async function getHairRecommendationsFromGemini(
   },
 ): Promise<HairRecommendations> {
   const start      = Date.now();
+  // Cumulative token totals across all attempts.
   let inputTokens  = 0;
   let outputTokens = 0;
 
-  try {
-    const body: RequestInit = {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: buildHairRecsPrompt(profile, faceShape, gender, city, budget, matchedProducts),
-          }],
-        }],
-        generationConfig: {
-          temperature:     0,
-          maxOutputTokens: 8192,
-        },
-      }),
-    };
+  let lastError:         unknown = null;
+  let lastRawResponse    = '';
+  let lastFinishReason:  string | null = null;
+  let lastSafetyRatings: unknown | null = null;
 
-    const onPartialText = options?.onPartial
-      ? (accumulated: string) => {
-          const maybe = tryParsePartialJson(accumulated);
-          if (maybe && typeof maybe === 'object') {
-            options.onPartial!(maybe as Partial<HairRecommendations>);
-          }
-        }
-      : undefined;
-
-    const { text, inputTokens: it, outputTokens: ot } =
-      await streamGeminiSSE(ENDPOINT_TEXT_STREAM, body, onPartialText);
-    inputTokens  = it;
-    outputTokens = ot;
-
-    if (!text) throw new Error('Gemini returned empty response');
-
-    const cleaned = text
-      .replace(/```json\n?/g, '')
-      .replace(/```\n?/g, '')
-      .trim();
-
-    if (!cleaned.endsWith('}')) {
-      throw new Error(
-        `Gemini hair response was truncated — increase maxOutputTokens. Last 100 chars: ${cleaned.slice(-100)}`,
-      );
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (BACKOFF_MS[attempt - 1] > 0) {
+      console.warn(`[gemini hair_recs] retry attempt ${attempt}/${MAX_ATTEMPTS} after ${BACKOFF_MS[attempt - 1]}ms`);
+      await new Promise(r => setTimeout(r, BACKOFF_MS[attempt - 1]));
     }
 
-    const parsed = JSON.parse(cleaned) as HairRecommendations;
+    try {
+      const body: RequestInit = {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: buildHairRecsPrompt(profile, faceShape, gender, city, budget, matchedProducts),
+            }],
+          }],
+          generationConfig: {
+            temperature:     0,
+            maxOutputTokens: 8192,
+          },
+        }),
+      };
 
-    void logUsage({
-      callType:     'hair_recs',
-      model:        MODEL_TEXT,
-      inputTokens,
-      outputTokens,
-      durationMs:   Date.now() - start,
-      success:      true,
-      scanId:       options?.scanId ?? null,
-    });
+      const onPartialText = options?.onPartial
+        ? (accumulated: string) => {
+            const maybe = tryParsePartialJson(accumulated);
+            if (maybe && typeof maybe === 'object') {
+              options.onPartial!(maybe as Partial<HairRecommendations>);
+            }
+          }
+        : undefined;
 
-    return parsed;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    void logUsage({
-      callType:     'hair_recs',
-      model:        MODEL_TEXT,
-      inputTokens,
-      outputTokens,
-      durationMs:   Date.now() - start,
-      success:      false,
-      errorMessage: msg,
-      scanId:       options?.scanId ?? null,
-    });
-    throw err;
+      const { text, inputTokens: it, outputTokens: ot, finishReason, safetyRatings } =
+        await streamGeminiSSE(ENDPOINT_TEXT_STREAM, body, onPartialText);
+      inputTokens      += it;
+      outputTokens     += ot;
+      lastFinishReason  = finishReason ?? lastFinishReason;
+      lastSafetyRatings = safetyRatings ?? lastSafetyRatings;
+
+      if (!text) throw new Error('Gemini returned empty response');
+
+      const cleaned = text
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+
+      lastRawResponse = cleaned;
+
+      if (!cleaned.endsWith('}')) {
+        throw new Error(
+          `Gemini hair response was truncated — increase maxOutputTokens. Last 100 chars: ${cleaned.slice(-100)}`,
+        );
+      }
+
+      const parsed = JSON.parse(cleaned) as HairRecommendations;
+
+      void logUsage({
+        callType:     'hair_recs',
+        model:        MODEL_TEXT,
+        inputTokens,
+        outputTokens,
+        durationMs:   Date.now() - start,
+        success:      true,
+        scanId:       options?.scanId ?? null,
+      });
+
+      return parsed;
+    } catch (err: unknown) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[gemini hair_recs] attempt ${attempt} failed: ${msg}`);
+    }
   }
+
+  // All attempts exhausted.
+  const exhaustedMsg = lastError instanceof Error ? lastError.message : String(lastError);
+  console.error(`[gemini hair_recs EXHAUSTED]`, JSON.stringify({
+    attempts:             MAX_ATTEMPTS,
+    last_error:           exhaustedMsg,
+    last_finish_reason:   lastFinishReason ?? 'unknown',
+    last_safety_ratings:  lastSafetyRatings ?? null,
+    last_response_length: lastRawResponse.length,
+    last_response_tail:   lastRawResponse.slice(-500),
+    scan_id:              options?.scanId ?? null,
+  }, null, 2));
+
+  void logUsage({
+    callType:     'hair_recs',
+    model:        MODEL_TEXT,
+    inputTokens,
+    outputTokens,
+    durationMs:   Date.now() - start,
+    success:      false,
+    errorMessage: exhaustedMsg,
+    scanId:       options?.scanId ?? null,
+  });
+  throw lastError instanceof Error ? lastError : new Error(exhaustedMsg);
 }
 
 // Keep ENDPOINT_TEXT exported-unused suppressed via a type-only reference if

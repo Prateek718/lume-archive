@@ -16,6 +16,7 @@ import {
   runScanPhase1,
   runScanPhase2,
   finalizeTraitsAndRunPhase2,
+  refreshRecommendations,
   type Phase1Result,
 } from '../services/scanService';
 import type { BeardGoal, PartialScan, Scan, UserTrait } from '../types';
@@ -26,19 +27,27 @@ export type ScanState =
   | 'needs_beard_goal'
   | 'needs_trait_confirm'
   | 'phase2'
+  | 'phase2_failed'
   | 'success'
   | 'error';
+
+// Cap user-driven retry attempts after Phase 2 has already exhausted its
+// internal retry loop. After this many manual retries we surface a hard
+// 'error' so the user is nudged to start over instead of looping forever.
+const MAX_PHASE2_RETRIES = 2;
 
 interface ScanContextValue {
   state:        ScanState;
   result:       Scan | null;
   error:        string | null;
   partialScan:  PartialScan | null;
+  failedScanId: string | null;
   start:        (photoUri: string, gender: string) => Promise<void>;
   submitBeardGoal: (goal: BeardGoal) => Promise<void>;
   confirmTraits:   (
     confirmations: Record<string, { value: string; source: UserTrait['source'] }>,
   ) => Promise<void>;
+  retryPhase2:  () => Promise<void>;
   reset:        () => void;
 }
 
@@ -49,23 +58,37 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
   const [result, setResult] = useState<Scan | null>(null);
   const [error,  setError]  = useState<string | null>(null);
   const [partialScan, setPartialScan] = useState<PartialScan | null>(null);
+  const [failedScanId, setFailedScanId] = useState<string | null>(null);
 
   const phase1Ref = useRef<Phase1Result | null>(null);
   const userIdRef = useRef<string | null>(null);
   const genderRef = useRef<string>('man');
+  const phase2RetryCountRef = useRef(0);
 
   const reset = useCallback(() => {
     setState('idle');
     setResult(null);
     setError(null);
     setPartialScan(null);
+    setFailedScanId(null);
     phase1Ref.current = null;
     userIdRef.current = null;
+    phase2RetryCountRef.current = 0;
   }, []);
 
   const fail = useCallback((message: string) => {
     setError(message);
     setState('error');
+  }, []);
+
+  // Phase 2 has already exhausted its internal retry loop in lib/gemini.ts —
+  // failing here means the network or model is genuinely unhappy. The scan row
+  // already exists with Phase 1 analysis data, so we can recover by retrying
+  // just the recs generation without redoing the photo.
+  const failPhase2 = useCallback((scanId: string, message: string) => {
+    setError(message);
+    setFailedScanId(scanId);
+    setState('phase2_failed');
   }, []);
 
   const continueToPhase2 = useCallback(async () => {
@@ -93,9 +116,49 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error('[useScan] phase2 error:', msg);
-      fail(msg);
+      // Scan row already exists with Phase 1 data — degrade to recoverable
+      // failure so the user can retry recs without redoing the photo.
+      failPhase2(phase1.scanId, msg);
     }
-  }, [fail]);
+  }, [fail, failPhase2]);
+
+  const retryPhase2 = useCallback(async () => {
+    const userId = userIdRef.current;
+    const scanId = failedScanId;
+    if (!userId || !scanId) {
+      fail('No active scan to retry');
+      return;
+    }
+    if (phase2RetryCountRef.current >= MAX_PHASE2_RETRIES) {
+      fail('We tried a few times and the network is still unhappy. Start over when you have a stronger connection.');
+      return;
+    }
+    phase2RetryCountRef.current += 1;
+    setError(null);
+    setState('phase2');
+    try {
+      // refreshRecommendations re-runs Gemini against the most recent scan row
+      // for this user. The failed Phase 2 scan IS the latest, so this targets it.
+      await refreshRecommendations(userId);
+      // Pull the now-completed scan row so downstream screens have the result.
+      const { data: row } = await supabase
+        .from('scans')
+        .select('*')
+        .eq('id', scanId)
+        .single();
+      if (row) {
+        setResult(row as Scan);
+        setFailedScanId(null);
+        setState('success');
+      } else {
+        fail('Scan saved but could not be loaded');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[useScan] retryPhase2 error:', msg);
+      failPhase2(scanId, msg);
+    }
+  }, [fail, failPhase2, failedScanId]);
 
   const start = useCallback(async (photoUri: string, gender: string) => {
     setError(null);
@@ -243,18 +306,21 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error('[useScan] confirmTraits error:', msg);
-      fail(msg);
+      // Scan row exists once trait finalize has run — same recoverable path.
+      failPhase2(phase1.scanId, msg);
     }
-  }, [fail]);
+  }, [fail, failPhase2]);
 
   const value: ScanContextValue = {
     state,
     result,
     error,
     partialScan,
+    failedScanId,
     start,
     submitBeardGoal,
     confirmTraits,
+    retryPhase2,
     reset,
   };
 

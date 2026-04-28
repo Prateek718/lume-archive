@@ -28,6 +28,7 @@ import {
   ChapterLabel,
   Display,
   PrimaryButton,
+  TextLink,
 } from '../components/editorial';
 import { Palette } from '../constants/theme';
 import { useScan } from '../hooks/useScan';
@@ -117,6 +118,29 @@ export default function Scan() {
     captureLockRef.current = false;
     setPhase('intro');
   };
+
+  const onRetryPhase2 = () => {
+    void scan.retryPhase2();
+  };
+
+  const onStartOver = () => {
+    // TODO Phase 7+: clean up abandoned scan rows after 24h. For now the
+    // half-finished row stays in DB and is simply not surfaced anywhere.
+    scan.reset();
+    captureLockRef.current = false;
+    setPhase('intro');
+  };
+
+  // Recoverable Phase 2 failure — scan row exists, recs generation failed.
+  // Show a soft retry CTA so the user doesn't have to redo the photo.
+  if (scan.state === 'phase2_failed') {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <Phase2FailedView onTryAgain={onRetryPhase2} onStartOver={onStartOver} />
+      </>
+    );
+  }
 
   // Error state gets its own full-screen layout.
   if (scan.state === 'error') {
@@ -459,6 +483,42 @@ function ErrorView({
         </Body>
         <View style={{ flex: 1 }} />
         <PrimaryButton dark label="Try again" onPress={onRetry} />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ── Recoverable Phase 2 failure ─────────────────────────────────────────
+// Shown when Gemini's recs call exhausted all 3 internal retries. The scan
+// row already exists with Phase 1 analysis data, so retry is cheap — no
+// re-photo, no re-vision call. ~30s expected.
+
+function Phase2FailedView({
+  onTryAgain,
+  onStartOver,
+}: {
+  onTryAgain:  () => void;
+  onStartOver: () => void;
+}) {
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: Palette.scanBg }}>
+      <View style={{ flex: 1, paddingHorizontal: 32, paddingTop: 60, paddingBottom: 30 }}>
+        <ChapterLabel dark>A pause</ChapterLabel>
+        <View style={{ height: 16 }} />
+        <Display dark>
+          <Display dark italic>We couldn&apos;t</Display>
+          {'\n'}finish your reading.
+        </Display>
+        <View style={{ height: 20 }} />
+        <Body serif dark size={15} style={{ fontStyle: 'italic', color: 'rgba(243,239,230,0.75)', lineHeight: 22 }}>
+          Your photo was processed, but generating the plan ran into a network issue. We can try again without redoing the photo — about 30 seconds.
+        </Body>
+        <View style={{ flex: 1 }} />
+        <PrimaryButton dark label="Try again" onPress={onTryAgain} />
+        <View style={{ height: 14 }} />
+        <View style={{ alignItems: 'center' }}>
+          <TextLink dark label="Start over" onPress={onStartOver} />
+        </View>
       </View>
     </SafeAreaView>
   );
