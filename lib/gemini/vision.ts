@@ -396,10 +396,10 @@ export async function analyseWithGemini(
   city:                 string | null,
   gender:               string,
   careCategories:       string[],
-  ageRange?:            string | null,
-  previousScanSummary?: string | null,
-  scanId?:              string | null,
-  scanNumber:           number = 1,
+  ageRange:             string | null,
+  previousScanSummary:  string | null,
+  scanId:               string | null,
+  scanNumber:           number,
 ): Promise<GeminiAnalysis> {
   const visionStart = Date.now();
   let inputTokens   = 0;

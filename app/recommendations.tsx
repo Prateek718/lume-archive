@@ -16,6 +16,7 @@ import {
 } from '../components/editorial';
 import { Palette } from '../constants/theme';
 import { supabase } from '../lib/supabase';
+import { errorToMessage } from '../lib/errors';
 import { hasValidHairProfile } from '../lib/hair';
 import { getSkinConcernsDetailed } from '../lib/scanData';
 import { useScan } from '../hooks/useScan';
@@ -55,6 +56,18 @@ type UserContext = Pick<User, 'care_categories' | 'hair_profile' | 'hair_recomme
 // ─── Derivation helpers ─────────────────────────────────────────────────────────
 
 const SEVERITY_RANK: Record<string, number> = { significant: 3, moderate: 2, mild: 1 };
+
+// Pull the "Issue X" prefix from the observation block written by the vision
+// call (e.g. "Issue sixteen · cover" → "Issue sixteen"). Falls back to a
+// neutral "Issue one" when the observation is missing — extremely rare since
+// the observation block is required in the vision schema.
+function deriveIssueLabel(scan: ScanRow | null): string {
+  const obsLabel = scan?.recommendations?.observation?.issue_label;
+  if (typeof obsLabel === 'string' && obsLabel.includes('·')) {
+    return obsLabel.split('·')[0].trim();
+  }
+  return 'Issue one';
+}
 
 function topConcern(list: SkinConcernObservation[] | null | undefined): SkinConcernObservation | null {
   if (!list || list.length === 0) return null;
@@ -260,27 +273,17 @@ export default function RecommendationsRoute() {
         if (cancelled) return;
         if (userErr) {
           console.error('[recommendations] user query failed:', userErr);
-          throw userErr;
+          throw new Error(userErr.message ?? 'Database error');
         }
         if (scanErr) {
           console.error('[recommendations] scan query failed:', scanErr);
-          throw scanErr;
+          throw new Error(scanErr.message ?? 'Database error');
         }
 
         setUser(userData as UserContext);
         setScan(scanData as ScanRow);
       } catch (err) {
-        if (!cancelled) {
-          let msg: string;
-          if (err instanceof Error) {
-            msg = err.message;
-          } else if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
-            msg = (err as { message: string }).message;
-          } else {
-            msg = String(err);
-          }
-          setErrorMsg(msg);
-        }
+        if (!cancelled) setErrorMsg(errorToMessage(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -340,7 +343,7 @@ export default function RecommendationsRoute() {
             </View>
 
             <View style={{ paddingTop: 24, paddingHorizontal: 32 }}>
-              <ChapterLabel>Issue one · your plan</ChapterLabel>
+              <ChapterLabel>{deriveIssueLabel(scan)} · your plan</ChapterLabel>
               <Display
                 style={{
                   marginTop:     14,

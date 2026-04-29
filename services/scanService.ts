@@ -149,8 +149,10 @@ import {
   getBeardRecommendations,
   getMakeupRecommendations,
   getHairRecommendationsFromGemini,
+  getDeltaCommentary,
 } from '../lib/gemini';
 import type { GeminiAnalysis } from '../lib/gemini';
+import { fetchScanDeltaByToScanId } from './deltaService';
 import type { RescanFeedback } from '../types';
 import {
   getProductsForProfile,
@@ -468,6 +470,7 @@ export async function runScanPhase1(
       ageRange,
       previousScanSummary,
       scanId,
+      scanNumber,
     );
   } catch (visionErr) {
     // Clean up the empty scan row so it doesn't pollute the count check
@@ -617,6 +620,73 @@ async function writeRecommendationSection(
   }
 }
 
+// Loads previous + current scan + just-computed delta row, calls Gemini for
+// editorial commentary, and read-modify-writes recommendations.delta_commentary.
+// Designed to run in parallel with the section promises — it only depends on
+// the pre-write fields (skin_concerns_detailed, score_skin) that landed before
+// sectionPromises started, plus the scan_deltas row that the sibling delta
+// promise produces.
+async function generateAndStoreDeltaCommentary(args: {
+  scanId:     string;
+  userId:     string;
+  scanNumber: number;
+}): Promise<void> {
+  const { scanId, userId, scanNumber } = args;
+
+  const { data: currentRow } = await supabase
+    .from('scans')
+    .select('*')
+    .eq('id', scanId)
+    .single();
+  if (!currentRow) return;
+  const currentScan = currentRow as Scan;
+
+  const [{ data: prevRows }, deltaRow] = await Promise.all([
+    supabase
+      .from('scans')
+      .select('*')
+      .eq('user_id', userId)
+      .lt('created_at', currentScan.created_at)
+      .order('created_at', { ascending: false })
+      .limit(1),
+    fetchScanDeltaByToScanId(scanId),
+  ]);
+  const previousScan = prevRows?.[0] as Scan | undefined;
+  if (!previousScan || !deltaRow) return;
+
+  const commentary = await getDeltaCommentary(
+    previousScan,
+    currentScan,
+    {
+      days_between:        deltaRow.days_between,
+      concerns_improved:   deltaRow.concerns_improved,
+      concerns_new:        deltaRow.concerns_new,
+      concerns_persistent: deltaRow.concerns_persistent,
+    },
+    scanNumber,
+    { scanId },
+  );
+
+  const { data: latestRow } = await supabase
+    .from('scans')
+    .select('recommendations')
+    .eq('id', scanId)
+    .single();
+  const existing = (latestRow?.recommendations as Recommendations | null) ?? null;
+  const next: Recommendations = {
+    observation: existing?.observation as Recommendations['observation'],
+    skin:        existing?.skin    ?? ({ advice: '', steps: [] } as SkinRecommendation),
+    beard:       existing?.beard   ?? null,
+    makeup:      existing?.makeup  ?? null,
+    products:    existing?.products ?? [],
+    delta_commentary: commentary,
+  };
+  await supabase
+    .from('scans')
+    .update({ recommendations: next })
+    .eq('id', scanId);
+}
+
 // ── Phase 2 — recommendations + save ──────────────────────────────────────
 // Phase 6.2: split into per-section parallel calls (skin/beard/makeup).
 // Each section writes itself into scan.recommendations as it completes via
@@ -642,7 +712,6 @@ export async function runScanPhase2(
   getUserFeedback?: () => RescanFeedback | undefined,
   callbacks?:      SectionCallbacks,
 ): Promise<Scan> {
-  void scanNumber; // captured by analysis.observation; no longer threaded into recs
   // Guard: recommendations must be based on confirmed traits. If the caller
   // hands us a scan that still has pending decisions, that's a wiring bug —
   // the UI should have routed through confirm-traits first.
@@ -854,6 +923,37 @@ export async function runScanPhase2(
     );
   }
 
+  // Delta computation + commentary run in parallel with the section calls.
+  // Both depend only on the pre-write fields (skin_concerns_detailed,
+  // score_skin) — independent of the Phase 2 Gemini section outputs — so
+  // gating them behind the section join would add 30-50s of avoidable lag.
+  // Lands the scan_deltas row in ~2-3s instead of after sections settle.
+  if (scanType === 'rescan') {
+    const userFeedback = getUserFeedback?.();
+    sectionPromises.push(
+      (async () => {
+        try {
+          await computeAndStoreScanDelta({
+            userId,
+            newScanId: scanId,
+            userFeedback,
+          });
+          await generateAndStoreDeltaCommentary({
+            scanId,
+            userId,
+            scanNumber,
+          });
+        } catch (e) {
+          console.error('[scanService] delta pipeline failed (non-fatal):', {
+            scanId,
+            message: e instanceof Error ? e.message : String(e),
+            stack:   e instanceof Error ? e.stack : undefined,
+          });
+        }
+      })(),
+    );
+  }
+
   await Promise.allSettled(sectionPromises);
 
   // Read back the now-merged scan row so downstream work sees the union of
@@ -896,12 +996,6 @@ export async function runScanPhase2(
     } catch {
       // Non-critical
     }
-
-    await computeAndStoreScanDelta({
-      userId,
-      newScanId:    data.id as string,
-      userFeedback: getUserFeedback?.(),
-    });
 
     try {
       await cancelRescanNudge();

@@ -10,7 +10,7 @@ const PRICING = {
 } as const;
 
 export type ModelName = keyof typeof PRICING;
-export type CallType = 'vision' | 'skin_recs' | 'beard_recs' | 'makeup_recs' | 'hair_recs';
+export type CallType = 'vision' | 'skin_recs' | 'beard_recs' | 'makeup_recs' | 'hair_recs' | 'delta_commentary';
 
 export interface UsageRecord {
   callType:     CallType;

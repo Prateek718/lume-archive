@@ -17,6 +17,7 @@ import {
 import { InsightRow } from '../../components/scan/InsightRow';
 import { Palette } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
+import { errorToMessage } from '../../lib/errors';
 import type { Recommendations, ScanObservation } from '../../types';
 
 // Split a title like "A first observation." into first-two-words + rest so we
@@ -34,6 +35,8 @@ export default function ObservationRoute() {
   const scanId = typeof params.scanId === 'string' ? params.scanId : null;
 
   const [observation, setObservation] = useState<ScanObservation | null>(null);
+  const [scanType, setScanType]       = useState<'first' | 'rescan' | null>(null);
+  const [hasDelta, setHasDelta]       = useState(false);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
 
@@ -52,16 +55,45 @@ export default function ObservationRoute() {
           .eq('id', scanId)
           .single();
         if (cancelled) return;
-        if (dbErr) throw dbErr;
-        const recs = (data as { recommendations: Recommendations | null } | null)?.recommendations;
+        if (dbErr) throw new Error(dbErr.message ?? 'Database error');
+        const row  = data as { recommendations: Recommendations | null; scan_type: 'first' | 'rescan' | null } | null;
+        const recs = row?.recommendations;
         if (recs?.observation) {
           setObservation(recs.observation);
+          setScanType(row?.scan_type ?? null);
         } else {
           setError('Your scan is still being read. Give it a moment.');
         }
+        // Poll scan_deltas in the background — delta computation runs in
+        // parallel with Phase 2 sections in scanService and typically lands
+        // within ~5-15s. The CTA stays disabled with editorial framing while
+        // we wait. Polling does NOT block the main content render: the IIFE
+        // has already populated observation/scanType above, so the screen is
+        // already fully rendered by the time we get here.
+        if (row?.scan_type === 'rescan') {
+          const MAX_POLL_ATTEMPTS = 10;
+          const POLL_INTERVAL_MS  = 1500;
+          for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+            if (cancelled) return;
+            const { count } = await supabase
+              .from('scan_deltas')
+              .select('id', { count: 'exact', head: true })
+              .eq('to_scan_id', scanId);
+            if ((count ?? 0) > 0) {
+              if (!cancelled) setHasDelta(true);
+              return;
+            }
+            if (attempt < MAX_POLL_ATTEMPTS - 1) {
+              await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+            }
+          }
+          // Poll exhausted — leave hasDelta false; CTA falls back to a still-
+          // disabled "See what changed →" (founder can decide if that should
+          // promote to "Read your plan →" instead — for now we hold the line).
+        }
       } catch (e) {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(errorToMessage(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -187,12 +219,47 @@ export default function ObservationRoute() {
               ))}
             </View>
 
-            {/* Read your plan → */}
+            {/* Forward CTA — rescans with a computed delta read the comparison
+                first via /(scan)/issue-cover. While the delta is still being
+                assembled in the background, the CTA stays disabled with a soft
+                editorial line below. First scans always go straight to recs. */}
             <View style={{ paddingTop: 36, paddingHorizontal: 32, paddingBottom: 40 }}>
-              <PrimaryButton
-                label="Read your plan →"
-                onPress={() => router.replace('/recommendations' as never)}
-              />
+              {scanType === 'rescan' ? (
+                hasDelta ? (
+                  <PrimaryButton
+                    label="See what changed →"
+                    onPress={() => router.replace({
+                      pathname: '/(scan)/issue-cover',
+                      params:   { scanId: scanId ?? '' },
+                    } as never)}
+                  />
+                ) : (
+                  <View>
+                    <PrimaryButton
+                      label="See what changed →"
+                      disabled
+                      onPress={() => {}}
+                    />
+                    <Body
+                      serif
+                      size={13.5}
+                      style={{
+                        fontStyle:  'italic',
+                        textAlign:  'center',
+                        color:      Palette.ink3,
+                        paddingTop: 16,
+                      }}
+                    >
+                      The reading is being assembled.
+                    </Body>
+                  </View>
+                )
+              ) : (
+                <PrimaryButton
+                  label="Read your plan →"
+                  onPress={() => router.replace('/recommendations' as never)}
+                />
+              )}
             </View>
           </ScrollView>
         )}

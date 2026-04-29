@@ -12,6 +12,10 @@ export { getBeardRecommendations }  from './beard';
 export { getMakeupRecommendations } from './makeup';
 export { getHairRecommendationsFromGemini } from './hair';
 
+// Rescan delta narrative ----------------------------------------------------
+export { getDeltaCommentary } from './delta';
+export type { DeltaCommentary, DekLine } from './delta';
+
 // Shared utilities — re-exported for callers that touch palette data, etc.
 export {
   PALETTE_SWATCHES,

@@ -190,23 +190,40 @@ export const EDITORIAL_RULES = `Voice rules, apply to every text field:
 
 // ── Ordinal + cardinal helpers ────────────────────────────────────────────────
 // Used to build observation.title / issue_label deterministically rather than
-// asking the model to format scan numbers.
-export function ordinal(n: number): string {
-  if (n === 1) return 'first';
-  if (n === 2) return 'second';
-  if (n === 3) return 'third';
-  if (n === 4) return 'fourth';
-  if (n === 5) return 'fifth';
-  return `${n}th`;
-}
+// asking the model to format scan numbers. Handles 1-99; falls back to digits
+// beyond that.
+const ONES        = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const TEENS       = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS        = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+const ORDINAL_ONES  = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
+const ORDINAL_TEENS = ['tenth', 'eleventh', 'twelfth', 'thirteenth', 'fourteenth', 'fifteenth', 'sixteenth', 'seventeenth', 'eighteenth', 'nineteenth'];
+const ORDINAL_TENS  = ['', '', 'twentieth', 'thirtieth', 'fortieth', 'fiftieth', 'sixtieth', 'seventieth', 'eightieth', 'ninetieth'];
 
 export function cardinal(n: number): string {
-  if (n === 1) return 'one';
-  if (n === 2) return 'two';
-  if (n === 3) return 'three';
-  if (n === 4) return 'four';
-  if (n === 5) return 'five';
+  if (n < 0 || !Number.isInteger(n)) return String(n);
+  if (n === 0) return 'zero';
+  if (n < 10)  return ONES[n];
+  if (n < 20)  return TEENS[n - 10];
+  if (n < 100) {
+    const tens = Math.floor(n / 10);
+    const ones = n % 10;
+    return ones === 0 ? TENS[tens] : `${TENS[tens]}-${ONES[ones]}`;
+  }
   return String(n);
+}
+
+export function ordinal(n: number): string {
+  if (n < 0 || !Number.isInteger(n)) return `${n}th`;
+  if (n === 0) return 'zeroth';
+  if (n < 10)  return ORDINAL_ONES[n];
+  if (n < 20)  return ORDINAL_TEENS[n - 10];
+  if (n < 100) {
+    const tens = Math.floor(n / 10);
+    const ones = n % 10;
+    if (ones === 0) return ORDINAL_TENS[tens];
+    return `${TENS[tens]}-${ORDINAL_ONES[ones]}`;
+  }
+  return `${n}th`;
 }
 
 // Detects sentences that name a categorical face shape. Used as defense in

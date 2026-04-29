@@ -1,6 +1,16 @@
 import { Stack, useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
+
+// TODO: Phase 9 — proper accessibility — implement scalable typography that
+// doesn't break editorial layouts at large font sizes. For v1, lock font
+// scaling off globally so cards and tab labels don't truncate.
+{
+  type DefaultProps = { allowFontScaling?: boolean };
+  const T = Text as unknown as { defaultProps?: DefaultProps };
+  if (T.defaultProps == null) T.defaultProps = {};
+  T.defaultProps.allowFontScaling = false;
+}
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import {

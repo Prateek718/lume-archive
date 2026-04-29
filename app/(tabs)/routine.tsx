@@ -20,12 +20,14 @@ import {
   PrimaryButton,
 } from '../../components/editorial';
 import {
+  RescanBanner,
   RoutineCheckStep,
   StreakCallout,
   WeekStrip,
 } from '../../components/routine';
 import { Palette } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
+import { cardinal } from '../../lib/gemini/shared';
 import { buildWeekStrip, computeStreak, type DayAdherence } from '../../lib/habit';
 import {
   fetchDailyAdherence,
@@ -61,9 +63,16 @@ function todayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-function daysBetween(fromIso: string, toIso: string): number {
-  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
-  return Math.floor(ms / 86_400_000);
+// Calendar-day math: compare local YYYY-MM-DD strings (midnight to midnight)
+// instead of raw millisecond diffs. Avoids the off-by-one when the user scans
+// at 11pm and opens the app at 1am — both should read as "0 days since."
+function calendarDaysBetween(fromIso: string, toIso: string): number {
+  const toLocalYMD = (iso: string) => {
+    const d = new Date(iso);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
+  const ms = toLocalYMD(toIso) - toLocalYMD(fromIso);
+  return Math.max(0, Math.floor(ms / 86_400_000));
 }
 
 function pad2(n: number): string {
@@ -78,6 +87,7 @@ export default function RoutineRoute() {
   const [todaySteps,     setTodaySteps]     = useState<RoutineDayStep[]>([]);
   const [dailyAdherence, setDailyAdherence] = useState<DayAdherence[]>([]);
   const [latestScan,     setLatestScan]     = useState<ScanRow | null>(null);
+  const [scanCount,      setScanCount]      = useState<number>(0);
   const [loading,        setLoading]        = useState(true);
   const [errorMsg,       setErrorMsg]       = useState<string | null>(null);
 
@@ -107,12 +117,17 @@ export default function RoutineRoute() {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+        const scanCountPromise = supabase
+          .from('scans')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', uid);
 
-        const [stepsRes, adherenceRes, userRes, scanRes] = await Promise.all([
+        const [stepsRes, adherenceRes, userRes, scanRes, scanCountRes] = await Promise.all([
           fetchTodayRoutine(uid),
           fetchDailyAdherence(uid),
           userPromise,
           scanPromise,
+          scanCountPromise,
         ]);
 
         if (cancelled) return;
@@ -122,6 +137,7 @@ export default function RoutineRoute() {
         const cats = (userRes.data?.care_categories ?? ['skin']) as CareCategory[];
         setCareCategories(cats);
         setLatestScan((scanRes.data ?? null) as ScanRow | null);
+        setScanCount(scanCountRes.count ?? 0);
       } catch (err) {
         if (!cancelled) setErrorMsg(err instanceof Error ? err.message : String(err));
       } finally {
@@ -138,7 +154,7 @@ export default function RoutineRoute() {
 
   const daysSinceScan = useMemo(() => {
     if (!latestScan) return 0;
-    return Math.max(0, daysBetween(latestScan.created_at, today.toISOString()));
+    return calendarDaysBetween(latestScan.created_at, today.toISOString());
   }, [latestScan, today]);
 
   const issueDay = daysSinceScan + 1;
@@ -258,7 +274,7 @@ export default function RoutineRoute() {
         <View style={{ paddingTop: 12, paddingHorizontal: 32 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <ChapterLabel>{headerDate}</ChapterLabel>
-            <ChapterLabel>Issue one · day {issueDay}</ChapterLabel>
+            <ChapterLabel>Issue {cardinal(scanCount > 0 ? scanCount : 1)} · day {issueDay}</ChapterLabel>
           </View>
           <Display style={{ marginTop: 16, fontSize: 30, lineHeight: 33 }}>
             <Text style={{ fontFamily: 'CormorantGaramond_500Medium_Italic', fontStyle: 'italic', color: Palette.ink }}>
@@ -268,8 +284,18 @@ export default function RoutineRoute() {
           </Display>
         </View>
 
+        {/* Rescan banner — full-width hairline band, returns null below day 25
+            so no wrapper padding is needed. Component handles its own insets. */}
+        <View style={{ marginTop: 24 }}>
+          <RescanBanner
+            daysSinceLastScan={daysSinceScan}
+            scanCount={scanCount}
+            onPress={() => router.push('/(scan)/rescan-feedback' as never)}
+          />
+        </View>
+
         {/* Week strip */}
-        <View style={{ paddingTop: 30, paddingHorizontal: 32 }}>
+        <View style={{ paddingTop: 24, paddingHorizontal: 32 }}>
           <WeekStrip activeIdx={activeIdx} completedIdxs={completedIdxs} />
         </View>
 

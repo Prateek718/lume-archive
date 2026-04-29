@@ -125,6 +125,7 @@ export default function GeminiTest() {
         VISION_INPUT.ageRange,
         null,
         null,
+        1,
       );
       setVisionOut(JSON.stringify(result, null, 2));
       setVisionStatus('done');

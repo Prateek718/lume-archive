@@ -20,6 +20,7 @@ import {
 import { Palette } from '../constants/theme';
 import { PRODUCTS, Product } from '../constants/productConstants';
 import { supabase } from '../lib/supabase';
+import { errorToMessage } from '../lib/errors';
 import { hasValidHairProfile } from '../lib/hair';
 import type {
   HairProfile,
@@ -240,13 +241,13 @@ export default function HairDetailRoute() {
         const [{ data: userData, error: uErr }, { data: scanData, error: sErr }] =
           await Promise.all([userPromise, scanPromise]);
         if (cancelled) return;
-        if (uErr) throw uErr;
-        if (sErr) throw sErr;
+        if (uErr) throw new Error(uErr.message ?? 'Database error');
+        if (sErr) throw new Error(sErr.message ?? 'Database error');
 
         setUser(userData as UserContext);
         setScan((scanData as ScanRow | null) ?? null);
       } catch (err) {
-        if (!cancelled) setErr(err instanceof Error ? err.message : String(err));
+        if (!cancelled) setErr(errorToMessage(err));
       } finally {
         if (!cancelled) setLoading(false);
       }

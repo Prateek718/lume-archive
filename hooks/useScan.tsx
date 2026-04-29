@@ -31,7 +31,7 @@ import {
   type SectionState,
   type SectionCallbacks,
 } from '../services/scanService';
-import type { BeardGoal, PartialScan, Scan, UserTrait } from '../types';
+import type { BeardGoal, PartialScan, RescanFeedback, Scan, UserTrait } from '../types';
 
 type SectionStates = Record<SectionKey, SectionState>;
 
@@ -70,6 +70,7 @@ interface ScanContextValue {
   ) => Promise<void>;
   retryPhase2:      () => Promise<void>;
   regenerateSection: (section: SectionKey) => Promise<void>;
+  setRescanFeedback: (feedback: RescanFeedback) => void;
   reset:            () => void;
 }
 
@@ -87,6 +88,20 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
   const userIdRef = useRef<string | null>(null);
   const genderRef = useRef<string>('man');
   const phase2RetryCountRef = useRef(0);
+  // Set by /(scan)/rescan-feedback before start() runs. Read once when phase 2
+  // fires getUserFeedback, then cleared so the next first-scan doesn't inherit
+  // stale feedback.
+  const pendingRescanFeedbackRef = useRef<RescanFeedback | null>(null);
+
+  const setRescanFeedback = useCallback((feedback: RescanFeedback) => {
+    pendingRescanFeedbackRef.current = feedback;
+  }, []);
+
+  const consumeRescanFeedback = useCallback((): RescanFeedback | undefined => {
+    const fb = pendingRescanFeedbackRef.current;
+    pendingRescanFeedbackRef.current = null;
+    return fb ?? undefined;
+  }, []);
 
   const setSectionState = useCallback((section: SectionKey, value: SectionState) => {
     setSectionStates(prev => ({ ...prev, [section]: value }));
@@ -108,6 +123,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
     phase1Ref.current = null;
     userIdRef.current = null;
     phase2RetryCountRef.current = 0;
+    pendingRescanFeedbackRef.current = null;
   }, []);
 
   const fail = useCallback((message: string) => {
@@ -204,7 +220,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
       phase1.scanNumber,
       undefined,
       phase1.partialScan,
-      undefined,
+      consumeRescanFeedback,
       sectionCallbacksRef.current,
     )
       .then(scan => {
@@ -216,7 +232,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
         console.error('[useScan] phase2 error:', msg);
         failPhase2(phase1.scanId, msg);
       });
-  }, [fail, failPhase2]);
+  }, [consumeRescanFeedback, fail, failPhase2]);
 
   const retryPhase2 = useCallback(async () => {
     const userId = userIdRef.current;
@@ -447,7 +463,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
         gender:         genderRef.current,
       },
       undefined,
-      undefined,
+      consumeRescanFeedback,
       sectionCallbacksRef.current,
     )
       .then(scan => {
@@ -459,7 +475,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
         console.error('[useScan] confirmTraits error:', msg);
         failPhase2(phase1.scanId, msg);
       });
-  }, [fail, failPhase2]);
+  }, [consumeRescanFeedback, fail, failPhase2]);
 
   const regenerateSection = useCallback(async (section: SectionKey) => {
     const scanId = (result?.id as string | undefined) ?? failedScanId ?? null;
@@ -499,6 +515,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
     confirmTraits,
     retryPhase2,
     regenerateSection,
+    setRescanFeedback,
     reset,
   };
 
