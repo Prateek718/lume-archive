@@ -53,7 +53,11 @@ export default function Scan() {
       router.replace('/(scan)/trait-confirm' as never);
       return;
     }
-    if (scan.state === 'success') {
+    // Phase 6.2.3: navigate to observation as soon as 'phase2' fires (Phase 1
+    // is done, observation persisted, Phase 2 sections running in background).
+    // 'success' uses the same target — by then sectionStates are already on
+    // recommendations.tsx so the user can move forward without another nav.
+    if (scan.state === 'phase2' || scan.state === 'success') {
       if (scan.result?.id) {
         router.replace({
           pathname: '/(scan)/observation',
@@ -64,7 +68,7 @@ export default function Scan() {
       }
       return;
     }
-    if (scan.state === 'phase1' || scan.state === 'phase2') {
+    if (scan.state === 'phase1') {
       setPhase('analyzing');
     }
   }, [scan.state, scan.result, router]);

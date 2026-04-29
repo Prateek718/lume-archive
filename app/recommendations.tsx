@@ -18,6 +18,8 @@ import { Palette } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 import { hasValidHairProfile } from '../lib/hair';
 import { getSkinConcernsDetailed } from '../lib/scanData';
+import { useScan } from '../hooks/useScan';
+import type { SectionKey, SectionState } from '../services/scanService';
 import type {
   HairProfile,
   HairRecommendations,
@@ -214,6 +216,7 @@ export default function RecommendationsRoute() {
   const router = useRouter();
   const params = useLocalSearchParams<{ scanId?: string }>();
   const paramScanId = typeof params.scanId === 'string' ? params.scanId : null;
+  const { sectionStates, regenerateSection } = useScan();
 
   const [scan, setScan]             = useState<ScanRow | null>(null);
   const [user, setUser]             = useState<UserContext | null>(null);
@@ -285,6 +288,22 @@ export default function RecommendationsRoute() {
     return () => { cancelled = true; };
   }, [paramScanId]);
 
+  // When a section completes (or retries succeed), refetch the scan row so
+  // newly-merged recommendations land in this view without a manual refresh.
+  useEffect(() => {
+    if (!scan?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('scans')
+        .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone')
+        .eq('id', scan.id)
+        .single();
+      if (!cancelled && data) setScan(data as ScanRow);
+    })();
+    return () => { cancelled = true; };
+  }, [sectionStates.skin, sectionStates.beard, sectionStates.makeup, scan?.id]);
+
   const areas = useMemo<AreaCard[]>(() => {
     if (!user) return [];
     const categories = user.care_categories ?? ['skin'];
@@ -352,16 +371,28 @@ export default function RecommendationsRoute() {
             </View>
 
             <View style={{ paddingTop: 4, paddingHorizontal: 32 }}>
-              {areas.map((a, i) => (
-                <AreaRow
-                  key={a.cat}
-                  num={padNum(i + 1)}
-                  area={a}
-                  first={i === 0}
-                  last={i === areas.length - 1}
-                  onTap={() => handleAreaTap(a.cat)}
-                />
-              ))}
+              {areas.map((a, i) => {
+                const sectionState: SectionState | null =
+                  a.cat === 'skin' || a.cat === 'beard' || a.cat === 'makeup'
+                    ? sectionStates[a.cat as SectionKey]
+                    : null;
+                return (
+                  <AreaRow
+                    key={a.cat}
+                    num={padNum(i + 1)}
+                    area={a}
+                    first={i === 0}
+                    last={i === areas.length - 1}
+                    sectionState={sectionState}
+                    onTap={() => handleAreaTap(a.cat)}
+                    onRetry={
+                      sectionState === 'failed'
+                        ? () => { void regenerateSection(a.cat as SectionKey); }
+                        : undefined
+                    }
+                  />
+                );
+              })}
             </View>
 
             <View style={{ paddingTop: 32, paddingHorizontal: 32, paddingBottom: 40 }}>
@@ -409,18 +440,35 @@ function padNum(n: number): string {
 }
 
 interface AreaRowProps {
-  num:   string;
-  area:  AreaCard;
-  first: boolean;
-  last:  boolean;
-  onTap: () => void;
+  num:           string;
+  area:          AreaCard;
+  first:         boolean;
+  last:          boolean;
+  sectionState:  SectionState | null;
+  onTap:         () => void;
+  onRetry?:      () => void;
 }
 
-function AreaRow({ num, area, first, last, onTap }: AreaRowProps) {
+function AreaRow({ num, area, first, last, sectionState, onTap, onRetry }: AreaRowProps) {
+  const isLoading = sectionState === 'loading';
+  const isFailed  = sectionState === 'failed';
+  const trailing  = isLoading
+    ? null
+    : isFailed
+      ? 'retry →'
+      : 'read →';
+
+  const handlePress = () => {
+    if (isLoading) return;
+    if (isFailed && onRetry) { onRetry(); return; }
+    onTap();
+  };
+
   return (
     <TouchableOpacity
-      onPress={onTap}
-      activeOpacity={0.85}
+      onPress={handlePress}
+      activeOpacity={isLoading ? 1 : 0.85}
+      disabled={isLoading}
       style={{
         paddingVertical:   22,
         borderTopWidth:    first ? 1 : 1,
@@ -430,6 +478,7 @@ function AreaRow({ num, area, first, last, onTap }: AreaRowProps) {
         flexDirection:     'row',
         alignItems:        'flex-start',
         gap:               18,
+        opacity:           isLoading ? 0.55 : 1,
       }}
     >
       <Text
@@ -463,61 +512,69 @@ function AreaRow({ num, area, first, last, onTap }: AreaRowProps) {
             color:         Palette.ink3,
           }}
         >
-          {area.focus}
+          {isLoading ? 'Drafting your plan…' : isFailed ? 'Tap to try again.' : area.focus}
         </Text>
-        <Text
-          style={{
-            marginTop:  10,
-            fontFamily: 'CormorantGaramond_400Regular_Italic',
-            fontStyle:  'italic',
-            fontSize:   13.5,
-            lineHeight: 20,
-            color:      Palette.ink2,
-          }}
-        >
-          {area.note}
-        </Text>
-        {area.top && (
-          <View
-            style={{
-              marginTop:     12,
-              flexDirection: 'row',
-              alignItems:    'center',
-              gap:           6,
-            }}
-          >
-            <View
-              style={{
-                width:           4,
-                height:          4,
-                borderRadius:    99,
-                backgroundColor: Palette.accent,
-              }}
-            />
+        {!isLoading && !isFailed && (
+          <>
             <Text
               style={{
-                fontFamily: 'Inter_400Regular',
-                fontSize:   11,
-                color:      Palette.ink3,
+                marginTop:  10,
+                fontFamily: 'CormorantGaramond_400Regular_Italic',
+                fontStyle:  'italic',
+                fontSize:   13.5,
+                lineHeight: 20,
+                color:      Palette.ink2,
               }}
             >
-              Priority ·{' '}
-              <Text style={{ color: Palette.ink2 }}>{area.top}</Text>
+              {area.note}
             </Text>
-          </View>
+            {area.top && (
+              <View
+                style={{
+                  marginTop:     12,
+                  flexDirection: 'row',
+                  alignItems:    'center',
+                  gap:           6,
+                }}
+              >
+                <View
+                  style={{
+                    width:           4,
+                    height:          4,
+                    borderRadius:    99,
+                    backgroundColor: Palette.accent,
+                  }}
+                />
+                <Text
+                  style={{
+                    fontFamily: 'Inter_400Regular',
+                    fontSize:   11,
+                    color:      Palette.ink3,
+                  }}
+                >
+                  Priority ·{' '}
+                  <Text style={{ color: Palette.ink2 }}>{area.top}</Text>
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </View>
-      <Text
-        style={{
-          paddingTop: 10,
-          fontFamily: 'CormorantGaramond_400Regular_Italic',
-          fontStyle:  'italic',
-          fontSize:   14,
-          color:      Palette.ink2,
-        }}
-      >
-        read →
-      </Text>
+      {isLoading ? (
+        <ActivityIndicator size="small" color={Palette.accent} style={{ paddingTop: 12 }} />
+      ) : (
+        <Text
+          style={{
+            paddingTop: 10,
+            fontFamily: 'CormorantGaramond_400Regular_Italic',
+            fontStyle:  'italic',
+            fontSize:   14,
+            color:      isFailed ? Palette.accent : Palette.ink2,
+          }}
+        >
+          {trailing}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }

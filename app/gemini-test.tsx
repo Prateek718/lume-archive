@@ -23,7 +23,7 @@ import {
 import { Palette, Space } from '../constants/theme';
 import {
   analyseWithGemini,
-  getRecommendationsFromGemini,
+  getSkinRecommendations,
   getHairRecommendationsFromGemini,
   type GeminiAnalysis,
 } from '../lib/gemini';
@@ -138,14 +138,10 @@ export default function GeminiTest() {
     setSkinStatus('loading');
     setSkinOut('');
     try {
-      const result = await getRecommendationsFromGemini(
-        SKIN_RECS_INPUT.gender,
+      const result = await getSkinRecommendations(
         SKIN_RECS_INPUT.analysis,
         SKIN_RECS_INPUT.matchedProducts,
-        SKIN_RECS_INPUT.careCategories,
         SKIN_RECS_INPUT.ageRange,
-        SKIN_RECS_INPUT.beardGoal,
-        1,
         { scanId: null },
       );
       setSkinOut(JSON.stringify(result, null, 2));
@@ -207,7 +203,7 @@ export default function GeminiTest() {
           />
 
           <Section
-            label="Skin recs · getRecommendationsFromGemini"
+            label="Skin recs · getSkinRecommendations"
             description="Combination skin + moderate dehydration + mild hyperpigmentation, Fitzpatrick 4, warm undertone, woman, skin+hair+makeup selected."
             buttonLabel="Run skin recs test"
             onPress={runSkinRecs}

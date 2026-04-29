@@ -308,15 +308,19 @@ const BEARD_CONDITION_ACTIVES = new Set<string>(['argan_oil', 'jojoba_oil', 'san
 const BEARD_CATEGORIES_FOR_BOOST = new Set<string>(['beard_oil', 'beard_balm', 'beard_wash']);
 
 export function getScoredProducts(params: {
-  category:        string;
-  target_concern?: string;
-  userProfile:     UserProfileForScoring;
-  beard_goal?:     BeardGoal;
+  category:         string;
+  target_concern?:  string;
+  userProfile:      UserProfileForScoring;
+  beard_goal?:      BeardGoal;
+  limit?:           number;
+  excludeProductIds?: string[];
 }): ScoredMatchedProduct[] {
   const canonical        = normalizeCategory(params.category);
   const { userProfile }  = params;
   const targetConcern    = params.target_concern;
   const beardGoal        = params.beard_goal;
+  const limit            = params.limit ?? 3;
+  const excludeIds       = new Set(params.excludeProductIds ?? []);
   const brandPrefs       = userProfile.brand_preferences ?? [];
   const inferredBudget   = inferBudgetFromBrandList(brandPrefs);
   const primaryConcerns  = userProfile.primary_concerns ?? [];
@@ -328,6 +332,7 @@ export function getScoredProducts(params: {
 
   const scored = PRODUCTS
     .filter(p => p.category === canonical)
+    .filter(p => !excludeIds.has(p.id))
     .map(product => {
       let score = 50;  // category gate passed
 
@@ -381,7 +386,7 @@ export function getScoredProducts(params: {
       return { product, score };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+    .slice(0, limit);
 
   return scored.map(({ product, score }) => {
     const matched = toMatchedProduct(product);

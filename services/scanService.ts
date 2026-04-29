@@ -142,15 +142,40 @@ import { scheduleRescanNudge, cancelRescanNudge } from './notificationService';
 import { scheduleRoutineForScan, supersedePreviousScanRows } from './habitService';
 import { computeAndStoreScanDelta } from './deltaService';
 import { checkMilestonesForScan } from '../lib/milestones';
-import { analyseWithGemini, fitzpatrickToDepthTier } from '../lib/gemini';
 import {
-  getRecommendationsFromGemini,
+  analyseWithGemini,
+  fitzpatrickToDepthTier,
+  getSkinRecommendations,
+  getBeardRecommendations,
+  getMakeupRecommendations,
   getHairRecommendationsFromGemini,
 } from '../lib/gemini';
 import type { GeminiAnalysis } from '../lib/gemini';
 import type { RescanFeedback } from '../types';
-import { getProductsForProfile, inferBudgetFromBrands } from '../constants/productConstants';
-import type { Scan, PartialScan, HairProfile, HairRecommendations, MatchedProduct, PreferredBrands, UserTrait, UserTraits, BudgetTier, BeardGoal, MakeupRecommendation, Recommendations } from '../types';
+import {
+  getProductsForProfile,
+  inferBudgetFromBrands,
+  getScoredProducts,
+  deriveClimateFromCity,
+} from '../constants/productConstants';
+import type {
+  Scan,
+  PartialScan,
+  HairProfile,
+  HairRecommendations,
+  MatchedProduct,
+  PreferredBrands,
+  ProductRecommendation,
+  UserTrait,
+  UserTraits,
+  BudgetTier,
+  BeardGoal,
+  SkinRecommendation,
+  BeardRecommendation,
+  MakeupRecommendation,
+  Recommendations,
+  RoutineStep,
+} from '../types';
 import { isBaldProfile } from '../types';
 import {
   resolveTraits,
@@ -519,10 +544,85 @@ export async function runScanPhase1(
   };
 }
 
-// ── Phase 2 — recommendations + save (~32s) ───────────────────────────────────
-// Updates the scan row created in phase 1 with analysis + recommendations.
-// Reads users.beard_goal once at the start (no polling — the scan flow
-// captures the goal before kicking off phase 2).
+// ── Section state types — exported for the useScan hook ─────────────────────
+export type SectionKey   = 'skin' | 'beard' | 'makeup';
+export type SectionState = 'loading' | 'ready' | 'failed' | 'not_applicable';
+
+export interface SectionCallbacks {
+  onSectionStart?:    (section: SectionKey) => void;
+  onSectionComplete?: (section: SectionKey) => void;
+  onSectionFailed?:   (section: SectionKey, error: Error) => void;
+}
+
+// Flatten a productMap (Record<canonical, MatchedProduct[]>) into the
+// ProductRecommendation array stored under recommendations.products. The
+// scoring engine has already ranked these, so the top entry per category
+// becomes the prescribed product.
+function buildProductRecommendations(
+  productMap: Record<string, MatchedProduct[]>,
+): ProductRecommendation[] {
+  const out: ProductRecommendation[] = [];
+  for (const [, products] of Object.entries(productMap)) {
+    const top = products[0];
+    if (!top) continue;
+    out.push({
+      category:    top.category,
+      name:        top.name,
+      brand:       top.brand,
+      attributes:  top.attributes,
+      reason:      top.why_this_one ?? top.why_good ?? '',
+      // Score isn't exposed on the MatchedProduct type but the runtime object
+      // carries it from the scoring engine. Default to 80 when missing.
+      match_score:
+        ((top as unknown as { score?: number }).score ?? 80) | 0,
+    });
+  }
+  return out;
+}
+
+// Read-modify-write helper for the scan.recommendations JSONB column.
+// Each per-section call merges its slice in without clobbering siblings.
+// Race risk is bounded — only one orchestrator writes per scan, but the
+// three section calls finish out of order, so each one needs the latest
+// recommendations object before merging.
+async function writeRecommendationSection(
+  scanId:  string,
+  section: 'skin' | 'beard' | 'makeup',
+  payload: SkinRecommendation | BeardRecommendation | MakeupRecommendation,
+): Promise<void> {
+  const { data: row, error: readErr } = await supabase
+    .from('scans')
+    .select('recommendations')
+    .eq('id', scanId)
+    .single();
+  if (readErr) {
+    console.warn(`[scanService] writeRecommendationSection read failed for ${section}:`, readErr.message);
+  }
+  const existing = (row?.recommendations as Recommendations | null) ?? null;
+  const next: Recommendations = {
+    observation: existing?.observation as Recommendations['observation'],
+    skin:        existing?.skin    ?? ({ advice: '', steps: [] } as SkinRecommendation),
+    beard:       existing?.beard   ?? null,
+    makeup:      existing?.makeup  ?? null,
+    products:    existing?.products ?? [],
+    [section]:   payload,
+  } as Recommendations;
+
+  const { error: writeErr } = await supabase
+    .from('scans')
+    .update({ recommendations: next })
+    .eq('id', scanId);
+  if (writeErr) {
+    console.warn(`[scanService] writeRecommendationSection write failed for ${section}:`, writeErr.message);
+  }
+}
+
+// ── Phase 2 — recommendations + save ──────────────────────────────────────
+// Phase 6.2: split into per-section parallel calls (skin/beard/makeup).
+// Each section writes itself into scan.recommendations as it completes via
+// writeRecommendationSection so the UI can render whichever finished first.
+// observation is already attached to the analysis (vision call) and gets
+// written in the bulk pre-write below.
 export async function runScanPhase2(
   scanId:          string,
   analysis:        GeminiAnalysis,
@@ -540,7 +640,9 @@ export async function runScanPhase2(
   onProgress?:     ProgressCallback,
   partialScan?:    PartialScan,
   getUserFeedback?: () => RescanFeedback | undefined,
+  callbacks?:      SectionCallbacks,
 ): Promise<Scan> {
+  void scanNumber; // captured by analysis.observation; no longer threaded into recs
   // Guard: recommendations must be based on confirmed traits. If the caller
   // hands us a scan that still has pending decisions, that's a wiring bug —
   // the UI should have routed through confirm-traits first.
@@ -604,8 +706,7 @@ export async function runScanPhase2(
 
   // Makeup recs live at the user level — only regenerate when undertone,
   // depth_tier, or fitzpatrick_scale shifts. Most rescans reuse the stored
-  // recs, which keeps Gemini output small (avoids JSON truncation) and
-  // skips the expensive makeup section entirely.
+  // recs, which keeps Gemini output small and skips the makeup call.
   let needsMakeup = false;
   if (careCategories.includes('makeup') && gender === 'woman') {
     const { meta } = await getStoredMakeupRecs(userId);
@@ -616,60 +717,33 @@ export async function runScanPhase2(
     });
   }
 
-  onProgress?.('Generating recommendations…');
-  console.log('[scanService] Calling getRecommendationsFromGemini (makeup:', needsMakeup, ', hair-reused:', !!existingHairRecs, ')');
-  let recommendations: Recommendations;
-  try {
-    recommendations = await getRecommendationsFromGemini(
-      gender,
-      analysis,
-      matchedProducts,
-      userProfile.careCategories,
-      userProfile.ageRange,
-      beardGoal,
-      scanNumber,
-      { scanId, includeMakeup: needsMakeup },
-    );
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    // Surface the truncated tail of the raw response so future schema growth
-    // is easier to diagnose. The error message itself carries the last 100
-    // chars from the truncation guard in lib/gemini.ts; log a wider window
-    // here to capture surrounding structure.
-    console.error('[scanService] getRecommendationsFromGemini failed:', msg);
-    if (msg.length > 500) {
-      console.error('[scanService] error tail (last 500):', msg.slice(-500));
-    }
-    throw err;
-  }
-  console.log('[scanService] Gemini recommendations received');
+  // Beard applicability: detected beard density on a male/other user, with
+  // beard in the user's care_categories.
+  const beardApplicable =
+    careCategories.includes('beard') &&
+    gender !== 'woman' &&
+    !!analysis.beard_density &&
+    analysis.beard_density !== 'none';
 
-  // Persist newly-generated makeup recs to the user level so subsequent
-  // scans can reuse them. Existing scan.recommendations.makeup remains
-  // populated as a backward-compat path for legacy rendering.
-  if (needsMakeup && recommendations.makeup) {
-    await saveMakeupRecs(
-      userId,
-      recommendations.makeup as MakeupRecommendation,
-      analysis.skin_undertone ?? 'neutral',
-      fitzpatrickToDepthTier(analysis.fitzpatrick_scale) ?? 'medium',
-      analysis.fitzpatrick_scale ?? 4,
-    );
-  }
+  // ── Pre-write: stamp the scan row with everything we know now ──────────
+  // observation is already on `analysis`. Per-section recs land via
+  // writeRecommendationSection as each call completes.
+  const observation = analysis.observation;
+  const productRecs = buildProductRecommendations(productMap);
+  const initialRecommendations: Recommendations = {
+    observation: observation as Recommendations['observation'],
+    skin:        { advice: '', steps: [] },
+    beard:       null,
+    makeup:      null,
+    products:    productRecs,
+  };
 
-  onProgress?.('Calculating your score…');
-  // Phase 6.0: score_overall = score_skin. We only score skin condition;
-  // beard and makeup are no longer scored. Kept as a column write for
-  // backward compat with any existing UI reads.
   const scoreOverall = analysis.score_skin ?? 0;
-  console.log('[scanService] Score:', scoreOverall);
-
-  onProgress?.('Saving your results…');
   const now      = new Date();
   const scanHour = now.getHours();
   const season   = getSeason(now, userProfile.city ?? '');
 
-  const scanUpdate = {
+  const preWrite = {
     image_url:               null,
     face_shape:              analysis.face_shape,
     skin_type:               analysis.skin_type,
@@ -679,32 +753,123 @@ export async function runScanPhase2(
     beard_condition:         analysis.beard_condition,
     brow_condition:          analysis.brow_condition,
     undereye:                analysis.undereye,
-    score_skin:    analysis.score_skin,
-    score_beard:   null,                                  // Phase 6.0: no longer scored
-    score_makeup:  null,                                  // Phase 6.0: no longer scored
-    score_overall: scoreOverall,
+    score_skin:              analysis.score_skin,
+    score_beard:             null,
+    score_makeup:            null,
+    score_overall:           scoreOverall,
     fitzpatrick_scale:       analysis.fitzpatrick_scale ?? null,
     skin_tone:               analysis.skin_tone ?? null,
     skin_undertone:          analysis.skin_undertone ?? null,
-    recommendations:         recommendations ?? null,
+    recommendations:         initialRecommendations,
     scan_hour:               scanHour,
     season,
     scan_type:               scanType,
   };
 
+  onProgress?.('Saving your results…');
+  const { error: preWriteErr } = await supabase
+    .from('scans')
+    .update(preWrite)
+    .eq('id', scanId);
+  if (preWriteErr) {
+    console.error('[scanService] pre-write failed:', preWriteErr.message);
+    throw new Error(`Failed to save scan: ${preWriteErr.message}`);
+  }
+
+  // ── Parallel section calls ─────────────────────────────────────────────
+  onProgress?.('Generating recommendations…');
+
+  const sectionPromises: Array<Promise<void>> = [];
+
+  // Skin — always runs.
+  callbacks?.onSectionStart?.('skin');
+  const skinAgeRange = userProfile.ageRange ?? null;
+  const skinMatched: MatchedProduct[] = matchedProducts.filter(p =>
+    p && p.category && [
+      'face_cleanser','moisturizer','spf_sunscreen',
+      'serum_niacinamide','serum_hyaluronic_acid','serum_vitamin_c',
+      'serum_retinol','serum_salicylic_acid','serum_azelaic_acid',
+      'serum_brightening','serum_soothing','toner','eye_cream',
+      'face_mask','face_oil','face_gel',
+    ].includes(p.category)
+  );
+  sectionPromises.push(
+    getSkinRecommendations(analysis, skinMatched, skinAgeRange, { scanId })
+      .then(async (skin) => {
+        await writeRecommendationSection(scanId, 'skin', skin);
+        callbacks?.onSectionComplete?.('skin');
+      })
+      .catch((err: unknown) => {
+        const e = err instanceof Error ? err : new Error(String(err));
+        console.error('[scanService] skin section failed:', e.message);
+        callbacks?.onSectionFailed?.('skin', e);
+      }),
+  );
+
+  // Beard — only when applicable.
+  if (beardApplicable) {
+    callbacks?.onSectionStart?.('beard');
+    sectionPromises.push(
+      getBeardRecommendations(analysis, beardGoal, { scanId })
+        .then(async (beard) => {
+          await writeRecommendationSection(scanId, 'beard', beard);
+          callbacks?.onSectionComplete?.('beard');
+        })
+        .catch((err: unknown) => {
+          const e = err instanceof Error ? err : new Error(String(err));
+          console.error('[scanService] beard section failed:', e.message);
+          callbacks?.onSectionFailed?.('beard', e);
+        }),
+    );
+  }
+
+  // Makeup — only when applicable AND regen is required.
+  if (needsMakeup) {
+    callbacks?.onSectionStart?.('makeup');
+    sectionPromises.push(
+      getMakeupRecommendations(analysis, { scanId })
+        .then(async (makeup) => {
+          await writeRecommendationSection(scanId, 'makeup', makeup);
+          if (makeup) {
+            try {
+              await saveMakeupRecs(
+                userId,
+                makeup,
+                analysis.skin_undertone ?? 'neutral',
+                fitzpatrickToDepthTier(analysis.fitzpatrick_scale) ?? 'medium',
+                analysis.fitzpatrick_scale ?? 4,
+              );
+            } catch (saveErr) {
+              console.warn('[scanService] saveMakeupRecs failed (non-fatal):',
+                saveErr instanceof Error ? saveErr.message : String(saveErr));
+            }
+          }
+          callbacks?.onSectionComplete?.('makeup');
+        })
+        .catch((err: unknown) => {
+          const e = err instanceof Error ? err : new Error(String(err));
+          console.error('[scanService] makeup section failed:', e.message);
+          callbacks?.onSectionFailed?.('makeup', e);
+        }),
+    );
+  }
+
+  await Promise.allSettled(sectionPromises);
+
+  // Read back the now-merged scan row so downstream work sees the union of
+  // sections that succeeded. Sections that failed remain null on the scan;
+  // the UI exposes a per-section retry that calls regenerateXxxRecs.
   const { data, error } = await supabase
     .from('scans')
-    .update(scanUpdate)
+    .select('*')
     .eq('id', scanId)
-    .select()
     .single();
 
   if (error || !data) {
-    console.error('[scanService] Supabase update error:', error?.message);
-    console.error('[scanService] Supabase error details:', JSON.stringify(error));
-    throw new Error(`Failed to save scan: ${error?.message ?? 'unknown'}`);
+    console.error('[scanService] post-section read failed:', error?.message);
+    throw new Error(`Failed to load scan after section writes: ${error?.message ?? 'unknown'}`);
   }
-  console.log('[scanService] Saved successfully');
+  console.log('[scanService] Phase 2 sections settled');
 
   // Note: hair_recommendations is no longer written here. Scans reuse the
   // recs already stored on users (see hair-setup's analyzing screen for the
@@ -841,6 +1006,7 @@ export async function finalizeTraitsAndRunPhase2(
   },
   onProgress?:   ProgressCallback,
   getUserFeedback?: () => RescanFeedback | undefined,
+  callbacks?:    SectionCallbacks,
 ): Promise<Scan> {
   const traitsToSave = buildTraitsToSave(
     partialScan,
@@ -876,11 +1042,48 @@ export async function finalizeTraitsAndRunPhase2(
     onProgress,
     partialScan,
     getUserFeedback,
+    callbacks,
   );
 }
 
-// Regenerate recommendations for the user's latest scan using updated preferences.
-// No camera or vision call — reconstructs GeminiAnalysis from the stored scan fields.
+// Reconstruct a GeminiAnalysis from a stored scan row. Used by refresh +
+// per-section regenerate paths so they don't have to re-run the vision call.
+// observation lives on the scan's recommendations JSONB (not on top-level
+// columns) so we re-attach it here when present.
+function analysisFromScan(scan: Scan): GeminiAnalysis {
+  const recs = scan.recommendations as Recommendations | null;
+  return {
+    face_shape:             scan.face_shape,
+    skin_type:              scan.skin_type,
+    skin_concerns:          scan.skin_concerns,
+    skin_concerns_detailed: scan.skin_concerns_detailed ?? [],
+    beard_density:          scan.beard_density,
+    beard_condition:        scan.beard_condition,
+    brow_condition:         scan.brow_condition,
+    undereye:               scan.undereye,
+    score_skin:             scan.score_skin,
+    fitzpatrick_scale:      scan.fitzpatrick_scale ?? null,
+    skin_tone:              scan.skin_tone ?? null,
+    skin_undertone:         scan.skin_undertone ?? null,
+    observation:            recs?.observation ?? undefined,
+  } as GeminiAnalysis;
+}
+
+// Skin categories used to filter matchedProducts before passing into the
+// skin recs call. Beard/makeup don't need pre-filtering — the per-section
+// callers don't take matchedProducts.
+const SKIN_CATEGORY_WHITELIST = [
+  'face_cleanser', 'moisturizer', 'spf_sunscreen',
+  'serum_niacinamide', 'serum_hyaluronic_acid', 'serum_vitamin_c',
+  'serum_retinol', 'serum_salicylic_acid', 'serum_azelaic_acid',
+  'serum_brightening', 'serum_soothing', 'toner', 'eye_cream',
+  'face_mask', 'face_oil', 'face_gel',
+];
+
+// Regenerate recommendations for the user's latest scan using updated
+// preferences. No camera or vision call — reconstructs GeminiAnalysis from
+// the stored scan fields and runs the per-section calls in parallel,
+// merging each into recommendations as it lands.
 export async function refreshRecommendations(
   userId:      string,
   onProgress?: (step: string) => void,
@@ -916,20 +1119,9 @@ export async function refreshRecommendations(
     console.log('[refreshRecommendations] scans found:', scans?.length ?? 0);
     if (!scans || scans.length === 0) throw new Error('No scan found to refresh');
     const latestScan = scans[0] as Scan;
+    const scanId = latestScan.id as string;
 
-    const analysis: GeminiAnalysis = {
-      face_shape:        latestScan.face_shape,
-      skin_type:         latestScan.skin_type,
-      skin_concerns:     latestScan.skin_concerns,
-      beard_density:     latestScan.beard_density,
-      beard_condition:   latestScan.beard_condition,
-      brow_condition:    latestScan.brow_condition,
-      undereye:          latestScan.undereye,
-      score_skin:        latestScan.score_skin,
-      fitzpatrick_scale: latestScan.fitzpatrick_scale ?? null,
-      skin_tone:         latestScan.skin_tone ?? null,
-      skin_undertone:    latestScan.skin_undertone ?? null,
-    };
+    const analysis = analysisFromScan(latestScan);
 
     console.log('[refreshRecommendations] step: matching products');
     onProgress?.('Matching products…');
@@ -940,10 +1132,7 @@ export async function refreshRecommendations(
       categories:      [
         ...buildSkinCategories(analysis),
         ...buildBeardCategories(gender),
-        ...buildMakeupCategories(
-          productGender === 'women' ? 'woman' : 'man',
-          analysis,
-        ),
+        ...buildMakeupCategories(gender, analysis),
       ],
       preferredBrands: preferredBrandsRaw,
       gender:          productGender,
@@ -951,51 +1140,112 @@ export async function refreshRecommendations(
       skinType:        analysis.skin_type ?? undefined,
       concerns:        analysis.skin_concerns ?? undefined,
       city:            (userRow?.city as string | null) ?? undefined,
+      beardGoal:       beardGoal ?? undefined,
     });
-    // Flatten to one product per category for Gemini description writing
     const matchedProducts: MatchedProduct[] = Object.values(productMap).map(arr => arr[0]);
+
+    // Refresh products array on the scan immediately — preferences may have
+    // shifted the catalog matches even before any Gemini call completes.
+    const productRecs = buildProductRecommendations(productMap);
+    const existingRecs = (latestScan.recommendations as Recommendations | null) ?? null;
+    const refreshedRecs: Recommendations = {
+      observation: existingRecs?.observation as Recommendations['observation'],
+      skin:        existingRecs?.skin   ?? ({ advice: '', steps: [] } as SkinRecommendation),
+      beard:       existingRecs?.beard  ?? null,
+      makeup:      existingRecs?.makeup ?? null,
+      products:    productRecs,
+    };
+    await supabase.from('scans').update({ recommendations: refreshedRecs }).eq('id', scanId);
 
     console.log('[refreshRecommendations] step: generating recs');
     onProgress?.('Generating recommendations…');
-    // Ordinal position of the scan being refreshed = number of user's scans at
-    // or before its created_at. (This is the latest scan, so it equals total.)
-    const { count: totalScanCount } = await supabase
-      .from('scans')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId);
-    const scanNumber = totalScanCount && totalScanCount > 0 ? totalScanCount : 1;
 
-    const recommendations = await getRecommendationsFromGemini(
-      gender,
-      analysis,
-      matchedProducts,
-      careCategories,
-      ageRange,
-      beardGoal,
-      scanNumber,
-      { scanId: latestScan.id as string },
+    const beardApplicable =
+      careCategories.includes('beard') &&
+      gender !== 'woman' &&
+      !!analysis.beard_density &&
+      analysis.beard_density !== 'none';
+
+    let needsMakeup = false;
+    if (careCategories.includes('makeup') && gender === 'woman') {
+      const { meta } = await getStoredMakeupRecs(userId);
+      needsMakeup = shouldRegenerateMakeup(meta, {
+        undertone:   analysis.skin_undertone ?? 'neutral',
+        depth_tier:  fitzpatrickToDepthTier(analysis.fitzpatrick_scale) ?? 'medium',
+        fitzpatrick: analysis.fitzpatrick_scale ?? 4,
+      });
+    }
+
+    const skinMatched = matchedProducts.filter(p =>
+      p && p.category && SKIN_CATEGORY_WHITELIST.includes(p.category),
     );
+
+    const promises: Array<Promise<void>> = [
+      getSkinRecommendations(analysis, skinMatched, ageRange, { scanId })
+        .then((skin) => writeRecommendationSection(scanId, 'skin', skin))
+        .catch((err: unknown) => {
+          console.error('[refreshRecommendations] skin failed:',
+            err instanceof Error ? err.message : String(err));
+        }),
+    ];
+
+    if (beardApplicable) {
+      promises.push(
+        getBeardRecommendations(analysis, beardGoal, { scanId })
+          .then((beard) => writeRecommendationSection(scanId, 'beard', beard))
+          .catch((err: unknown) => {
+            console.error('[refreshRecommendations] beard failed:',
+              err instanceof Error ? err.message : String(err));
+          }),
+      );
+    }
+
+    if (needsMakeup) {
+      promises.push(
+        getMakeupRecommendations(analysis, { scanId })
+          .then(async (makeup) => {
+            await writeRecommendationSection(scanId, 'makeup', makeup);
+            try {
+              await saveMakeupRecs(
+                userId,
+                makeup,
+                analysis.skin_undertone ?? 'neutral',
+                fitzpatrickToDepthTier(analysis.fitzpatrick_scale) ?? 'medium',
+                analysis.fitzpatrick_scale ?? 4,
+              );
+            } catch (saveErr) {
+              console.warn('[refreshRecommendations] saveMakeupRecs failed (non-fatal):',
+                saveErr instanceof Error ? saveErr.message : String(saveErr));
+            }
+          })
+          .catch((err: unknown) => {
+            console.error('[refreshRecommendations] makeup failed:',
+              err instanceof Error ? err.message : String(err));
+          }),
+      );
+    }
+
+    await Promise.allSettled(promises);
 
     console.log('[refreshRecommendations] step: saving');
     onProgress?.('Saving…');
-    await supabase
-      .from('scans')
-      .update({ recommendations })
-      .eq('id', latestScan.id as string);
 
-    const updatedScan = { ...latestScan, recommendations };
+    const { data: refreshedRow } = await supabase
+      .from('scans')
+      .select('*')
+      .eq('id', scanId)
+      .single();
+    const updatedScan = (refreshedRow ?? latestScan) as Scan;
+
     try {
-      await AsyncStorage.setItem(RECOMMENDATIONS_KEY(latestScan.id as string), JSON.stringify(updatedScan));
+      await AsyncStorage.setItem(RECOMMENDATIONS_KEY(scanId), JSON.stringify(updatedScan));
       await AsyncStorage.setItem(LATEST_SCAN_KEY, JSON.stringify(updatedScan));
     } catch {
       // Non-critical — offline cache failure should not surface to user
     }
 
     try {
-      await AsyncStorage.setItem(
-        PRODUCT_MAP_KEY(latestScan.id as string),
-        JSON.stringify(productMap),
-      );
+      await AsyncStorage.setItem(PRODUCT_MAP_KEY(scanId), JSON.stringify(productMap));
     } catch {
       // Non-critical
     }
@@ -1011,12 +1261,108 @@ export async function refreshRecommendations(
       isBald: hairProfileSet && isBaldProfile(hairProfile!),
     });
 
-    return latestScan.id as string;
+    return scanId;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('[refreshRecommendations] CRASH:', msg);
     throw error;
   }
+}
+
+// ── Per-section regenerate (UI retry path) ──────────────────────────────────
+// Each function loads the latest scan, reconstructs the analysis, calls the
+// matching per-section recs function, and merges the result back into the
+// scan's recommendations JSONB. They throw on failure so the UI can flip
+// the section state back to 'failed' and re-offer retry.
+
+async function loadScanForRegen(scanId: string): Promise<{
+  scan:    Scan;
+  userId:  string;
+}> {
+  const { data, error } = await supabase
+    .from('scans')
+    .select('*')
+    .eq('id', scanId)
+    .single();
+  if (error || !data) throw new Error(`Scan ${scanId} not found: ${error?.message ?? 'unknown'}`);
+  const scan = data as Scan;
+  return { scan, userId: scan.user_id as string };
+}
+
+export async function regenerateSkinRecs(scanId: string): Promise<SkinRecommendation> {
+  const { scan, userId } = await loadScanForRegen(scanId);
+  const analysis = analysisFromScan(scan);
+
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('gender, city, preferred_brands_v2, age_range, beard_goal')
+    .eq('id', userId)
+    .single();
+  const gender             = (userRow?.gender as string | null) ?? 'man';
+  const preferredBrandsRaw = (userRow as { preferred_brands_v2?: PreferredBrands } | null)
+    ?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] };
+  const inferredBudget     = inferBudgetFromBrands(preferredBrandsRaw);
+  const ageRange           = (userRow as { age_range?: string } | null)?.age_range ?? null;
+  const beardGoal          = (userRow as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
+  const productGender: 'all' | 'men' | 'women' =
+    gender === 'woman' ? 'women' : gender === 'man' ? 'men' : 'all';
+
+  const productMap = getProductsForProfile({
+    categories:      buildSkinCategories(analysis),
+    preferredBrands: preferredBrandsRaw,
+    gender:          productGender,
+    budget:          inferredBudget,
+    skinType:        analysis.skin_type ?? undefined,
+    concerns:        analysis.skin_concerns ?? undefined,
+    city:            (userRow?.city as string | null) ?? undefined,
+    beardGoal:       beardGoal ?? undefined,
+  });
+  const matchedProducts: MatchedProduct[] = Object.values(productMap)
+    .map(arr => arr[0])
+    .filter(p => p && p.category && SKIN_CATEGORY_WHITELIST.includes(p.category));
+
+  const skin = await getSkinRecommendations(analysis, matchedProducts, ageRange, { scanId });
+  await writeRecommendationSection(scanId, 'skin', skin);
+  return skin;
+}
+
+export async function regenerateBeardRecs(scanId: string): Promise<BeardRecommendation> {
+  const { scan, userId } = await loadScanForRegen(scanId);
+  const analysis = analysisFromScan(scan);
+
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('beard_goal')
+    .eq('id', userId)
+    .single();
+  const beardGoal = (userRow as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
+
+  const beard = await getBeardRecommendations(analysis, beardGoal, { scanId });
+  await writeRecommendationSection(scanId, 'beard', beard);
+  return beard;
+}
+
+export async function regenerateMakeupRecs(scanId: string): Promise<MakeupRecommendation> {
+  const { scan, userId } = await loadScanForRegen(scanId);
+  const analysis = analysisFromScan(scan);
+
+  const makeup = await getMakeupRecommendations(analysis, { scanId });
+  await writeRecommendationSection(scanId, 'makeup', makeup);
+
+  try {
+    await saveMakeupRecs(
+      userId,
+      makeup,
+      analysis.skin_undertone ?? 'neutral',
+      fitzpatrickToDepthTier(analysis.fitzpatrick_scale) ?? 'medium',
+      analysis.fitzpatrick_scale ?? 4,
+    );
+  } catch (saveErr) {
+    console.warn('[regenerateMakeupRecs] saveMakeupRecs failed (non-fatal):',
+      saveErr instanceof Error ? saveErr.message : String(saveErr));
+  }
+
+  return makeup;
 }
 
 
@@ -1150,6 +1496,70 @@ export async function generateAndSaveHairProfile(
   }).eq('id', userId);
 
   return hairRecs;
+}
+
+// ── Alternatives for a routine step ─────────────────────────────────────────
+// Returns a ranked list of alternative MatchedProducts for a given step on
+// a saved scan. Used by the product-detail "see alternatives" affordance.
+// Inputs:
+//   - scanId: identifies the scan we're getting alternatives for
+//   - stepId: RoutineStep.step_id within recommendations.skin/beard.steps[]
+//   - excludeProductIds: product IDs already shown (e.g. the prescribed pick)
+//   - limit: how many alternatives to return (default 5)
+export async function getAlternativesForStep(
+  scanId:            string,
+  stepId:            string,
+  excludeProductIds: string[] = [],
+  limit:             number = 5,
+): Promise<MatchedProduct[]> {
+  const { data: scanRow, error: scanErr } = await supabase
+    .from('scans')
+    .select('*')
+    .eq('id', scanId)
+    .single();
+  if (scanErr || !scanRow) throw new Error(`Scan ${scanId} not found: ${scanErr?.message ?? 'unknown'}`);
+  const scan = scanRow as Scan;
+
+  // Find the step across skin / beard / hair recommendation slices.
+  const recs = scan.recommendations as Recommendations | null;
+  const allSteps: RoutineStep[] = [
+    ...(recs?.skin?.steps ?? []),
+    ...(recs?.beard?.steps ?? []),
+  ];
+  const step = allSteps.find(s => s.step_id === stepId);
+  if (!step || !step.category) {
+    throw new Error(`Step ${stepId} not found on scan ${scanId} or missing category`);
+  }
+
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('city, preferred_brands_v2, beard_goal')
+    .eq('id', scan.user_id as string)
+    .single();
+  const preferredBrandsRaw = (userRow as { preferred_brands_v2?: PreferredBrands } | null)
+    ?.preferred_brands_v2 ?? { skin: [], hair: [], makeup: [] };
+  const beardGoal = (userRow as { beard_goal?: BeardGoal | null } | null)?.beard_goal ?? null;
+  const city      = (userRow as { city?: string | null } | null)?.city ?? null;
+
+  const brandList: string[] = [
+    ...(preferredBrandsRaw.skin   ?? []),
+    ...(preferredBrandsRaw.hair   ?? []),
+    ...(preferredBrandsRaw.makeup ?? []),
+  ];
+
+  return getScoredProducts({
+    category:          step.category,
+    target_concern:    step.target_concern,
+    beard_goal:        beardGoal ?? undefined,
+    limit,
+    excludeProductIds,
+    userProfile: {
+      skin_type:         scan.skin_type ?? undefined,
+      primary_concerns:  scan.skin_concerns ?? undefined,
+      brand_preferences: brandList,
+      climate:           deriveClimateFromCity(city ?? undefined),
+    },
+  });
 }
 
 // Log a product buy-tap event to the product_events table.
