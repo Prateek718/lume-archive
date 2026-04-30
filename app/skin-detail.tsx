@@ -114,6 +114,7 @@ function resolveCatalogueProduct(step: RoutineStepType): Product | null {
 
 interface RenderedStep {
   key:              string;
+  step_id:          string | null;
   when:             string;
   minutes:          string;
   title:            string;
@@ -126,6 +127,7 @@ function renderStep(step: RoutineStepType, slot: 'am' | 'pm', idx: number): Rend
   const product = resolveCatalogueProduct(step);
   return {
     key:     `${step.step_id ?? 'step'}-${slot}-${idx}`,
+    step_id: step.step_id ?? null,
     when:    slot === 'am' ? 'Morning' : 'Night',
     minutes: stepMinutes(step),
     title:   stepTitle(step),
@@ -208,6 +210,7 @@ export default function SkinDetailRoute() {
   const [sheetOpen, setSheetOpen]         = useState(false);
   const [sheetProduct, setSheetProduct]   = useState<ProductDetailSheetProduct | null>(null);
   const [sheetReasoning, setSheetReason]  = useState<string | null>(null);
+  const [sheetStepId, setSheetStepId]     = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -290,10 +293,15 @@ export default function SkinDetailRoute() {
     };
   }, [skin]);
 
-  const openSheet = (sp: ProductDetailSheetProduct | null, reasoning: string | null) => {
+  const openSheet = (
+    sp: ProductDetailSheetProduct | null,
+    reasoning: string | null,
+    stepId: string | null,
+  ) => {
     if (!sp) return;
     setSheetProduct(sp);
     setSheetReason(reasoning);
+    setSheetStepId(stepId);
     setSheetOpen(true);
   };
 
@@ -387,7 +395,7 @@ export default function SkinDetailRoute() {
                           minutes={rs.minutes}
                           title={rs.title}
                           product={rs.cardProduct}
-                          onTap={() => openSheet(rs.sheetProduct, rs.clinical)}
+                          onTap={() => openSheet(rs.sheetProduct, rs.clinical, rs.step_id)}
                           last={i === arr.length - 1}
                         />
                       ))}
@@ -405,7 +413,7 @@ export default function SkinDetailRoute() {
                           minutes={rs.minutes}
                           title={rs.title}
                           product={rs.cardProduct}
-                          onTap={() => openSheet(rs.sheetProduct, rs.clinical)}
+                          onTap={() => openSheet(rs.sheetProduct, rs.clinical, rs.step_id)}
                           last={i === arr.length - 1}
                         />
                       ))}
@@ -420,6 +428,7 @@ export default function SkinDetailRoute() {
               onClose={() => setSheetOpen(false)}
               product={sheetProduct}
               clinical_reasoning={sheetReasoning}
+              stepId={sheetStepId}
             />
           </>
         )}

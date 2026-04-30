@@ -76,6 +76,7 @@ function resolveProduct(step: RoutineStepType): Product | null {
 
 interface RenderedStep {
   key:          string;
+  step_id:      string | null;
   num:          string;
   when:         'Daily' | 'Weekly';
   minutes:      string;
@@ -91,6 +92,7 @@ function renderStep(step: RoutineStepType, idx: number): RenderedStep {
   const when = STEP_CADENCE[step.step_id ?? ''] ?? 'Daily';
   return {
     key:     `${step.step_id ?? 'step'}-${idx}`,
+    step_id: step.step_id ?? null,
     num,
     when,
     minutes: stepMinutes(step),
@@ -152,6 +154,7 @@ export default function BeardDetailRoute() {
   const [sheetOpen, setSheetOpen]         = useState(false);
   const [sheetProduct, setSheetProduct]   = useState<ProductDetailSheetProduct | null>(null);
   const [sheetReasoning, setSheetReason]  = useState<string | null>(null);
+  const [sheetStepId, setSheetStepId]     = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -240,10 +243,15 @@ export default function BeardDetailRoute() {
 
   const dailySteps = renderedSteps.filter(r => r.when === 'Daily');
 
-  const openSheet = (sp: ProductDetailSheetProduct | null, reasoning: string | null) => {
+  const openSheet = (
+    sp: ProductDetailSheetProduct | null,
+    reasoning: string | null,
+    stepId: string | null,
+  ) => {
     if (!sp) return;
     setSheetProduct(sp);
     setSheetReason(reasoning);
+    setSheetStepId(stepId);
     setSheetOpen(true);
   };
 
@@ -387,7 +395,7 @@ export default function BeardDetailRoute() {
                           minutes={rs.minutes}
                           title={rs.title}
                           product={rs.cardProduct}
-                          onTap={() => openSheet(rs.sheetProduct, rs.clinical)}
+                          onTap={() => openSheet(rs.sheetProduct, rs.clinical, rs.step_id)}
                           last={i === arr.length - 1}
                         />
                       ))}
@@ -415,6 +423,7 @@ export default function BeardDetailRoute() {
               onClose={() => setSheetOpen(false)}
               product={sheetProduct}
               clinical_reasoning={sheetReasoning}
+              stepId={sheetStepId}
             />
           </>
         )}

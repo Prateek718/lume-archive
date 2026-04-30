@@ -19,6 +19,7 @@ import { supabase } from '../lib/supabase';
 import { errorToMessage } from '../lib/errors';
 import { hasValidHairProfile } from '../lib/hair';
 import { getSkinConcernsDetailed } from '../lib/scanData';
+import { fetchLatestScanId, formatLongDate } from '../lib/profileData';
 import { useScan } from '../hooks/useScan';
 import type { SectionKey, SectionState } from '../services/scanService';
 import type {
@@ -47,6 +48,7 @@ interface ScanRow {
   beard_density?:          string | null;
   skin_undertone?:         string | null;
   skin_tone?:              string | null;
+  created_at?:             string;
 }
 
 type UserContext = Pick<User, 'care_categories' | 'hair_profile' | 'hair_recommendations'> & {
@@ -233,6 +235,7 @@ export default function RecommendationsRoute() {
 
   const [scan, setScan]             = useState<ScanRow | null>(null);
   const [user, setUser]             = useState<UserContext | null>(null);
+  const [latestScanId, setLatestScanId] = useState<string | null>(null);
   const [loading, setLoading]       = useState(true);
   const [errorMsg, setErrorMsg]     = useState<string | null>(null);
 
@@ -256,19 +259,22 @@ export default function RecommendationsRoute() {
         const scanPromise = paramScanId
           ? supabase
               .from('scans')
-              .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone')
+              .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone, created_at')
               .eq('id', paramScanId)
               .single()
           : supabase
               .from('scans')
-              .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone')
+              .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone, created_at')
               .eq('user_id', authUserId)
               .order('created_at', { ascending: false })
               .limit(1)
               .single();
 
-        const [{ data: userData, error: userErr }, { data: scanData, error: scanErr }] =
-          await Promise.all([userPromise, scanPromise]);
+        const [
+          { data: userData, error: userErr },
+          { data: scanData, error: scanErr },
+          latestId,
+        ] = await Promise.all([userPromise, scanPromise, fetchLatestScanId(authUserId)]);
 
         if (cancelled) return;
         if (userErr) {
@@ -282,6 +288,7 @@ export default function RecommendationsRoute() {
 
         setUser(userData as UserContext);
         setScan(scanData as ScanRow);
+        setLatestScanId(latestId);
       } catch (err) {
         if (!cancelled) setErrorMsg(errorToMessage(err));
       } finally {
@@ -299,7 +306,7 @@ export default function RecommendationsRoute() {
     (async () => {
       const { data } = await supabase
         .from('scans')
-        .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone')
+        .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone, created_at')
         .eq('id', scan.id)
         .single();
       if (!cancelled && data) setScan(data as ScanRow);
@@ -325,6 +332,11 @@ export default function RecommendationsRoute() {
     router.push(`/${cat}-detail${query}` as never);
   };
 
+  // Historical mode: viewing a specific past scan (not the most-recent one).
+  // Triggers a "READING FROM …" subhead and disables retry on failed sections —
+  // we don't want users regenerating recs on an old scan from history.
+  const isHistorical = !!paramScanId && !!scan?.id && !!latestScanId && scan.id !== latestScanId;
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
@@ -344,6 +356,11 @@ export default function RecommendationsRoute() {
 
             <View style={{ paddingTop: 24, paddingHorizontal: 32 }}>
               <ChapterLabel>{deriveIssueLabel(scan)} · your plan</ChapterLabel>
+              {isHistorical && scan?.created_at && (
+                <ChapterLabel style={{ marginTop: 4 }}>
+                  {`Reading from ${formatLongDate(scan.created_at)}`}
+                </ChapterLabel>
+              )}
               <Display
                 style={{
                   marginTop:     14,
@@ -389,7 +406,7 @@ export default function RecommendationsRoute() {
                     sectionState={sectionState}
                     onTap={() => handleAreaTap(a.cat)}
                     onRetry={
-                      sectionState === 'failed'
+                      sectionState === 'failed' && !isHistorical
                         ? () => { void regenerateSection(a.cat as SectionKey); }
                         : undefined
                     }
@@ -463,7 +480,12 @@ function AreaRow({ num, area, first, last, sectionState, onTap, onRetry }: AreaR
 
   const handlePress = () => {
     if (isLoading) return;
-    if (isFailed && onRetry) { onRetry(); return; }
+    if (isFailed) {
+      // Failed without a retry handler (historical mode) — tap is a no-op
+      // so the user can't regenerate recs on an old scan from history.
+      if (onRetry) onRetry();
+      return;
+    }
     onTap();
   };
 
