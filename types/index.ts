@@ -61,6 +61,15 @@ export interface User {
   push_token:             string | null;
   notification_reminders: boolean;
   notification_routine:   boolean;
+  // Phase 7B — granular notification preferences. Booleans default true except
+  // notify_milestones (false). Times stored as 'HH:MM' 24-hour strings.
+  notify_morning_routine: boolean;
+  notify_evening_routine: boolean;
+  notify_weekly_summary:  boolean;
+  notify_rescan:          boolean;
+  notify_milestones:      boolean;
+  notify_morning_time:    string;
+  notify_evening_time:    string;
   last_scan_at:           string | null;    // ISO timestamp
   onboarding_complete:    boolean;
   care_categories:        Array<'skin' | 'hair' | 'beard' | 'makeup'>;

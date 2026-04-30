@@ -1,12 +1,12 @@
 // Profile tab — editorial dashboard. Metadata bar (since + city), two-line
 // italic-comma-regular headline, 2×2 stat grid (Days in / Adherence / Streak /
-// Milestones), seven nav rows + sign out. Mirrors design source ProfileScreen.
+// Milestones), seven nav rows. Sign out moved to Settings → Account.
 
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChapterLabel, Display, TextLink } from '../../components/editorial';
+import { ChapterLabel, Display } from '../../components/editorial';
 import { Palette } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
 import {
@@ -58,11 +58,6 @@ export default function ProfileTab() {
 
   useEffect(() => { void reload(); }, [reload]);
   useFocusEffect(useCallback(() => { void reload(); }, [reload]));
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    // Routing handled by the root auth listener.
-  };
 
   if (!loaded || !header) {
     return <SafeAreaView style={{ flex: 1, backgroundColor: Palette.bg }} />;
@@ -152,15 +147,10 @@ export default function ProfileTab() {
           />
           <ProfileRow
             label="Settings"
-            note=""
+            note="Account, notifications, privacy"
             last
             onPress={() => router.push('/(profile)/settings')}
           />
-        </View>
-
-        {/* Sign out */}
-        <View style={{ alignItems: 'center', marginTop: 40 }}>
-          <TextLink label="Sign out →" onPress={signOut} />
         </View>
       </ScrollView>
     </SafeAreaView>
