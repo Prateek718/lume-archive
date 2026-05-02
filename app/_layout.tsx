@@ -157,6 +157,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="scan" options={{ presentation: 'card', animation: 'slide_from_bottom' }} />
           <Stack.Screen name="(scan)" />
+          <Stack.Screen name="(discover)" />
           <Stack.Screen name="index" />
         </Stack>
       </View>

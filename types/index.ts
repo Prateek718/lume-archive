@@ -436,20 +436,65 @@ export interface PartialScan {
   };
 }
 
-// ─── Shadow Stylist ───────────────────────────────────────────────────────────
-// Matches the public.shadow_stylists table.
-// These are stylists users mention who haven't signed up yet.
-export interface ShadowStylist {
-  id:               string;
-  name:             string | null;
-  instagram_handle: string | null;
-  salon_name:       string | null;
-  city:             string | null;
-  mention_count:    number;
-  mentioned_by:     string[];   // array of user uuids
-  source:           string[];   // e.g. ['user_mention']
-  outreach_status:  'none' | 'contacted' | 'onboarded';
-  created_at:       string;
+// ─── Salons (Phase X — Discover) ─────────────────────────────────────────────
+// Matches the public.salon_profiles table. One row per claimed salon, keyed
+// by Google Places id so unclaimed salons returned by Places API can still be
+// joined against ratings and verification status.
+export interface SalonProfile {
+  id:                  string;
+  google_place_id:     string;
+  salon_name:          string;
+  owner_name:          string | null;
+  phone:               string | null;
+  email:               string | null;
+  city:                string | null;
+  services_hair:       string[] | null;
+  services_skin:       string[] | null;
+  services_beard:      string[] | null;
+  services_bridal:     string[] | null;
+  services_other:      string[] | null;
+  price_range:         'budget' | 'mid' | 'premium' | 'luxury' | null;
+  booking_interest:    'yes' | 'maybe' | 'no' | null;
+  verification_status: 'pending' | 'verified' | 'rejected';
+  verified_at:         string | null;
+  created_by:          string | null;
+  created_at:          string;
+  updated_at:          string;
+}
+
+// Matches public.salon_ratings. Multiple ratings per salon allowed; averages
+// are computed in the salon service.
+export interface SalonRating {
+  id:              string;
+  user_id:         string;
+  google_place_id: string;
+  salon_name:      string;
+  rating_overall:  number;
+  rating_service:  number | null;
+  rating_staff:    number | null;
+  rating_hygiene:  number | null;
+  rating_value:    number | null;
+  services_done:   string[] | null;
+  comment:         string | null;
+  created_at:      string;
+}
+
+// Result row for the nearby-salons list on Discover. Combines Google Places
+// fields with Lumé-side enrichments (verification flag + Lumé rating averages).
+export interface NearbySalon {
+  google_place_id:        string;
+  name:                   string;
+  address:                string;
+  neighborhood:           string | null;
+  distance_km:            number;
+  rating_google:          number | null;
+  rating_count_google:    number;
+  price_level:            number | null;
+  // Lumé-side enrichments
+  is_verified:            boolean;
+  rating_lume_avg:        number | null;
+  rating_lume_count:      number;
+  services_done_summary:  string[];
 }
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────
