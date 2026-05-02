@@ -5,7 +5,7 @@
 // placeholder route until Phase 7C wires the real flow.
 
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BackButton, ChapterLabel, Display } from '../../components/editorial';
@@ -65,9 +65,27 @@ export default function SettingsScreen() {
     return () => { cancelled = true; };
   }, []);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    // Routing handled by the root auth listener.
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign out?',
+      'You can sign back in anytime.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await supabase.auth.signOut();
+            } catch (e) {
+              console.error('[settings] sign out failed', e);
+              Alert.alert('Could not sign out', 'Please try again.');
+            }
+          },
+        },
+      ],
+      { cancelable: true },
+    );
   };
 
   const sections: { head: string; rows: RowSpec[] }[] = [
@@ -87,7 +105,7 @@ export default function SettingsScreen() {
     {
       head: 'Privacy & data',
       rows: [
-        { label: 'Sign out',       note: '', onPress: signOut },
+        { label: 'Sign out',       note: '', onPress: handleSignOut },
         { label: 'Delete account', note: '', danger: true,
           onPress: () => router.push('/(profile)/delete-account') },
       ],

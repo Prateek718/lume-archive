@@ -309,7 +309,11 @@ export default function ScanDeltaRoute() {
             <View style={{ paddingTop: 36, paddingHorizontal: 32 }}>
               <PrimaryButton
                 label="See the new plan →"
-                onPress={() => router.replace('/recommendations' as never)}
+                onPress={() => router.replace(
+                  (scanId
+                    ? `/recommendations?scanId=${encodeURIComponent(scanId)}`
+                    : '/recommendations') as never,
+                )}
               />
             </View>
 

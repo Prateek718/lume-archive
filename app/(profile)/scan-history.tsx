@@ -14,10 +14,12 @@ import { supabase } from '../../lib/supabase';
 import {
   fetchScanHistory, type ScanHistoryRow,
 } from '../../lib/profileData';
+import { fetchDeltaToScanIds } from '../../services/deltaService';
 
 export default function ScanHistoryScreen() {
   const router = useRouter();
   const [rows, setRows] = useState<ScanHistoryRow[] | null>(null);
+  const [deltaIds, setDeltaIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -25,8 +27,11 @@ export default function ScanHistoryScreen() {
       const { data } = await supabase.auth.getUser();
       const userId = data.user?.id;
       if (!userId) { if (!cancelled) setRows([]); return; }
-      const list = await fetchScanHistory(userId);
-      if (!cancelled) setRows(list);
+      const [list, ids] = await Promise.all([
+        fetchScanHistory(userId),
+        fetchDeltaToScanIds(userId),
+      ]);
+      if (!cancelled) { setRows(list); setDeltaIds(ids); }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -61,7 +66,13 @@ export default function ScanHistoryScreen() {
               row={r}
               first={i === 0}
               last={i === rows.length - 1}
-              onPress={() => router.push(`/recommendations?scanId=${encodeURIComponent(r.id)}`)}
+              onPress={() => {
+                if (deltaIds.has(r.id)) {
+                  router.push(`/(scan)/issue-cover?scanId=${encodeURIComponent(r.id)}` as never);
+                } else {
+                  router.push(`/recommendations?scanId=${encodeURIComponent(r.id)}` as never);
+                }
+              }}
             />
           ))}
         </View>

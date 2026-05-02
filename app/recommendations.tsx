@@ -435,7 +435,7 @@ export default function RecommendationsRoute() {
                     color:      Palette.ink,
                   }}
                 >
-                  We&apos;ll take a second look and{' '}
+                  We&apos;ll take another look and{' '}
                   <Text
                     style={{
                       fontFamily: 'CormorantGaramond_500Medium_Italic',
