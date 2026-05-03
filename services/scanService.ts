@@ -777,7 +777,7 @@ export async function runScanPhase2(
   // depth_tier, or fitzpatrick_scale shifts. Most rescans reuse the stored
   // recs, which keeps Gemini output small and skips the makeup call.
   let needsMakeup = false;
-  if (careCategories.includes('makeup') && gender === 'woman') {
+  if (careCategories.includes('makeup')) {
     const { meta } = await getStoredMakeupRecs(userId);
     needsMakeup = shouldRegenerateMakeup(meta, {
       undertone:   analysis.skin_undertone ?? 'neutral',
@@ -786,11 +786,9 @@ export async function runScanPhase2(
     });
   }
 
-  // Beard applicability: detected beard density on a male/other user, with
-  // beard in the user's care_categories.
+  // Beard applicability: beard in care_categories and a beard was detected.
   const beardApplicable =
     careCategories.includes('beard') &&
-    gender !== 'woman' &&
     !!analysis.beard_density &&
     analysis.beard_density !== 'none';
 
@@ -1256,12 +1254,11 @@ export async function refreshRecommendations(
 
     const beardApplicable =
       careCategories.includes('beard') &&
-      gender !== 'woman' &&
       !!analysis.beard_density &&
       analysis.beard_density !== 'none';
 
     let needsMakeup = false;
-    if (careCategories.includes('makeup') && gender === 'woman') {
+    if (careCategories.includes('makeup')) {
       const { meta } = await getStoredMakeupRecs(userId);
       needsMakeup = shouldRegenerateMakeup(meta, {
         undertone:   analysis.skin_undertone ?? 'neutral',
@@ -1459,6 +1456,43 @@ export async function regenerateMakeupRecs(scanId: string): Promise<MakeupRecomm
   return makeup;
 }
 
+/**
+ * Re-runs scheduleRoutineForScan after a section regeneration.
+ * Reads the updated scan + user hair data, then upserts routine_checkins
+ * for all remaining days in the 28-day window. Idempotent — existing rows
+ * are skipped; rows for the newly-regenerated section are inserted.
+ */
+export async function rescheduleAfterRegen(scanId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('[rescheduleAfterRegen] no auth session');
+    return;
+  }
+
+  const [{ data: scan, error: scanErr }, { data: userRow }] = await Promise.all([
+    supabase.from('scans').select('*').eq('id', scanId).single(),
+    supabase.from('users').select('hair_profile, hair_recommendations').eq('id', user.id).single(),
+  ]);
+
+  if (scanErr || !scan) {
+    console.error('[rescheduleAfterRegen] scan fetch failed', scanErr);
+    return;
+  }
+
+  try {
+    await scheduleRoutineForScan({
+      scanId,
+      userId:          user.id,
+      scan:            scan as Scan,
+      userHairProfile: (userRow?.hair_profile as HairProfile | null) ?? null,
+      userHairRoutine: (userRow?.hair_recommendations as HairRecommendations | null)?.routine ?? null,
+    });
+    console.log('[rescheduleAfterRegen] rescheduled routine for scan', scanId);
+  } catch (e) {
+    console.error('[rescheduleAfterRegen] schedule failed (non-fatal)', e);
+    // Don't rethrow — regen UI already succeeded; routine will recover on next scan.
+  }
+}
 
 // Load a previously cached scan from AsyncStorage by scan ID.
 export async function getSavedRecommendations(scanId: string): Promise<Scan | null> {

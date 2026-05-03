@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChapterLabel, Rule, PrimaryButton } from '../../components/editorial';
+import { Rule, PrimaryButton } from '../../components/editorial';
 import { Palette, Type } from '../../constants/theme';
 
 export default function Splash() {
@@ -12,10 +12,6 @@ export default function Splash() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1, backgroundColor: Palette.bg }}>
         <View style={{ flex: 1, paddingHorizontal: 32 }}>
-          <View style={{ paddingTop: 24 }}>
-            <ChapterLabel>Issue · One</ChapterLabel>
-          </View>
-
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Text
               style={{
@@ -30,17 +26,6 @@ export default function Splash() {
             </Text>
             <View style={{ height: 28 }} />
             <Rule length="short" tone="accent" />
-            <View style={{ height: 20 }} />
-            <Text
-              style={{
-                fontFamily: 'CormorantGaramond_400Regular_Italic',
-                fontStyle: 'italic',
-                fontSize: 15,
-                color: Palette.ink3,
-              }}
-            >
-              be you
-            </Text>
           </View>
 
           <View style={{ position: 'absolute', bottom: 88, left: 32, right: 32 }}>

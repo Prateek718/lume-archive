@@ -26,6 +26,7 @@ import {
   regenerateSkinRecs,
   regenerateBeardRecs,
   regenerateMakeupRecs,
+  rescheduleAfterRegen,
   type Phase1Result,
   type SectionKey,
   type SectionState,
@@ -156,7 +157,6 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
     const careCategories = phase1.userProfile.careCategories;
     const beardApplicable =
       careCategories.includes('beard') &&
-      genderRef.current !== 'woman' &&
       !!phase1.analysis.beard_density &&
       phase1.analysis.beard_density !== 'none';
 
@@ -323,9 +323,9 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
       setPartialScan(phase1.partialScan);
 
       // Branching:
-      // 1. Beard goal — men/other with detected beard, only if not already set.
+      // 1. Beard goal — only if beard is in care_categories and a beard was detected.
       const beardApplicable =
-        (resolvedGender === 'man' || resolvedGender === 'other') &&
+        phase1.userProfile.careCategories.includes('beard') &&
         !!phase1.analysis.beard_density &&
         phase1.analysis.beard_density !== 'none';
       let needsBeardGoal = false;
@@ -404,7 +404,6 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
     const careCategories = phase1.userProfile.careCategories;
     const beardApplicable =
       careCategories.includes('beard') &&
-      genderRef.current !== 'woman' &&
       !!phase1.analysis.beard_density &&
       phase1.analysis.beard_density !== 'none';
 
@@ -495,6 +494,13 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
         .eq('id', scanId)
         .single();
       if (row) setResult(row as Scan);
+
+      try {
+        await rescheduleAfterRegen(scanId);
+      } catch (e) {
+        console.error('[useScan] post-regen schedule failed', e);
+      }
+
       setSectionState(section, 'ready');
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

@@ -20,7 +20,7 @@ const italicStyle = {
 };
 
 const AGE_OPTIONS = ['18 – 25', '26 – 35', '36 – 45', '46 – 55', '55 and over'];
-const GENDER_OPTIONS = ['Man', 'Woman', 'Prefer not to say'];
+const GENDER_OPTIONS = ['Man', 'Woman'];
 
 const AGE_RANGE_STORAGE: Record<string, '18-25' | '26-35' | '36-45' | '46-55' | '55+'> = {
   '18 – 25':     '18-25',
@@ -49,7 +49,7 @@ export default function Onboarding() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const toggleCategory = (cat: 'beard' | 'makeup') => {
+  const toggleCategory = (cat: 'hair' | 'beard' | 'makeup') => {
     setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   };
 
@@ -86,6 +86,11 @@ export default function Onboarding() {
       return;
     }
     if (step === 3) {
+      // Seed gender-appropriate defaults before showing step 4.
+      const defaultCats: Array<'skin' | 'hair' | 'beard' | 'makeup'> = ['skin', 'hair'];
+      if (gender === 'Man') defaultCats.push('beard');
+      if (gender === 'Woman') defaultCats.push('makeup');
+      setCategories(defaultCats);
       setStep(4);
       return;
     }
@@ -99,8 +104,8 @@ export default function Onboarding() {
       setSubmitting(false);
       return;
     }
-    const mappedGender: 'man' | 'woman' | 'prefer_not_to_say' =
-      gender === 'Man' ? 'man' : gender === 'Woman' ? 'woman' : 'prefer_not_to_say';
+    const mappedGender: 'man' | 'woman' =
+      gender === 'Man' ? 'man' : 'woman';
     const storedAge = age ? AGE_RANGE_STORAGE[age] : null;
     const { error: upsertError } = await supabase.from('users').upsert({
       id: user.id,
@@ -265,7 +270,7 @@ export default function Onboarding() {
               <View style={{ height: 12 }} />
               <View style={{ maxWidth: 260 }}>
                 <Body serif>
-                  Skin and hair are always part of your plan. Pick anything else you'd like us to cover.
+                  Skin is always included. Toggle anything else you'd like us to cover.
                 </Body>
               </View>
               <View style={{ height: 24 }} />
@@ -278,24 +283,29 @@ export default function Onboarding() {
               />
               <OptionRow
                 label="Hair"
-                selected
-                locked
+                selected={categories.includes('hair')}
                 variant="checkbox"
-                onPress={() => {}}
+                onPress={() => toggleCategory('hair')}
+                last={gender !== 'Man' && gender !== 'Woman'}
               />
-              <OptionRow
-                label="Beard"
-                selected={categories.includes('beard')}
-                variant="checkbox"
-                onPress={() => toggleCategory('beard')}
-              />
-              <OptionRow
-                label="Makeup"
-                selected={categories.includes('makeup')}
-                variant="checkbox"
-                onPress={() => toggleCategory('makeup')}
-                last
-              />
+              {gender === 'Man' && (
+                <OptionRow
+                  label="Beard"
+                  selected={categories.includes('beard')}
+                  variant="checkbox"
+                  onPress={() => toggleCategory('beard')}
+                  last
+                />
+              )}
+              {gender === 'Woman' && (
+                <OptionRow
+                  label="Makeup"
+                  selected={categories.includes('makeup')}
+                  variant="checkbox"
+                  onPress={() => toggleCategory('makeup')}
+                  last
+                />
+              )}
             </>
           )}
 

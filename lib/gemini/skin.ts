@@ -191,11 +191,9 @@ export async function getSkinRecommendations(
           }],
           generationConfig: {
             temperature:     0,
-            // Bumped from 2500 — observed real-world MAX_TOKENS truncation on
-            // rescans with rich previous-scan context. Skin output: advice +
-            // routine_note + up to 5 steps with full clinical_reasoning ≈
-            // 3500-4500 tokens. 6144 gives 1.5x buffer.
-            maxOutputTokens: 6144,
+            // 8192 matches hair — skin emits 4-5 steps with 2-sentence clinical_reasoning each;
+            // Gemini 2.5 reasoning tokens consume significant budget beyond visible output.
+            maxOutputTokens: 8192,
           },
         }),
       };

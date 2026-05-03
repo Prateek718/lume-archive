@@ -134,9 +134,9 @@ export async function getMakeupRecommendations(
           }],
           generationConfig: {
             temperature:     0,
-            // Makeup palette is the largest of the three sections (six swatches
-            // with prose) — give it more headroom than skin/beard.
-            maxOutputTokens: 3500,
+            // 6144 matches skin — makeup emits 6 swatches with 2-3 sentence descriptions plus
+            // shade_families prose, the most complex nested schema of the four sections.
+            maxOutputTokens: 6144,
           },
         }),
       };

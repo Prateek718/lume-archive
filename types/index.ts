@@ -53,7 +53,7 @@ export type BeardGoal =
 export interface User {
   id:                     string;           // uuid — matches auth.users id
   display_name:           string | null;
-  gender:                 'man' | 'woman' | 'other' | 'prefer_not_to_say' | null;
+  gender:                 'man' | 'woman' | null;
   city:                   string | null;
   avatar_url:             string | null;
   referral_code:          string | null;

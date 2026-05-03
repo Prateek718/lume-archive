@@ -25,11 +25,16 @@ interface RowCounts {
   scan_count:      number;
 }
 
+function formatCareCategories(cats: string[]): string {
+  return cats.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ');
+}
+
 export default function ProfileTab() {
   const router = useRouter();
   const [header, setHeader] = useState<ProfileHeader | null>(null);
   const [stats, setStats] = useState<StatGrid | null>(null);
   const [rowCounts, setRowCounts] = useState<RowCounts | null>(null);
+  const [careCats, setCareCats] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const reload = useCallback(async () => {
@@ -39,15 +44,17 @@ export default function ProfileTab() {
       setLoaded(true);
       return;
     }
-    const [head, statGrid, kit, milestones, scans] = await Promise.all([
+    const [head, statGrid, kit, milestones, scans, userRow] = await Promise.all([
       fetchProfileHeader(userId),
       computeStatGrid(userId),
       fetchKitItems(userId),
       fetchMilestones(userId),
       fetchScanHistory(userId),
+      supabase.from('users').select('care_categories').eq('id', userId).single(),
     ]);
     setHeader(head);
     setStats(statGrid);
+    setCareCats((userRow.data?.care_categories as string[] | null) ?? []);
     setRowCounts({
       kit_count:       kit.length,
       milestone_count: milestones.earned.length,
@@ -144,6 +151,11 @@ export default function ProfileTab() {
             label="Hair profile"
             note="Texture & wash"
             onPress={() => router.push('/(profile)/hair-profile')}
+          />
+          <ProfileRow
+            label="Care categories"
+            note={careCats.length > 0 ? formatCareCategories(careCats) : 'Skin'}
+            onPress={() => router.push('/(profile)/care-categories')}
           />
           <ProfileRow
             label="Settings"
