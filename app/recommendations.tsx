@@ -47,7 +47,6 @@ interface ScanRow {
   skin_concerns_detailed?: SkinConcernObservation[] | null;
   beard_density?:          string | null;
   skin_undertone?:         string | null;
-  skin_tone?:              string | null;
   created_at?:             string;
 }
 
@@ -259,12 +258,12 @@ export default function RecommendationsRoute() {
         const scanPromise = paramScanId
           ? supabase
               .from('scans')
-              .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone, created_at')
+              .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, created_at')
               .eq('id', paramScanId)
               .single()
           : supabase
               .from('scans')
-              .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone, created_at')
+              .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, created_at')
               .eq('user_id', authUserId)
               .order('created_at', { ascending: false })
               .limit(1)
@@ -306,7 +305,7 @@ export default function RecommendationsRoute() {
     (async () => {
       const { data } = await supabase
         .from('scans')
-        .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, skin_tone, created_at')
+        .select('id, recommendations, skin_concerns_detailed, beard_density, skin_undertone, created_at')
         .eq('id', scan.id)
         .single();
       if (!cancelled && data) setScan(data as ScanRow);

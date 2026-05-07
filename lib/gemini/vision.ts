@@ -42,19 +42,16 @@ export type GeminiAnalysis = Pick<
   | 'undereye'
   | 'score_skin'
   | 'fitzpatrick_scale'
-  | 'skin_tone'
   | 'skin_undertone'
 > & {
   skin_concerns_detailed?: SkinConcernObservation[];
   observation?:            ObservationOutput;
   confidence?: {
     face_shape?:     number;
-    hair_texture?:   number;
     skin_undertone?: number;
   };
   alternatives?: {
     face_shape?:     string | null;
-    hair_texture?:   string | null;
     skin_undertone?: string | null;
   };
 };
@@ -99,7 +96,7 @@ Step 5 — ASSESS SKIN UNDERTONE.
   cool    = pink/rosy/bluish hue, pink-flushed cheeks
   neutral = balanced beige, no dominance
 Do not default to cool without clear visual evidence.`
-    : `Makeup analysis is not needed for this user. Do not assess Fitzpatrick scale or undertone. Omit fitzpatrick_scale, skin_tone, and skin_undertone from the output.`;
+    : `Makeup analysis is not needed for this user. Do not assess Fitzpatrick scale or undertone. Omit fitzpatrick_scale and skin_undertone from the output.`;
 
   // ── Score field — skin condition only (Phase 6.0) ─────────────────────────
   const scoreInstructions = `score_skin (always required): integer 0-100. Measures observable skin CONDITION as visible in the photo. Higher = clearer, more even, healthier-looking skin.
@@ -251,7 +248,6 @@ Pick one that fits this scan's tone. No trait-naming openings.`;
       ? `"brow_condition": one of ["well_defined","sparse","ungroomed","over_plucked"]\n  "undereye": one of ["dark_circles","puffiness","normal"]`
       : `"brow_condition": null, "undereye": null`,
     wantsMakeup ? `"fitzpatrick_scale": integer 1–6` : null,
-    wantsMakeup ? `"skin_tone": one of ["Very fair","Fair","Medium","Olive","Brown","Dark brown"]` : null,
     wantsMakeup ? `"skin_undertone": one of ["warm","cool","neutral"]` : null,
     `"score_skin": integer 0-100`,
     `"confidence": { "face_shape": number 0.0–1.0${wantsMakeup ? `, "skin_undertone": number 0.0–1.0` : ''} }`,
@@ -333,7 +329,6 @@ Example A — woman in Mumbai, skin+hair+makeup selected (scan number 1):
     { "concern": "hyperpigmentation", "severity": "mild", "zones": ["cheeks"], "notes": "two post-acne marks on right cheek", "display_label": "Post-acne marks · cheeks" }
   ],
   "fitzpatrick_scale": 4,
-  "skin_tone": "Olive",
   "skin_undertone": "warm",
   "score_skin": 78,
   "brow_condition": "well_defined",

@@ -35,7 +35,6 @@ interface ScanRow {
   recommendations:           Recommendations | null;
   skin_type?:                string | null;
   skin_undertone?:           string | null;
-  skin_tone?:                string | null;
   skin_concerns_detailed?:   SkinConcernObservation[] | null;
   fitzpatrick_scale?:        number | null;
 }
@@ -232,12 +231,12 @@ export default function SkinDetailRoute() {
         const scanQuery = paramScanId
           ? supabase
               .from('scans')
-              .select('id, recommendations, skin_type, skin_undertone, skin_tone, skin_concerns_detailed, fitzpatrick_scale')
+              .select('id, recommendations, skin_type, skin_undertone, skin_concerns_detailed, fitzpatrick_scale')
               .eq('id', paramScanId)
               .single()
           : supabase
               .from('scans')
-              .select('id, recommendations, skin_type, skin_undertone, skin_tone, skin_concerns_detailed, fitzpatrick_scale')
+              .select('id, recommendations, skin_type, skin_undertone, skin_concerns_detailed, fitzpatrick_scale')
               .eq('user_id', authUserId)
               .order('created_at', { ascending: false })
               .limit(1)

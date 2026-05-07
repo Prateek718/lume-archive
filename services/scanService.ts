@@ -2,139 +2,6 @@
 // Steps: compress → analyse with Gemini vision → get recommendations from Gemini text
 //        → save to database → delete image → return finished scan.
 
-/*
-Run in Supabase SQL editor:
-
-alter table users
-  add column if not exists routine_level text default 'simple',
-  add column if not exists preferred_brands jsonb default '[]'::jsonb,
-  add column if not exists hair_profile jsonb,
-  add column if not exists hair_recommendations jsonb;
-*/
-
-/*
-Run in Supabase SQL editor:
-
--- Routine compliance logs
-create table if not exists routine_logs (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references users(id) on delete cascade,
-  scan_id uuid references scans(id) on delete set null,
-  step_label text not null,
-  step_product text,
-  category text not null, -- 'skin_am' | 'skin_pm' | 'hair' | 'beard' | 'makeup'
-  completed_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
-);
-
--- Product usage confirmations
-create table if not exists product_usage (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references users(id) on delete cascade,
-  scan_id uuid references scans(id) on delete set null,
-  product_id text not null,
-  product_name text not null,
-  brand text not null,
-  category text not null,
-  using_it boolean,
-  nudge_sent_at timestamptz,
-  responded_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
--- Scan deltas (computed on each rescan)
-create table if not exists scan_deltas (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references users(id) on delete cascade,
-  scan_id uuid references scans(id) on delete cascade,
-  previous_scan_id uuid references scans(id) on delete set null,
-  days_between int,
-  score_delta int,
-  concerns_improved text[],
-  concerns_worsened text[],
-  concerns_resolved text[],
-  compliance_rate numeric,
-  created_at timestamptz not null default now()
-);
-
--- Add columns to scans table
-alter table scans
-  add column if not exists scan_hour int,
-  add column if not exists season text,
-  add column if not exists scan_type text;
-
--- Add columns to product_events
-alter table product_events
-  add column if not exists nudge_sent boolean default false,
-  add column if not exists nudge_sent_at timestamptz;
-
--- RLS policies
-alter table routine_logs enable row level security;
-create policy "Users can manage own routine_logs"
-  on routine_logs for all using (auth.uid() = user_id);
-
-alter table product_usage enable row level security;
-create policy "Users can manage own product_usage"
-  on product_usage for all using (auth.uid() = user_id);
-
-alter table scan_deltas enable row level security;
-create policy "Users can read own scan_deltas"
-  on scan_deltas for all using (auth.uid() = user_id);
-*/
-
-/*
-Run in Supabase SQL editor:
-
-create table if not exists product_events (
-  id           uuid default gen_random_uuid() primary key,
-  user_id      uuid references auth.users(id),
-  scan_id      uuid references scans(id),
-  product_id   text not null,
-  product_name text,
-  brand        text,
-  category     text,
-  event_type   text, -- 'clicked_buy'
-  created_at   timestamptz default now()
-);
-
-enable row level security on product_events;
-
-create policy "Users can insert their own product events"
-  on product_events for insert
-  with check (auth.uid() = user_id);
-*/
-
-/*
-Run in Supabase SQL editor:
-
-create table if not exists product_confirmations (
-  id           uuid default gen_random_uuid() primary key,
-  user_id      uuid references users(id) on delete cascade,
-  prev_scan_id uuid references scans(id) on delete set null,
-  new_scan_id  uuid references scans(id) on delete set null,
-  product_name text not null,
-  brand        text not null,
-  category     text not null,
-  confirmed    boolean not null,
-  created_at   timestamptz not null default now()
-);
-
-alter table product_confirmations enable row level security;
-create policy "Users can manage own product_confirmations"
-  on product_confirmations for all using (auth.uid() = user_id);
-
--- Add Fitzpatrick columns to scans
-alter table scans
-  add column if not exists fitzpatrick_scale int,
-  add column if not exists skin_tone text,
-  add column if not exists skin_undertone text
-    check (skin_undertone in ('warm', 'cool', 'neutral'));
-
--- Add age_range to users
-alter table users
-  add column if not exists age_range text;
-*/
-
 import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
@@ -492,7 +359,6 @@ export async function runScanPhase1(
     brow_condition:    analysis.brow_condition ?? null,
     undereye:          analysis.undereye ?? null,
     fitzpatrick_scale: analysis.fitzpatrick_scale ?? null,
-    skin_tone:         analysis.skin_tone ?? null,
     skin_undertone:    analysis.skin_undertone ?? null,
     score_skin:    analysis.score_skin ?? null,
     score_beard:   null,                                  // Phase 6.0: no longer scored
@@ -825,7 +691,6 @@ export async function runScanPhase2(
     score_makeup:            null,
     score_overall:           scoreOverall,
     fitzpatrick_scale:       analysis.fitzpatrick_scale ?? null,
-    skin_tone:               analysis.skin_tone ?? null,
     skin_undertone:          analysis.skin_undertone ?? null,
     recommendations:         initialRecommendations,
     scan_hour:               scanHour,
@@ -1155,7 +1020,6 @@ function analysisFromScan(scan: Scan): GeminiAnalysis {
     undereye:               scan.undereye,
     score_skin:             scan.score_skin,
     fitzpatrick_scale:      scan.fitzpatrick_scale ?? null,
-    skin_tone:              scan.skin_tone ?? null,
     skin_undertone:         scan.skin_undertone ?? null,
     observation:            recs?.observation ?? undefined,
   } as GeminiAnalysis;

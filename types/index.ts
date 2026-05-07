@@ -58,9 +58,6 @@ export interface User {
   avatar_url:             string | null;
   referral_code:          string | null;
   referred_by:            string | null;    // uuid of referring user
-  push_token:             string | null;
-  notification_reminders: boolean;
-  notification_routine:   boolean;
   // Phase 7B — granular notification preferences. Booleans default true except
   // notify_milestones (false). Times stored as 'HH:MM' 24-hour strings.
   notify_morning_routine: boolean;
@@ -368,25 +365,19 @@ export interface Scan {
   score_makeup?:     number | null;
   score_overall:     number | null;    // Phase 6.0: mirrors score_skin
 
-  tier_label?:       string | null;    // kept for DB compatibility only — not used in UI
-
   // AI-generated advice from Claude Haiku
   recommendations:   Recommendations | null;
 
-  stylist_mentioned: string | null;    // optional name/handle tagged by user
-  share_count:       number;
   created_at:        string;           // ISO timestamp
 
   // Phase A.5 — trait confidence surfaced from the vision call.
   // Optional because legacy scans in the DB won't have them.
   confidence?: {
     face_shape?:     number;
-    hair_texture?:   number;
     skin_undertone?: number;
   };
   alternatives?: {
     face_shape?:     string | null;
-    hair_texture?:   string | null;
     skin_undertone?: string | null;
   };
 }
@@ -419,12 +410,10 @@ export interface PartialScan {
   // Missing on legacy scans — runtime callers must default to 0.5.
   confidence?: {
     face_shape?:     number;
-    hair_texture?:   number;
     skin_undertone?: number;
   };
   alternatives?: {
     face_shape?:     string | null;
-    hair_texture?:   string | null;
     skin_undertone?: string | null;
   };
 
@@ -495,15 +484,6 @@ export interface NearbySalon {
   rating_lume_avg:        number | null;
   rating_lume_count:      number;
   services_done_summary:  string[];
-}
-
-// ─── Waitlist ─────────────────────────────────────────────────────────────────
-// Matches the public.waitlist table.
-export interface Waitlist {
-  id:         string;
-  email:      string;
-  city:       string | null;
-  created_at: string;
 }
 
 // ─── Rescan Feedback ──────────────────────────────────────────────────────────

@@ -64,7 +64,6 @@ const SKIN_RECS_ANALYSIS: GeminiAnalysis = {
   undereye:          'normal',
   score_skin:        72,
   fitzpatrick_scale: 4,
-  skin_tone:         'Olive',
   skin_undertone:    'warm',
   confidence:        { face_shape: 0.88, skin_undertone: 0.82 },
   alternatives:      { face_shape: null, skin_undertone: null },
