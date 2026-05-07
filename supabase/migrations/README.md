@@ -52,6 +52,12 @@ Migrations are named with a `phase_*` prefix and run in filename-sort order
    and any non-obvious behavior. Each commit message explains the why
    behind the change, not just the what.
 
+7. **Snake_case policy names.** RLS policies follow the convention
+   `<table>_<action>_<scope>` (e.g. `scans_select_own`, `users_insert_own`,
+   `waitlist_insert_anyone`). This replaces the legacy human-readable names
+   created via the Supabase dashboard UI. Future migrations should use
+   this convention for any new policies.
+
 ## Application
 
 Migrations are applied manually via the Supabase dashboard SQL editor in
