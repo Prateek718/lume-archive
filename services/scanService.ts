@@ -70,6 +70,25 @@ function getSeason(_date: Date, _city: string): string {
   return 'winter';
 }
 
+/**
+ * Derive the high-level category enum (skin_am | skin_pm | hair | beard | makeup)
+ * from a RoutineDayStep's step_id. Returns null if the step_id doesn't match any
+ * known pattern, in which case the caller should skip telemetry rather than
+ * miscategorize.
+ */
+export function deriveStepCategory(stepId: string): 'skin_am' | 'skin_pm' | 'hair' | 'beard' | 'makeup' | null {
+  if (stepId.endsWith('_am') && !stepId.startsWith('hair_') && !stepId.startsWith('beard_') && !stepId.startsWith('makeup_')) {
+    return 'skin_am';
+  }
+  if (stepId.endsWith('_pm') && !stepId.startsWith('hair_') && !stepId.startsWith('beard_') && !stepId.startsWith('makeup_')) {
+    return 'skin_pm';
+  }
+  if (stepId.startsWith('hair_'))   return 'hair';
+  if (stepId.startsWith('beard_'))  return 'beard';
+  if (stepId.startsWith('makeup_')) return 'makeup';
+  return null;
+}
+
 // ── Log a routine step completion to Supabase ─────────────────────────────────
 export async function logRoutineStep(params: {
   userId:      string;
@@ -1554,39 +1573,25 @@ export async function getAlternativesForStep(
   });
 }
 
-// Log a product buy-tap event to the product_events table.
-// Non-critical — failures are swallowed so they never block the user.
-export async function logProductEvent(params: {
-  userId:      string;
-  scanId:      string;
-  productId:   string;
-  productName: string;
-  brand:       string;
-  category:    string;
-  eventType:   'clicked_buy';
-}): Promise<void> {
-  try {
-    await supabase.from('product_events').insert({
-      user_id:      params.userId,
-      scan_id:      params.scanId,
-      product_id:   params.productId,
-      product_name: params.productName,
-      brand:        params.brand,
-      category:     params.category,
-      event_type:   params.eventType,
-    });
-
-    await supabase.from('product_usage').insert({
-      user_id:      params.userId,
-      scan_id:      params.scanId,
-      product_id:   params.productId,
-      product_name: params.productName,
-      brand:        params.brand,
-      category:     params.category,
-      using_it:     null,
-    });
-  } catch (e) {
-    // Non-critical — never block the user for logging failure
-    console.error('[scanService] logProductEvent error:', e);
-  }
-}
+// ─────────────────────────────────────────────────────────────────────────
+// REMOVED IN PHASE XI: logProductEvent
+//
+// This function previously wrote to product_events (and product_usage) on
+// every buy-tap. It was a dead export at the time of removal — no UI
+// callsite ever invoked it.
+//
+// Wire-up was intentionally deferred. The current product catalogue is a
+// makeshift one with placeholder SKUs and brands that will be replaced when
+// affiliate links are integrated. Capturing buy-tap telemetry against
+// makeshift product identifiers would produce data that is correctly
+// shaped but semantically junk — product IDs that won't exist post-rebuild,
+// brands that may change, categories that may be re-taxonomized.
+//
+// Both product_events and product_usage tables remain in the schema
+// (see phase_00_baseline_telemetry.sql and phase_xi_create_missing_tables.sql)
+// ready for use when the rebuild lands. At that point a properly designed
+// telemetry function should be added — likely separate functions for tap
+// events (writing to product_events) and product-usage state changes
+// (writing to product_usage with an actual using_it value, populated from
+// a "I'm using this" UI affordance that doesn't exist yet).
+// ─────────────────────────────────────────────────────────────────────────

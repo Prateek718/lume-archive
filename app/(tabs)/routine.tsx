@@ -36,6 +36,7 @@ import {
   unrecordCheckin,
   type RoutineDayStep,
 } from '../../services/habitService';
+import { deriveStepCategory, logRoutineStep } from '../../services/scanService';
 
 type Period = 'AM' | 'PM';
 type CareCategory = 'skin' | 'hair' | 'beard' | 'makeup';
@@ -218,6 +219,20 @@ export default function RoutineRoute() {
         await unrecordCheckin(userId, step.step_id, date);
       } else {
         await recordCheckin(userId, step.step_id, date, step.kit_item_id);
+
+        // Fire-and-forget telemetry: log this step completion to routine_logs
+        // for analytics. Skip if we can't derive a clean category — better to
+        // miss a row than miscategorize.
+        const category = deriveStepCategory(step.step_id);
+        if (category) {
+          void logRoutineStep({
+            userId,
+            scanId: step.scan_id,
+            stepLabel: step.label,
+            stepProduct: step.product,
+            category,
+          });
+        }
       }
       const fresh = await fetchDailyAdherence(userId);
       setDailyAdherence(fresh);
