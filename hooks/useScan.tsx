@@ -496,7 +496,7 @@ export function ScanProvider({ children }: { children: React.ReactNode }) {
       if (row) setResult(row as Scan);
 
       try {
-        await rescheduleAfterRegen(scanId);
+        await rescheduleAfterRegen(scanId, section);
       } catch (e) {
         console.error('[useScan] post-regen schedule failed', e);
       }

@@ -12,7 +12,7 @@ export const FREEZE_MAX_BANKED     = 2;       // never bank more than 2 freezes 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-// Raw per-day data fed in by the caller (services layer aggregates routine_checkins).
+// Raw per-day data fed in by the caller (services layer aggregates routine_completions).
 export interface DayAdherence {
   date:              string;   // YYYY-MM-DD
   scheduled_count:   number;
@@ -35,13 +35,19 @@ export interface WeekDay {
   adherence_pct: number;                                                 // 0..100
 }
 
-// Output row for generateScheduledRows — ready to insert into routine_checkins.
-export interface ScheduledRow {
-  user_id:     string;
-  scan_id:     string;
-  step_id:     string;
-  time_of_day: 'am' | 'pm' | 'weekly' | 'monthly' | 'daily';
-  date:        string;   // YYYY-MM-DD
+// One row of the new prescription table — written once at scan finalize.
+export interface PlanStepRow {
+  user_id:            string;             // denormalised from scans.user_id
+  scan_id:            string;
+  step_key:           string;             // canonical, slot-suffixed for skin
+  label:              string;
+  product:            string | null;
+  category:           string | null;
+  clinical_reasoning: string | null;
+  time_of_day:        'am' | 'pm' | 'daily';
+  step_type:          'maintenance' | 'treatment';
+  target_concern:     string | null;
+  display_order:      number;
 }
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
@@ -234,239 +240,217 @@ export function computeRollingAdherence(dailyAdherence: DayAdherence[]): number 
   return Math.round((completed / scheduled) * 100);
 }
 
-// ─── Scheduling: wash-frequency parsing ──────────────────────────────────────
+// ─── step_key canonicalisation ───────────────────────────────────────────────
+// Drives plan-step generation. The Set lookup pattern matches lib/gemini/skin.ts
+// `normalizeConcern` — taxonomy lives in the JS bundle, not a CHECK constraint.
 
-// Map enum / free text to an integer number of days between washes.
-// Defaults to 2 if unknown.
-function washFrequencyDays(freq: string | undefined | null): number {
-  if (!freq) return 2;
+const CANONICAL_SKIN_STEPS = new Set<string>([
+  'skin_cleanse',
+  'skin_treat_1',
+  'skin_treat_2',
+  'skin_moisturize',
+  'skin_protect',
+]);
 
-  // Known enum values first.
-  switch (freq) {
-    case 'daily':             return 1;
-    case 'every_2_3_days':    return 2;
-    case 'once_a_week':       return 7;
-    case 'less_than_weekly':  return 10;
+const CANONICAL_HAIR_STEPS = new Set<string>([
+  'hair_shampoo',
+  'hair_conditioner',
+  'hair_oil',
+  'hair_serum',
+  'hair_mask',
+]);
+
+const CANONICAL_BEARD_STEPS = new Set<string>([
+  'beard_wash',
+  'beard_oil',
+  'beard_balm',
+]);
+
+export function isCanonicalStepId(stepId: string): boolean {
+  return (
+    CANONICAL_SKIN_STEPS.has(stepId) ||
+    CANONICAL_HAIR_STEPS.has(stepId) ||
+    CANONICAL_BEARD_STEPS.has(stepId)
+  );
+}
+
+// Build the slot-suffixed step_key for a skin step. Returns null on a
+// non-canonical id or invalid slot. Beard/hair steps don't get suffixed and
+// callers should use the bare step_id as the step_key.
+export function canonicalSlottedStepKey(stepId: string, slot: 'am' | 'pm'): string | null {
+  if (!CANONICAL_SKIN_STEPS.has(stepId)) return null;
+  if (slot !== 'am' && slot !== 'pm') return null;
+  return `${stepId}_${slot}`;
+}
+
+// Strip the `_am` / `_pm` slot suffix added at plan-gen time for skin keys.
+// Returns input unchanged for hair/beard keys (which are unsuffixed).
+export function stripSlotSuffix(stepKey: string): string {
+  if (!stepKey.startsWith('skin_')) return stepKey;
+  if (stepKey.endsWith('_am') || stepKey.endsWith('_pm')) {
+    return stepKey.slice(0, -3);
   }
-
-  // Liberal string fallback for legacy / free-text values.
-  const f = freq.toLowerCase();
-  if (f.includes('daily') || f.includes('every day') || f.includes('1 day')) return 1;
-  if (f.includes('alternate') || f.includes('every other')) return 2;
-  if (f.includes('2-3') || f.includes('2 to 3')) return 2;
-  if (f.includes('3-4') || f.includes('3 to 4')) return 3;
-  if (f.includes('twice a week') || f.includes('2x') || f.includes('2 times')) return 3;
-  if (f.includes('once a week') || f.includes('weekly') || f.includes('1x')) return 7;
-  if (f.includes('fortnight') || f.includes('two weeks')) return 14;
-  if (f.includes('less than')) return 10;
-  return 2;
+  return stepKey;
 }
 
-// ─── Scheduling: beard defaults ──────────────────────────────────────────────
-// Used as a fallback when the scan's beard recommendations don't include a
-// structured steps array (e.g. legacy scans). New scans embed beard.steps
-// directly and we honour those instead.
-const BEARD_DEFAULT_STEPS = [
-  { step_id: 'beard_wash', time_of_day: 'daily' as const, cadence: 'every_wash' as const },  // follows hair wash rhythm
-  { step_id: 'beard_oil',  time_of_day: 'pm'    as const, cadence: 'daily'      as const },
-  { step_id: 'beard_balm', time_of_day: 'am'    as const, cadence: 'daily'      as const },
-];
+// ─── step_type mapping ───────────────────────────────────────────────────────
+// A step is a treatment iff it carries a target_concern. Future-proof against
+// `skin_treat_3+` and lets hair/beard become treatments if Gemini emits one.
 
-// ─── Public: generate scheduled rows for a scan ──────────────────────────────
+export function mapStepType(step: { target_concern?: string | null }): 'maintenance' | 'treatment' {
+  return step.target_concern ? 'treatment' : 'maintenance';
+}
 
-export interface GenerateScheduleInput {
-  scanId:          string;
-  userId:          string;
-  scan:            Scan;
+// ─── Plan-step generation ────────────────────────────────────────────────────
+
+export interface GeneratePlanStepsInput {
+  scanId:           string;
+  scan:             Scan;
   userHairProfile?: HairProfile | null;
-  userHairRoutine?: HairRoutineStep[] | null;   // typically user.hair_recommendations.routine
-  startDate:       string;    // YYYY-MM-DD — first day to schedule (usually today)
-  days?:           number;    // how many days to pre-generate; defaults to 28
+  userHairRoutine?: HairRoutineStep[] | null;   // user.hair_recommendations.routine
 }
 
-// Shape of a beard step embedded in scan.recommendations.beard. New-format
-// beard recommendations carry a `steps` array; legacy scans don't.
-interface BeardStep extends RoutineStep {
-  cadence?: 'daily' | 'every_wash' | 'weekly' | 'monthly';
-}
-
-// Normalise a skin step to the new schema: derive time_of_day from legacy
-// step_id prefixes (skin_am_*, skin_pm_*) when the field is missing.
+// Resolve the time_of_day slots for a skin step. New-schema steps carry an
+// explicit array. If missing, default to both slots.
 function resolveSkinTimeOfDay(step: RoutineStep): ('am' | 'pm')[] {
   if (Array.isArray(step.time_of_day) && step.time_of_day.length > 0) {
     return step.time_of_day;
   }
-  if (step.step_id.startsWith('skin_am_')) return ['am'];
-  if (step.step_id.startsWith('skin_pm_')) return ['pm'];
-  // New-schema step without explicit time_of_day → default to both slots.
   return ['am', 'pm'];
 }
 
-export function generateScheduledRows(input: GenerateScheduleInput): ScheduledRow[] {
-  const {
-    scanId,
-    userId,
-    scan,
-    userHairProfile,
-    userHairRoutine,
-    startDate,
-    days = 28,
-  } = input;
+export function generatePlanSteps(input: GeneratePlanStepsInput): PlanStepRow[] {
+  const { scanId, scan, userHairRoutine } = input;
+  const userId = scan.user_id;
+  const rows: PlanStepRow[] = [];
 
-  const rows: ScheduledRow[] = [];
-
-  // ── Skin: support both schemas. Prefer new `steps` array when present. ──
-  const newSkinSteps: RoutineStep[] = scan.recommendations?.skin?.steps ?? [];
-  const legacyMorning: RoutineStep[] = scan.recommendations?.skin?.routine?.morning ?? [];
-  const legacyEvening: RoutineStep[] = scan.recommendations?.skin?.routine?.evening ?? [];
-
-  // Materialise an effective list of skin steps with explicit time_of_day arrays.
-  type EffectiveSkinStep = { step_id: string; time_of_day: ('am' | 'pm')[] };
-  const effectiveSkin: EffectiveSkinStep[] = (() => {
-    if (newSkinSteps.length > 0) {
-      return newSkinSteps
-        .filter(s => {
-          if (!s.step_id) {
-            console.log('[habit-gen] skipping skin step without step_id', { step: s });
-            return false;
-          }
-          return !s.step_id.startsWith('makeup_');
-        })
-        .map(s => ({ step_id: s.step_id, time_of_day: resolveSkinTimeOfDay(s) }));
+  // ── Skin ──────────────────────────────────────────────────────────────────
+  const skinSteps: RoutineStep[] = scan.recommendations?.skin?.steps ?? [];
+  for (const step of skinSteps) {
+    if (!step.step_id || !CANONICAL_SKIN_STEPS.has(step.step_id)) {
+      console.warn('[habit-gen] dropping skin step with non-canonical step_id', {
+        step_id: step.step_id,
+        scan_id: scanId,
+      });
+      continue;
     }
-    // Legacy path: morning + evening arrays.
-    const list: EffectiveSkinStep[] = [];
-    for (const s of legacyMorning) {
-      if (!s.step_id) { console.log('[habit-gen] skipping legacy morning step without step_id', { step: s }); continue; }
-      if (s.step_id.startsWith('makeup_')) continue;
-      list.push({ step_id: s.step_id, time_of_day: ['am'] });
+    const slots = resolveSkinTimeOfDay(step);
+    for (const slot of slots) {
+      const stepKey = canonicalSlottedStepKey(step.step_id, slot);
+      if (!stepKey) continue;
+      rows.push({
+        user_id:            userId,
+        scan_id:            scanId,
+        step_key:           stepKey,
+        label:              step.label,
+        product:            step.product ?? null,
+        category:           step.category ?? null,
+        clinical_reasoning: step.clinical_reasoning ?? null,
+        time_of_day:        slot,
+        step_type:          mapStepType(step),
+        target_concern:     step.target_concern ?? null,
+        display_order:      step.order ?? 999,
+      });
     }
-    for (const s of legacyEvening) {
-      if (!s.step_id) { console.log('[habit-gen] skipping legacy evening step without step_id', { step: s }); continue; }
-      if (s.step_id.startsWith('makeup_')) continue;
-      list.push({ step_id: s.step_id, time_of_day: ['pm'] });
+  }
+
+  // ── Beard ─────────────────────────────────────────────────────────────────
+  // Per plan §2.1: read recommendations.beard.steps; if absent, write nothing.
+  // No hardcoded BEARD_DEFAULT_STEPS. All beard steps land as time_of_day='daily'.
+  const beardRecs = scan.recommendations?.beard as { steps?: RoutineStep[] } | null | undefined;
+  for (const step of beardRecs?.steps ?? []) {
+    if (!step.step_id || !CANONICAL_BEARD_STEPS.has(step.step_id)) {
+      console.warn('[habit-gen] dropping beard step with non-canonical step_id', {
+        step_id: step.step_id,
+        scan_id: scanId,
+      });
+      continue;
     }
-    return list;
-  })();
+    rows.push({
+      user_id:            userId,
+      scan_id:            scanId,
+      step_key:           step.step_id,
+      label:              step.label,
+      product:            step.product ?? null,
+      category:           step.category ?? null,
+      clinical_reasoning: step.clinical_reasoning ?? null,
+      time_of_day:        'daily',
+      step_type:          mapStepType(step),
+      target_concern:     step.target_concern ?? null,
+      display_order:      step.order ?? 999,
+    });
+  }
 
-  console.log('[habit-gen] inputs:', {
-    hasRecommendations:      !!scan.recommendations,
-    newSkinStepsCount:       newSkinSteps.length,
-    legacyMorningCount:      legacyMorning.length,
-    legacyEveningCount:      legacyEvening.length,
-    effectiveSkinCount:      effectiveSkin.length,
-    beard_density:           scan.beard_density,
-    userHairProfilePresent:  !!userHairProfile,
-    userHairRoutineCount:    (userHairRoutine ?? []).length,
-  });
-
-  // ── Beard: support new steps array with fallback to defaults ──
-  const beardRecsRaw = scan.recommendations?.beard as { steps?: BeardStep[] } | null | undefined;
-  const beardSteps: BeardStep[] | null = Array.isArray(beardRecsRaw?.steps) && beardRecsRaw!.steps!.length > 0
-    ? beardRecsRaw!.steps!.filter(s => !!s.step_id)
-    : null;
-
-  const hasBeard = scan.beard_density && scan.beard_density !== 'none';
-  const washFreqDays = washFrequencyDays(userHairProfile?.wash_frequency);
-
-  const hairSteps: HairRoutineStep[] = (userHairRoutine ?? []).filter((s) => {
-    if (!s.step_id) {
-      console.log('[habit-gen] skipping hair step without step_id', { step: s });
-      return false;
+  // ── Hair ──────────────────────────────────────────────────────────────────
+  // Per plan §2.1: every hair step is time_of_day='daily' regardless of cadence.
+  // Cadence translation (every_wash / weekly / monthly) deferred to Phase XIII.
+  for (const step of userHairRoutine ?? []) {
+    if (!step.step_id || !CANONICAL_HAIR_STEPS.has(step.step_id)) {
+      console.warn('[habit-gen] dropping hair step with non-canonical step_id', {
+        step_id: step.step_id,
+        scan_id: scanId,
+      });
+      continue;
     }
-    return !s.step_id.startsWith('makeup_');
-  });
-
-  for (let i = 0; i < days; i += 1) {
-    const date = addDays(startDate, i);
-    const dayOffset = i;                                    // 0-based offset from startDate
-    const isWashDay = dayOffset % washFreqDays === 0;       // wash days anchored to startDate
-
-    // Skin — one row per (step, time_of_day) per day. The unique constraint on
-    // routine_checkins is (user_id, step_id, date), so multi-slot steps need
-    // distinct step_ids per slot. We suffix `_am`/`_pm` here; the routine UI
-    // strips the suffix when grouping into a single card per base step.
-    for (const s of effectiveSkin) {
-      for (const slot of s.time_of_day) {
-        const slottedStepId = `${s.step_id}_${slot}`;
-        rows.push({ user_id: userId, scan_id: scanId, step_id: slottedStepId, time_of_day: slot, date });
-      }
-    }
-
-    // Beard — prefer the scan's beard.steps if present, else defaults.
-    if (hasBeard) {
-      if (beardSteps) {
-        for (const b of beardSteps) {
-          // Wash steps follow the hair wash cadence; everything else is daily.
-          if (b.step_id === 'beard_wash' && !isWashDay) continue;
-          // Determine time_of_day. New schema uses an array; default to 'daily'.
-          const slots: ScheduledRow['time_of_day'][] = (() => {
-            if (Array.isArray(b.time_of_day) && b.time_of_day.length > 0) {
-              return b.time_of_day as ScheduledRow['time_of_day'][];
-            }
-            return ['daily'];
-          })();
-          for (const slot of slots) {
-            rows.push({ user_id: userId, scan_id: scanId, step_id: b.step_id, time_of_day: slot, date });
-          }
-        }
-      } else {
-        for (const b of BEARD_DEFAULT_STEPS) {
-          if (b.step_id === 'beard_wash' && !isWashDay) continue;
-          rows.push({
-            user_id:     userId,
-            scan_id:     scanId,
-            step_id:     b.step_id,
-            time_of_day: b.time_of_day,
-            date,
-          });
-        }
-      }
-    }
-
-    // Hair — cadence-aware (unchanged)
-    for (const h of hairSteps) {
-      let schedule = false;
-      let time_of_day: ScheduledRow['time_of_day'] = 'daily';
-
-      if (h.cadence === 'every_wash') {
-        schedule = isWashDay;
-        time_of_day = 'daily';
-      } else if (h.cadence === 'weekly') {
-        schedule = dayOffset % 7 === 0;
-        time_of_day = 'weekly';
-      } else if (h.cadence === 'monthly') {
-        schedule = dayOffset % 30 === 0;
-        time_of_day = 'monthly';
-      }
-
-      if (schedule) {
-        rows.push({
-          user_id:     userId,
-          scan_id:     scanId,
-          step_id:     h.step_id,
-          time_of_day,
-          date,
-        });
-      }
-    }
+    rows.push({
+      user_id:            userId,
+      scan_id:            scanId,
+      step_key:           step.step_id,
+      label:              step.label,
+      product:            step.product ?? null,
+      category:           step.category ?? null,
+      clinical_reasoning: step.clinical_reasoning ?? null,
+      time_of_day:        'daily',
+      step_type:          'maintenance',  // hair never carries target_concern today
+      target_concern:     null,
+      display_order:      step.order ?? 999,
+    });
   }
 
   if (rows.length === 0) {
-    console.warn('[habit-gen] returning 0 rows — reasons:', {
-      noRecommendations: !scan.recommendations,
-      noSkinSteps:       effectiveSkin.length === 0,
-      noBeard:           !hasBeard,
-      noHairRoutine:     hairSteps.length === 0,
+    console.warn('[habit-gen] generatePlanSteps returning 0 rows', {
+      scan_id:        scanId,
+      hasSkin:        skinSteps.length > 0,
+      hasBeardSteps:  Array.isArray(beardRecs?.steps) && (beardRecs?.steps?.length ?? 0) > 0,
+      hasHairRoutine: (userHairRoutine ?? []).length > 0,
     });
-    if (effectiveSkin.length > 0) {
-      console.warn(
-        '[habit-gen] skin steps were present but produced 0 rows — ' +
-        'check for missing step_id or all filtered as makeup',
-        { effectiveSkin },
-      );
-    }
   }
 
   return rows;
+}
+
+// ─── Daily adherence synthesiser ─────────────────────────────────────────────
+// Computes the per-day DayAdherence struct that the streak/week-strip math
+// expects, from the new (planSteps, completions) shape. Daily-only — no
+// weekly handling, no replay, no buckets.
+
+export function expectedDailyAdherence(
+  planSteps: Pick<PlanStepRow, 'step_key' | 'time_of_day'>[],
+  completions: { step_key: string; date: string }[],
+  windowStart: string,                    // local-tz YMD, inclusive
+  windowEnd:   string,                    // local-tz YMD, inclusive
+): DayAdherence[] {
+  const scheduledPerDay = planSteps.length;
+
+  const byDate = new Map<string, Set<string>>();
+  for (const c of completions) {
+    let s = byDate.get(c.date);
+    if (!s) {
+      s = new Set();
+      byDate.set(c.date, s);
+    }
+    s.add(c.step_key);
+  }
+
+  const out: DayAdherence[] = [];
+  const span = daysBetween(windowStart, windowEnd);
+  for (let i = 0; i <= span; i += 1) {
+    const date = addDays(windowStart, i);
+    out.push({
+      date,
+      scheduled_count: scheduledPerDay,
+      completed_count: byDate.get(date)?.size ?? 0,
+    });
+  }
+  return out;
 }

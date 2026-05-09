@@ -3,7 +3,7 @@
 // resulting row powers the /scan-delta view screen.
 
 import { supabase } from '../lib/supabase';
-import { computeStreak, type DayAdherence } from '../lib/habit';
+import { computeStreak, stripSlotSuffix, type DayAdherence } from '../lib/habit';
 import { checkMilestonesForScan } from '../lib/milestones';
 import { PRODUCTS } from '../constants/productConstants';
 import type { RescanFeedback } from '../types';
@@ -84,18 +84,21 @@ function diffDays(from: Date, to: Date): number {
   return Math.max(1, Math.round((to.getTime() - from.getTime()) / MS_PER_DAY));
 }
 
-// ─── Category classification for routine_checkins ───────────────────────────
+// ─── Category classification ────────────────────────────────────────────────
 
 type AdherenceCategory = 'skin_am' | 'skin_pm' | 'beard' | 'hair';
 
-function stepCategory(stepId: string, timeOfDay: string): AdherenceCategory | null {
-  if (stepId.startsWith('skin_')) {
-    if (timeOfDay === 'am') return 'skin_am';
-    if (timeOfDay === 'pm') return 'skin_pm';
+// Drive category from the step_key prefix + slot suffix. step_keys are the
+// canonical keys written to routine_plan_steps (skin_cleanse_am, hair_shampoo,
+// beard_oil, …). Returns null for anything that doesn't match.
+function categoryForStepKey(stepKey: string): AdherenceCategory | null {
+  if (stepKey.startsWith('skin_')) {
+    if (stepKey.endsWith('_am')) return 'skin_am';
+    if (stepKey.endsWith('_pm')) return 'skin_pm';
     return null;
   }
-  if (stepId.startsWith('beard_')) return 'beard';
-  if (stepId.startsWith('hair_'))  return 'hair';
+  if (stepKey.startsWith('beard_')) return 'beard';
+  if (stepKey.startsWith('hair_'))  return 'hair';
   return null;
 }
 
@@ -162,78 +165,117 @@ export async function computeAndStoreScanDelta(params: {
     const concerns_persistent = [...fromConcerns].filter(c => toConcerns.has(c));
 
     // ── Adherence metrics ─────────────────────────────────────────────────
+    // Active plan during the window = prevScan's plan_steps (the schedule the
+    // user was acting on between fromDate and toDate). Completions are bound
+    // to whichever scan was active when they were logged via completions.scan_id,
+    // but for this aggregate we filter by user + date range.
     const fromISO = toISODate(fromDate);
     const toISO   = toISODate(toDate);
-    const { data: checkinRows } = await supabase
-      .from('routine_checkins')
-      .select('date, step_id, time_of_day, completed_at, superseded')
-      .eq('user_id', userId)
-      .eq('superseded', false)
-      .gte('date', fromISO)
-      .lt('date', toISO);
 
-    const rows = (checkinRows ?? []) as Array<{
-      date: string; step_id: string; time_of_day: string; completed_at: string | null;
+    const [planRes, complRes] = await Promise.all([
+      supabase
+        .from('routine_plan_steps')
+        .select('step_key, time_of_day, step_type')
+        .eq('scan_id', prevScan.id),
+      supabase
+        .from('routine_completions')
+        .select('step_key, date')
+        .eq('user_id', userId)
+        .gte('date', fromISO)
+        .lt('date', toISO),
+    ]);
+
+    const planSteps = (planRes.data ?? []) as Array<{
+      step_key: string; time_of_day: 'am' | 'pm' | 'daily'; step_type: 'maintenance' | 'treatment';
     }>;
+    const completions = (complRes.data ?? []) as Array<{ step_key: string; date: string }>;
 
-    // Overall adherence
-    const totalScheduled = rows.length;
-    const totalCompleted = rows.filter(r => r.completed_at !== null).length;
-    const adherence_overall = totalScheduled > 0
-      ? Math.round((totalCompleted / totalScheduled) * 10_000) / 10_000
+    // Per-category scheduled-per-day counts derived from prevScan's plan_steps.
+    const scheduledPerDayByCat: Record<AdherenceCategory, number> = {
+      skin_am: 0, skin_pm: 0, beard: 0, hair: 0,
+    };
+    for (const p of planSteps) {
+      const cat = categoryForStepKey(p.step_key);
+      if (cat) scheduledPerDayByCat[cat] += 1;
+    }
+    const scheduledPerDayTotal =
+      scheduledPerDayByCat.skin_am +
+      scheduledPerDayByCat.skin_pm +
+      scheduledPerDayByCat.beard +
+      scheduledPerDayByCat.hair;
+
+    const expectedTotal = scheduledPerDayTotal * daysBetween;
+    const completedTotal = completions.length;
+    const adherence_overall = expectedTotal > 0
+      ? Math.round((completedTotal / expectedTotal) * 10_000) / 10_000
       : null;
 
-    // By-category adherence
-    const byCat: Record<AdherenceCategory, { scheduled: number; completed: number }> = {
-      skin_am: { scheduled: 0, completed: 0 },
-      skin_pm: { scheduled: 0, completed: 0 },
-      beard:   { scheduled: 0, completed: 0 },
-      hair:    { scheduled: 0, completed: 0 },
+    // By-category adherence: completions per category over (scheduledPerDay × daysBetween).
+    const completedByCat: Record<AdherenceCategory, number> = {
+      skin_am: 0, skin_pm: 0, beard: 0, hair: 0,
     };
-    for (const r of rows) {
-      const cat = stepCategory(r.step_id, r.time_of_day);
-      if (!cat) continue;
-      byCat[cat].scheduled += 1;
-      if (r.completed_at) byCat[cat].completed += 1;
+    for (const c of completions) {
+      const cat = categoryForStepKey(c.step_key);
+      if (cat) completedByCat[cat] += 1;
     }
     const adherence_by_category: AdherenceByCategory = {};
-    (Object.keys(byCat) as AdherenceCategory[]).forEach(cat => {
-      if (byCat[cat].scheduled > 0) {
-        adherence_by_category[cat] = Math.round((byCat[cat].completed / byCat[cat].scheduled) * 10_000) / 10_000;
+    (Object.keys(scheduledPerDayByCat) as AdherenceCategory[]).forEach(cat => {
+      const expected = scheduledPerDayByCat[cat] * daysBetween;
+      if (expected > 0) {
+        adherence_by_category[cat] = Math.round((completedByCat[cat] / expected) * 10_000) / 10_000;
       }
     });
 
-    // Weekly adherence — group rows by Monday start of their date.
-    const byWeek = new Map<string, { scheduled: number; completed: number }>();
-    for (const r of rows) {
-      const [y, m, d] = r.date.split('-').map(Number);
+    // ── Weekly adherence — Monday-anchored buckets. Numerator: completions
+    // landing in that week. Denominator: scheduledPerDayTotal × number of
+    // window days that fell into that bucket.
+    const completionsByWeek = new Map<string, number>();
+    const daysInWindowByWeek = new Map<string, number>();
+    for (const c of completions) {
+      const [y, m, d] = c.date.split('-').map(Number);
       const week = mondayStartISO(new Date(y, m - 1, d));
-      const rec = byWeek.get(week) ?? { scheduled: 0, completed: 0 };
-      rec.scheduled += 1;
-      if (r.completed_at) rec.completed += 1;
-      byWeek.set(week, rec);
+      completionsByWeek.set(week, (completionsByWeek.get(week) ?? 0) + 1);
     }
-    const adherence_weekly: WeeklyAdherencePoint[] = [...byWeek.entries()]
+    // Walk every day in [fromISO, toISO) to count window-days per week bucket,
+    // since completions alone leave gaps (zero-completion days).
+    for (let i = 0; i < daysBetween; i += 1) {
+      const day = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate() + i);
+      const week = mondayStartISO(day);
+      daysInWindowByWeek.set(week, (daysInWindowByWeek.get(week) ?? 0) + 1);
+    }
+    const adherence_weekly: WeeklyAdherencePoint[] = [...daysInWindowByWeek.entries()]
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-      .map(([week_start_date, rec]) => ({
-        week_start_date,
-        pct: rec.scheduled > 0 ? Math.round((rec.completed / rec.scheduled) * 10_000) / 10_000 : 0,
-      }));
+      .map(([week_start_date, daysInWindow]) => {
+        const expected = scheduledPerDayTotal * daysInWindow;
+        const completed = completionsByWeek.get(week_start_date) ?? 0;
+        return {
+          week_start_date,
+          pct: expected > 0 ? Math.round((completed / expected) * 10_000) / 10_000 : 0,
+        };
+      });
 
     // ── Streak metrics ────────────────────────────────────────────────────
-    const dailyAdherence: DayAdherence[] = Array.from(
-      rows.reduce((map, r) => {
-        const rec = map.get(r.date) ?? { scheduled: 0, completed: 0 };
-        rec.scheduled += 1;
-        if (r.completed_at) rec.completed += 1;
-        map.set(r.date, rec);
-        return map;
-      }, new Map<string, { scheduled: number; completed: number }>()).entries(),
-    ).map(([date, rec]) => ({
-      date,
-      scheduled_count: rec.scheduled,
-      completed_count: rec.completed,
-    }));
+    // Build per-day DayAdherence using the active plan's scheduledPerDayTotal
+    // so streak math has a non-zero denominator on every day in the window.
+    const completedByDate = new Map<string, Set<string>>();
+    for (const c of completions) {
+      let s = completedByDate.get(c.date);
+      if (!s) {
+        s = new Set();
+        completedByDate.set(c.date, s);
+      }
+      s.add(c.step_key);
+    }
+    const dailyAdherence: DayAdherence[] = [];
+    for (let i = 0; i < daysBetween; i += 1) {
+      const day = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate() + i);
+      const dateISO = toISODate(day);
+      dailyAdherence.push({
+        date:            dateISO,
+        scheduled_count: scheduledPerDayTotal,
+        completed_count: completedByDate.get(dateISO)?.size ?? 0,
+      });
+    }
 
     const streakInfo      = computeStreak(dailyAdherence);
     const streak_longest  = streakInfo.longest_streak;
@@ -241,29 +283,31 @@ export async function computeAndStoreScanDelta(params: {
     const freezes_used    = streakInfo.freezes_used;
 
     // ── Products used ─────────────────────────────────────────────────────
+    // Active kit at the time of each completion. Strip skin slot suffix to
+    // match user_kit.step_id (which is unsuffixed).
     const { data: kitRows } = await supabase
       .from('user_kit')
-      .select('id, product_id, acquired_at')
+      .select('id, product_id, step_id, acquired_at')
       .eq('user_id', userId)
       .eq('is_active', true)
       .lt('acquired_at', newScan.created_at);
 
-    const kit = (kitRows ?? []) as Array<{ id: string; product_id: string; acquired_at: string }>;
+    const kit = (kitRows ?? []) as Array<{
+      id: string; product_id: string; step_id: string | null; acquired_at: string;
+    }>;
 
-    // Count completions per kit item in the window.
+    // Count completions per kit item by joining stripSlotSuffix(step_key) ↔ kit.step_id.
+    // Only credit completions on/after the kit row's acquired_at (compared as YMD).
     const completionsByKit = new Map<string, number>();
-    const { data: completionRows } = await supabase
-      .from('routine_checkins')
-      .select('kit_item_id')
-      .eq('user_id', userId)
-      .eq('superseded', false)
-      .not('completed_at', 'is', null)
-      .gte('date', fromISO)
-      .lt('date', toISO);
-
-    for (const r of (completionRows ?? []) as Array<{ kit_item_id: string | null }>) {
-      if (!r.kit_item_id) continue;
-      completionsByKit.set(r.kit_item_id, (completionsByKit.get(r.kit_item_id) ?? 0) + 1);
+    for (const c of completions) {
+      const baseKey = stripSlotSuffix(c.step_key);
+      const matchingKit = kit.find(k => {
+        if (k.step_id !== baseKey) return false;
+        const acquiredYMD = k.acquired_at.slice(0, 10);   // 'YYYY-MM-DD' from ISO
+        return acquiredYMD <= c.date;
+      });
+      if (!matchingKit) continue;
+      completionsByKit.set(matchingKit.id, (completionsByKit.get(matchingKit.id) ?? 0) + 1);
     }
 
     const products_used: ProductUsageSummary[] = kit.map(k => {

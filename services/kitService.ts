@@ -1,7 +1,6 @@
 // Kit service — user_kit CRUD + helpers for linking products to routine steps.
 
 import { supabase } from '../lib/supabase';
-import { backfillKitItemIdForStep } from './habitService';
 import type { MatchedProduct } from '../types';
 
 export interface UserKitRow {
@@ -30,9 +29,10 @@ export function productIdFor(product: MatchedProduct): string {
 }
 
 // Called when the user taps "Buy" in ProductPickerSheet. Inserts a user_kit
-// row (marking any existing active row for the same step as inactive first),
-// then calls backfillKitItemIdForStep so today's and future check-ins reference
-// the new kit item.
+// row (marking any existing active row for the same step as inactive first).
+// Phase XII: completion → kit attribution is computed at delta-write time
+// (deltaService) by joining stripSlotSuffix(completion.step_key) === user_kit.step_id,
+// so there's no per-completion linkage to backfill.
 export async function addProductToKitFromBuy(params: {
   userId:        string;
   product:       MatchedProduct;
@@ -71,15 +71,7 @@ export async function addProductToKitFromBuy(params: {
     return null;
   }
 
-  const kitItemId = (data as { id: string } | null)?.id ?? null;
-  if (kitItemId) {
-    try {
-      await backfillKitItemIdForStep(userId, stepId, kitItemId);
-    } catch (err) {
-      console.error('[kit] backfill failed', err);
-    }
-  }
-  return kitItemId;
+  return (data as { id: string } | null)?.id ?? null;
 }
 
 // Fetch all active kit rows for a user.

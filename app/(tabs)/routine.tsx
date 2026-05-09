@@ -32,11 +32,11 @@ import { buildWeekStrip, computeStreak, type DayAdherence } from '../../lib/habi
 import {
   fetchDailyAdherence,
   fetchTodayRoutine,
-  recordCheckin,
-  unrecordCheckin,
+  recordCompletion,
+  todayISO,
+  unrecordCompletion,
   type RoutineDayStep,
 } from '../../services/habitService';
-import { deriveStepCategory, logRoutineStep } from '../../services/scanService';
 
 type Period = 'AM' | 'PM';
 type CareCategory = 'skin' | 'hair' | 'beard' | 'makeup';
@@ -58,10 +58,6 @@ const MONTH_LABELS   = ['January', 'February', 'March', 'April', 'May', 'June', 
 
 function formatTodayDate(d: Date): string {
   return `${WEEKDAY_LABELS[d.getDay()]} · ${MONTH_LABELS[d.getMonth()]} ${d.getDate()}`;
-}
-
-function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
 }
 
 // Calendar-day math: compare local YYYY-MM-DD strings (midnight to midnight)
@@ -209,37 +205,23 @@ export default function RoutineRoute() {
     const nowIso = new Date().toISOString();
 
     setTodaySteps(prev => prev.map(s =>
-      s.step_id === step.step_id
+      s.step_key === step.step_key
         ? { ...s, completed: !wasChecked, completed_at: wasChecked ? null : nowIso }
         : s,
     ));
 
     try {
       if (wasChecked) {
-        await unrecordCheckin(userId, step.step_id, date);
+        await unrecordCompletion(userId, step.step_key, date);
       } else {
-        await recordCheckin(userId, step.step_id, date, step.kit_item_id);
-
-        // Fire-and-forget telemetry: log this step completion to routine_logs
-        // for analytics. Skip if we can't derive a clean category — better to
-        // miss a row than miscategorize.
-        const category = deriveStepCategory(step.step_id);
-        if (category) {
-          void logRoutineStep({
-            userId,
-            scanId: step.scan_id,
-            stepLabel: step.label,
-            stepProduct: step.product,
-            category,
-          });
-        }
+        await recordCompletion(userId, step.scan_id, step.step_key, date);
       }
       const fresh = await fetchDailyAdherence(userId);
       setDailyAdherence(fresh);
     } catch (err) {
       console.error('[routine] toggle failed', err);
       setTodaySteps(prev => prev.map(s =>
-        s.step_id === step.step_id
+        s.step_key === step.step_key
           ? { ...s, completed: wasChecked, completed_at: wasChecked ? nowIso : null }
           : s,
       ));
@@ -379,7 +361,7 @@ export default function RoutineRoute() {
               const note  = step.product ? step.label : '';
               return (
                 <RoutineCheckStep
-                  key={step.row_id}
+                  key={step.step_key}
                   num={pad2(numberOffset + i + 1)}
                   title={title}
                   note={note}
