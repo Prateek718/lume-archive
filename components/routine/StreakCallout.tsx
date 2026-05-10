@@ -35,7 +35,7 @@ export function StreakCallout({ streakDays, doneToday, totalToday, daysToNextSca
       />
       <Divider />
       <Section
-        label="This week"
+        label="Today"
         valueNode={
           <Text style={valueText}>
             <Text style={italicNumber}>{doneToday}</Text>
