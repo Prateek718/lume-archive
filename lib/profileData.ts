@@ -84,15 +84,11 @@ export interface StatGrid {
 }
 
 export async function computeStatGrid(userId: string): Promise<StatGrid> {
-  const [scansRes, checkinsRes, milestoneRes, dailyAdherence] = await Promise.all([
+  const [scansRes, milestoneRes, dailyAdherence] = await Promise.all([
     supabase.from('scans')
       .select('id, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: true }),
-    supabase.from('routine_checkins')
-      .select('date, completed_at')
-      .eq('user_id', userId)
-      .eq('superseded', false),
     supabase.from('user_milestones')
       .select('milestone_key', { count: 'exact', head: true })
       .eq('user_id', userId),
@@ -100,24 +96,43 @@ export async function computeStatGrid(userId: string): Promise<StatGrid> {
   ]);
 
   const scans = (scansRes.data ?? []) as Array<{ id: string; created_at: string }>;
-  const checkins = (checkinsRes.data ?? []) as Array<{ date: string; completed_at: string | null }>;
-
   const scan_count = scans.length;
   const days_in = scan_count > 0 ? daysFloor(scans[0].created_at) : 0;
 
-  // Adherence over the current issue window (since most-recent-scan).
+  // Adherence over the current issue window (since most-recent-scan). Active
+  // scan is the latest by created_at; plan_steps for that scan define
+  // scheduledPerDay; expected = scheduledPerDay × windowDays. Completed = the
+  // count of routine_completions in the window.
   let adherence_pct = 0;
   if (scan_count > 0) {
-    const windowStart = scans[scans.length - 1].created_at.slice(0, 10);
-    let scheduled = 0;
-    let completed = 0;
-    for (const r of checkins) {
-      if (r.date >= windowStart) {
-        scheduled += 1;
-        if (r.completed_at) completed += 1;
-      }
-    }
-    adherence_pct = scheduled === 0 ? 0 : Math.round((completed / scheduled) * 100);
+    const latestScan = scans[scans.length - 1];
+    const windowStartISO = latestScan.created_at.slice(0, 10);
+    const todayISOStr = toISODate(new Date());
+    const windowDays = Math.max(
+      1,
+      Math.floor(
+        (new Date(todayISOStr + 'T00:00:00').getTime()
+          - new Date(windowStartISO + 'T00:00:00').getTime()) / MS_PER_DAY,
+      ) + 1,
+    );
+
+    const [planRes, complRes] = await Promise.all([
+      supabase
+        .from('routine_plan_steps')
+        .select('step_key')
+        .eq('scan_id', latestScan.id),
+      supabase
+        .from('routine_completions')
+        .select('step_key, date')
+        .eq('user_id', userId)
+        .gte('date', windowStartISO)
+        .lte('date', todayISOStr),
+    ]);
+
+    const scheduledPerDay = (planRes.data ?? []).length;
+    const completed = (complRes.data ?? []).length;
+    const expected = scheduledPerDay * windowDays;
+    adherence_pct = expected === 0 ? 0 : Math.round((completed / expected) * 100);
   }
 
   const streak_days = computeStreak(dailyAdherence).current_streak;
@@ -257,10 +272,10 @@ function descriptorFor(pct: number): string {
 
 export async function computeAdherenceForCurrentIssue(userId: string): Promise<AdherenceBreakdown> {
   const { data: scansData } = await supabase.from('scans')
-    .select('created_at')
+    .select('id, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: true });
-  const scans = (scansData ?? []) as Array<{ created_at: string }>;
+  const scans = (scansData ?? []) as Array<{ id: string; created_at: string }>;
 
   if (scans.length === 0) {
     return {
@@ -273,34 +288,41 @@ export async function computeAdherenceForCurrentIssue(userId: string): Promise<A
     };
   }
 
-  const issueStartISO = scans[scans.length - 1].created_at.slice(0, 10);
+  const latestScan = scans[scans.length - 1];
+  const issueStartISO = latestScan.created_at.slice(0, 10);
   const todayISO = toISODate(new Date());
 
-  const { data: checkinsData, error } = await supabase
-    .from('routine_checkins')
-    .select('date, completed_at')
-    .eq('user_id', userId)
-    .eq('superseded', false)
-    .gte('date', issueStartISO)
-    .lte('date', todayISO);
-  if (error) console.error('[profileData] adherence query failed', error);
-  const checkins = (checkinsData ?? []) as Array<{ date: string; completed_at: string | null }>;
+  const [planRes, complRes] = await Promise.all([
+    supabase
+      .from('routine_plan_steps')
+      .select('step_key')
+      .eq('scan_id', latestScan.id),
+    supabase
+      .from('routine_completions')
+      .select('step_key, date')
+      .eq('user_id', userId)
+      .gte('date', issueStartISO)
+      .lte('date', todayISO),
+  ]);
+  if (planRes.error) console.error('[profileData] plan_steps query failed', planRes.error);
+  if (complRes.error) console.error('[profileData] completions query failed', complRes.error);
 
-  let scheduledTotal = 0;
-  let completedTotal = 0;
-  for (const r of checkins) {
-    scheduledTotal += 1;
-    if (r.completed_at) completedTotal += 1;
-  }
-  const overall_pct = scheduledTotal === 0 ? 0 : Math.round((completedTotal / scheduledTotal) * 100);
+  const scheduledPerDay = (planRes.data ?? []).length;
+  const completions = (complRes.data ?? []) as Array<{ step_key: string; date: string }>;
+
+  // Days in the issue window so far (inclusive of today).
+  const issueStartMs = new Date(issueStartISO + 'T00:00:00').getTime();
+  const todayMs = new Date(todayISO + 'T00:00:00').getTime();
+  const issueAgeDays = Math.floor((todayMs - issueStartMs) / MS_PER_DAY);
+  const windowDays = Math.max(1, issueAgeDays + 1);
+
+  const expectedTotal = scheduledPerDay * windowDays;
+  const completedTotal = completions.length;
+  const overall_pct = expectedTotal === 0 ? 0 : Math.round((completedTotal / expectedTotal) * 100);
 
   // Weekly buckets — 7-day windows ending today.
   // Week 1 = oldest (21–27 days ago), This week = 0–6 days ago.
   // Buckets earlier than the issue start are hidden.
-  const issueStartMs = new Date(issueStartISO + 'T00:00:00').getTime();
-  const todayMs = new Date(todayISO + 'T00:00:00').getTime();
-  const issueAgeDays = Math.floor((todayMs - issueStartMs) / MS_PER_DAY);
-
   const weekly: WeeklyBucket[] = [];
   // Build from oldest to newest. Indices: 3 = oldest (week 1), 0 = this week.
   for (let i = 3; i >= 0; i -= 1) {
@@ -311,15 +333,17 @@ export async function computeAdherenceForCurrentIssue(userId: string): Promise<A
     const endMs = todayMs - endOffset * MS_PER_DAY;
     const startISO = toISODate(new Date(startMs));
     const endISO = toISODate(new Date(endMs));
-    let s = 0;
+    // Number of days in this bucket that fell within the issue window.
+    const bucketStartMs = Math.max(startMs, issueStartMs);
+    const bucketDays = Math.max(0, Math.floor((endMs - bucketStartMs) / MS_PER_DAY) + 1);
     let c = 0;
-    for (const r of checkins) {
+    for (const r of completions) {
       if (r.date >= startISO && r.date <= endISO) {
-        s += 1;
-        if (r.completed_at) c += 1;
+        c += 1;
       }
     }
-    const pct = s === 0 ? 0 : Math.round((c / s) * 100);
+    const expected = scheduledPerDay * bucketDays;
+    const pct = expected === 0 ? 0 : Math.round((c / expected) * 100);
     const label = i === 0 ? 'This week' : `Week ${4 - i}`;
     weekly.push({ label, pct });
   }

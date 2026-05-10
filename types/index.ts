@@ -353,7 +353,6 @@ export interface Scan {
   brow_condition:    string | null;
   undereye:          string | null;
   fitzpatrick_scale?: number | null;
-  skin_tone?:         string | null;
   skin_undertone?:    'warm' | 'cool' | 'neutral' | null;
 
   // Scores
@@ -396,7 +395,6 @@ export interface PartialScan {
   brow_condition:    string | null;
   undereye:          string | null;
   fitzpatrick_scale: number | null;
-  skin_tone:         string | null;
   skin_undertone:    string | null;
   score_skin:        number | null;
   // DEPRECATED Phase 6.0: see Scan interface above.

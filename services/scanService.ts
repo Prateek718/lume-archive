@@ -6,7 +6,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { scheduleRescanNudge, cancelRescanNudge } from './notificationService';
-import { scheduleRoutineForScan, supersedePreviousScanRows } from './habitService';
+import { writePlanStepsForScan } from './habitService';
 import { computeAndStoreScanDelta } from './deltaService';
 import { checkMilestonesForScan } from '../lib/milestones';
 import {
@@ -68,47 +68,6 @@ function getSeason(_date: Date, _city: string): string {
   if (month >= 6  && month <= 9)  return 'monsoon';
   if (month >= 10 && month <= 11) return 'post_monsoon';
   return 'winter';
-}
-
-/**
- * Derive the high-level category enum (skin_am | skin_pm | hair | beard | makeup)
- * from a RoutineDayStep's step_id. Returns null if the step_id doesn't match any
- * known pattern, in which case the caller should skip telemetry rather than
- * miscategorize.
- */
-export function deriveStepCategory(stepId: string): 'skin_am' | 'skin_pm' | 'hair' | 'beard' | 'makeup' | null {
-  if (stepId.endsWith('_am') && !stepId.startsWith('hair_') && !stepId.startsWith('beard_') && !stepId.startsWith('makeup_')) {
-    return 'skin_am';
-  }
-  if (stepId.endsWith('_pm') && !stepId.startsWith('hair_') && !stepId.startsWith('beard_') && !stepId.startsWith('makeup_')) {
-    return 'skin_pm';
-  }
-  if (stepId.startsWith('hair_'))   return 'hair';
-  if (stepId.startsWith('beard_'))  return 'beard';
-  if (stepId.startsWith('makeup_')) return 'makeup';
-  return null;
-}
-
-// ── Log a routine step completion to Supabase ─────────────────────────────────
-export async function logRoutineStep(params: {
-  userId:      string;
-  scanId:      string | null;
-  stepLabel:   string;
-  stepProduct?: string;
-  category:    'skin_am' | 'skin_pm' | 'hair' | 'beard' | 'makeup';
-}): Promise<void> {
-  try {
-    await supabase.from('routine_logs').insert({
-      user_id:      params.userId,
-      scan_id:      params.scanId,
-      step_label:   params.stepLabel,
-      step_product: params.stepProduct ?? null,
-      category:     params.category,
-      completed_at: new Date().toISOString(),
-    });
-  } catch (err) {
-    console.warn('[scanService] logRoutineStep failed:', err);
-  }
 }
 
 // Callback so the UI can show which step is running.
@@ -884,23 +843,12 @@ export async function runScanPhase2(
       await scheduleRescanNudge(new Date());
     } catch { }
 
-    // Habit engine: supersede the prior scan's future rows, then schedule the
-    // new scan. Failure here must not break the scan flow.
+    // Habit engine: write the plan_steps for this scan. Active scan is whatever
+    // (user_id, max(created_at)) returns — no superseded flag to flip on prior
+    // scans. Failure here must not break the scan flow.
     try {
       console.log('[habit-schedule] starting for scan', data.id, 'user', userId);
       console.log('[habit-schedule] scan.recommendations present:', !!(data as Scan).recommendations);
-      const { data: prevScanRows } = await supabase
-        .from('scans')
-        .select('id')
-        .eq('user_id', userId)
-        .neq('id', data.id as string)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      const prevScanId = prevScanRows?.[0]?.id as string | undefined;
-      if (prevScanId) {
-        await supersedePreviousScanRows(userId, prevScanId);
-        console.log('[habit-schedule] superseded previous scan rows');
-      }
 
       const { data: userRow } = await supabase
         .from('users')
@@ -908,14 +856,13 @@ export async function runScanPhase2(
         .eq('id', userId)
         .single();
 
-      await scheduleRoutineForScan({
+      await writePlanStepsForScan({
         scanId:          data.id as string,
-        userId,
         scan:            data as Scan,
         userHairProfile: (userRow?.hair_profile as HairProfile | null) ?? null,
         userHairRoutine: (userRow?.hair_recommendations as HairRecommendations | null)?.routine ?? null,
       });
-      console.log('[habit-schedule] scheduled routine for scan');
+      console.log('[habit-schedule] wrote plan_steps for scan');
     } catch (err) {
       console.error('[habit-schedule] FAILED', err);
     }
@@ -1340,12 +1287,19 @@ export async function regenerateMakeupRecs(scanId: string): Promise<MakeupRecomm
 }
 
 /**
- * Re-runs scheduleRoutineForScan after a section regeneration.
- * Reads the updated scan + user hair data, then upserts routine_checkins
- * for all remaining days in the 28-day window. Idempotent — existing rows
- * are skipped; rows for the newly-regenerated section are inserted.
+ * Re-runs writePlanStepsForScan after a section regeneration.
+ *
+ * Per Phase XII: deletes the regenerated section's existing plan_steps for
+ * this scan, then re-runs plan-step generation (which writes all sections
+ * the scan supports). The delete is scoped by step_key prefix so untouched
+ * sections aren't churned. Behavioural quirk — past-day adherence may
+ * rescore if the section's plan_step count changes — is documented in
+ * docs/phase-xii-rewrite-plan.md §12.1.
  */
-export async function rescheduleAfterRegen(scanId: string): Promise<void> {
+export async function rescheduleAfterRegen(
+  scanId: string,
+  section: SectionKey,
+): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     console.error('[rescheduleAfterRegen] no auth session');
@@ -1362,15 +1316,32 @@ export async function rescheduleAfterRegen(scanId: string): Promise<void> {
     return;
   }
 
+  // Plan-gen does not write makeup steps to routine_plan_steps; nothing to
+  // delete or rewrite. Bail early so we don't no-op a delete with no LIKE.
+  if (section === 'makeup') {
+    console.log('[rescheduleAfterRegen] skipping makeup — no plan_steps written for this section');
+    return;
+  }
+
   try {
-    await scheduleRoutineForScan({
+    const prefix = `${section}_`;
+    const { error: delErr } = await supabase
+      .from('routine_plan_steps')
+      .delete()
+      .eq('scan_id', scanId)
+      .like('step_key', `${prefix}%`);
+    if (delErr) {
+      console.error('[rescheduleAfterRegen] section delete failed', delErr);
+      return;
+    }
+
+    await writePlanStepsForScan({
       scanId,
-      userId:          user.id,
       scan:            scan as Scan,
       userHairProfile: (userRow?.hair_profile as HairProfile | null) ?? null,
       userHairRoutine: (userRow?.hair_recommendations as HairRecommendations | null)?.routine ?? null,
     });
-    console.log('[rescheduleAfterRegen] rescheduled routine for scan', scanId);
+    console.log('[rescheduleAfterRegen] rewrote plan_steps for', section, 'on scan', scanId);
   } catch (e) {
     console.error('[rescheduleAfterRegen] schedule failed (non-fatal)', e);
     // Don't rethrow — regen UI already succeeded; routine will recover on next scan.
@@ -1573,25 +1544,3 @@ export async function getAlternativesForStep(
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// REMOVED IN PHASE XI: logProductEvent
-//
-// This function previously wrote to product_events (and product_usage) on
-// every buy-tap. It was a dead export at the time of removal — no UI
-// callsite ever invoked it.
-//
-// Wire-up was intentionally deferred. The current product catalogue is a
-// makeshift one with placeholder SKUs and brands that will be replaced when
-// affiliate links are integrated. Capturing buy-tap telemetry against
-// makeshift product identifiers would produce data that is correctly
-// shaped but semantically junk — product IDs that won't exist post-rebuild,
-// brands that may change, categories that may be re-taxonomized.
-//
-// Both product_events and product_usage tables remain in the schema
-// (see phase_00_baseline_telemetry.sql and phase_xi_create_missing_tables.sql)
-// ready for use when the rebuild lands. At that point a properly designed
-// telemetry function should be added — likely separate functions for tap
-// events (writing to product_events) and product-usage state changes
-// (writing to product_usage with an actual using_it value, populated from
-// a "I'm using this" UI affordance that doesn't exist yet).
-// ─────────────────────────────────────────────────────────────────────────

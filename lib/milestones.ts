@@ -80,32 +80,85 @@ async function insertMilestone(
   }
 }
 
-// ─── Adherence aggregation over routine_checkins ────────────────────────────
+// ─── Adherence aggregation over routine_completions + plan_steps ────────────
 
 interface DayRow { date: string; scheduled: number; completed: number }
+
+function todayISO(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 async function fetchDailyAdherenceWindow(
   userId: string,
   fromISO: string,
 ): Promise<DayRow[]> {
-  const { data, error } = await supabase
-    .from('routine_checkins')
-    .select('date, completed_at')
+  // Active scan = (user_id, max(created_at)). Plan_steps for that scan define
+  // scheduledPerDay; every plan_step is in scope every day under the new model.
+  const { data: scanRow, error: scanErr } = await supabase
+    .from('scans')
+    .select('id')
     .eq('user_id', userId)
-    .eq('superseded', false)
-    .gte('date', fromISO);
-  if (error) {
-    console.error('[milestones] fetchDailyAdherenceWindow failed', error);
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (scanErr) {
+    console.error('[milestones] active scan fetch failed', scanErr);
     return [];
   }
-  const byDate = new Map<string, DayRow>();
-  for (const r of (data ?? []) as Array<{ date: string; completed_at: string | null }>) {
-    const rec = byDate.get(r.date) ?? { date: r.date, scheduled: 0, completed: 0 };
-    rec.scheduled += 1;
-    if (r.completed_at) rec.completed += 1;
-    byDate.set(r.date, rec);
+  const activeScanId = (scanRow?.id as string | undefined) ?? null;
+  if (!activeScanId) return [];
+
+  const [planRes, complRes] = await Promise.all([
+    supabase
+      .from('routine_plan_steps')
+      .select('step_key')
+      .eq('scan_id', activeScanId),
+    supabase
+      .from('routine_completions')
+      .select('step_key, date')
+      .eq('user_id', userId)
+      .gte('date', fromISO),
+  ]);
+
+  if (planRes.error) {
+    console.error('[milestones] plan_steps fetch failed', planRes.error);
+    return [];
   }
-  return [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+  if (complRes.error) {
+    console.error('[milestones] completions fetch failed', complRes.error);
+    return [];
+  }
+
+  const scheduledPerDay = (planRes.data ?? []).length;
+  if (scheduledPerDay === 0) return [];
+
+  const completionsByDate = new Map<string, Set<string>>();
+  for (const c of (complRes.data ?? []) as Array<{ step_key: string; date: string }>) {
+    let s = completionsByDate.get(c.date);
+    if (!s) {
+      s = new Set();
+      completionsByDate.set(c.date, s);
+    }
+    s.add(c.step_key);
+  }
+
+  // Walk every day in [fromISO, todayISO] so empty days appear with completed=0.
+  const out: DayRow[] = [];
+  const today = todayISO();
+  let cur = fromISO;
+  while (cur <= today) {
+    out.push({
+      date:      cur,
+      scheduled: scheduledPerDay,
+      completed: completionsByDate.get(cur)?.size ?? 0,
+    });
+    cur = addDaysISO(cur, 1);
+  }
+  return out;
 }
 
 function daysAgoISO(n: number): string {
