@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
+import { AppState, Text, View } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 
 // TODO: Phase 9 — proper accessibility — implement scalable typography that
@@ -30,6 +30,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Palette } from '../constants/theme';
 import { ScanProvider } from '../hooks/useScan';
+import { invalidateAppConfigCache } from '../lib/appConfig';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -58,6 +59,17 @@ export default function RootLayout() {
       webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
       scopes: ['profile', 'email'],
     });
+  }, []);
+
+  // Invalidate the app_config cache whenever the app returns to foreground
+  // so a freshly-flipped kill switch takes effect within one Supabase read
+  // instead of waiting up to 5 minutes for TTL expiry. See
+  // docs/phase-xiii-architecture.md §10.2.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') invalidateAppConfigCache();
+    });
+    return () => sub.remove();
   }, []);
 
   // Deep-link handler for lume://auth/callback. Supabase processes the URL
