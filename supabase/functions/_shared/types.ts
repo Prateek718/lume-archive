@@ -81,3 +81,52 @@ export interface GeminiVisionResponse {
     skin_undertone?: string | null;
   };
 }
+
+// ─── Delta commentary primitives (mirror lib/gemini/delta.ts:26-52) ──────────
+export interface DekLine {
+  number:   "01" | "02" | "03";
+  headline: string;
+  body:     string;
+}
+
+export interface DeltaScanContext {
+  scan_number:                number;
+  days_between:               number;
+  previous_concerns:          string[];
+  current_concerns:           string[];
+  previous_concerns_detailed: SkinConcernObservation[];
+  current_concerns_detailed:  SkinConcernObservation[];
+  concerns_improved:          string[];
+  concerns_persistent:        string[];
+  concerns_new:               string[];
+  concerns_worsened:          string[];
+}
+
+// Slim Scan projection — mirrors Pick<Scan, 'skin_concerns' | 'skin_concerns_detailed'>
+// from types/index.ts:341-350. We duplicate just the two fields delta needs
+// so the server doesn't have to import the entire Scan shape.
+export interface DeltaScanInput {
+  skin_concerns:           string[] | null;
+  skin_concerns_detailed?: SkinConcernObservation[];
+}
+
+// ─── Delta commentary request / response (§1.6 of architecture doc) ──────────
+export interface GeminiDeltaCommentaryRequest {
+  previousScan: DeltaScanInput;
+  currentScan:  DeltaScanInput;
+  scanDelta: {
+    days_between:        number;
+    concerns_improved:   string[];
+    concerns_new:        string[];
+    concerns_persistent: string[];
+  };
+  scanNumber: number;
+  scanId:     string | null;
+}
+
+export interface GeminiDeltaCommentaryResponse {
+  cover_dek:     string;
+  cover_lines:   [DekLine, DekLine, DekLine];
+  concern_notes: { [concernKey: string]: string };
+  closing_line:  string;
+}
