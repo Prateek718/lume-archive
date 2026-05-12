@@ -1,5 +1,18 @@
 # Phase XIII — Gemini server-side migration: architecture
 
+> **v3 — revised 2026-05-11.** Four revisions applied: per-call
+> kill-switch flags (`vision_enabled`, `skin_recs_enabled`,
+> `beard_recs_enabled`, `makeup_recs_enabled`, `hair_recs_enabled`,
+> `delta_commentary_enabled`) added alongside the master
+> `gemini_scans_enabled` in §10 — `lib/appConfig.ts` gains six per-call
+> helpers; §14.2 migration order revised to lowest-blast-radius-first
+> (delta → hair → makeup → beard → skin); §14.2 commit strategy moved
+> from single bulk commit to per-function commits with a bake window
+> between each plus a final cleanup commit; new §18 maps every §17
+> deferred item to its Block 1–5 trigger point and pins alert thresholds
+> for the future log aggregator. The v2 sections preserved verbatim
+> below outside of these four targeted changes.
+>
 > **v2 — revised 2026-05-11.** Six revisions applied: remote-config kill
 > switch (§10) replaces the EAS env-var pattern; quota-check failure now
 > fails closed (§8.1); §16 restructured into gated verification steps
@@ -13,7 +26,8 @@
 >
 > Date prepared: 2026-05-11. Branch target: `phase-xiii-gemini-server` off
 > `main`. Splits into XIII-a (vision only, single commit) and XIII-b (five
-> Flash calls, single commit).
+> Flash calls, one focused commit per function on
+> `phase-xiii-gemini-server-flash` plus a final cleanup commit — see §14.2).
 >
 > Reads as a companion to `docs/phase-xiii-gemini-server-investigation.md`.
 > Where the investigation lists options, this document picks one and shows
@@ -820,9 +834,36 @@ create policy app_config_select_all
 create index if not exists idx_app_config_updated
   on public.app_config (updated_at desc);
 
--- Seed the kill switch row:
+-- Seed the kill switch rows: master + one per call.
+-- All default to true (fail-open at seed time). Operator flips
+-- individual rows to false when they want to disable a specific
+-- function; flips the master to false for a billing-runaway emergency.
 insert into public.app_config (key, value)
 values ('gemini_scans_enabled', 'true'::jsonb)
+on conflict (key) do nothing;
+
+insert into public.app_config (key, value)
+values ('vision_enabled', 'true'::jsonb)
+on conflict (key) do nothing;
+
+insert into public.app_config (key, value)
+values ('skin_recs_enabled', 'true'::jsonb)
+on conflict (key) do nothing;
+
+insert into public.app_config (key, value)
+values ('beard_recs_enabled', 'true'::jsonb)
+on conflict (key) do nothing;
+
+insert into public.app_config (key, value)
+values ('makeup_recs_enabled', 'true'::jsonb)
+on conflict (key) do nothing;
+
+insert into public.app_config (key, value)
+values ('hair_recs_enabled', 'true'::jsonb)
+on conflict (key) do nothing;
+
+insert into public.app_config (key, value)
+values ('delta_commentary_enabled', 'true'::jsonb)
 on conflict (key) do nothing;
 ```
 
@@ -851,11 +892,23 @@ the new client tries to read it).
 import { supabase } from './supabase';
 
 export interface AppConfig {
-  gemini_scans_enabled: boolean;
+  gemini_scans_enabled:     boolean;   // master kill switch
+  vision_enabled:           boolean;
+  skin_recs_enabled:        boolean;
+  beard_recs_enabled:       boolean;
+  makeup_recs_enabled:      boolean;
+  hair_recs_enabled:        boolean;
+  delta_commentary_enabled: boolean;
 }
 
 const DEFAULTS: AppConfig = {
-  gemini_scans_enabled: true,
+  gemini_scans_enabled:     true,
+  vision_enabled:           true,
+  skin_recs_enabled:        true,
+  beard_recs_enabled:       true,
+  makeup_recs_enabled:      true,
+  hair_recs_enabled:        true,
+  delta_commentary_enabled: true,
 };
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -878,8 +931,15 @@ export async function fetchAppConfig(): Promise<AppConfig> {
 
       const next: AppConfig = { ...DEFAULTS };
       for (const row of data ?? []) {
-        if (row.key === 'gemini_scans_enabled' && typeof row.value === 'boolean') {
-          next.gemini_scans_enabled = row.value;
+        if (typeof row.value !== 'boolean') continue;
+        switch (row.key) {
+          case 'gemini_scans_enabled':     next.gemini_scans_enabled = row.value;     break;
+          case 'vision_enabled':           next.vision_enabled = row.value;           break;
+          case 'skin_recs_enabled':        next.skin_recs_enabled = row.value;        break;
+          case 'beard_recs_enabled':       next.beard_recs_enabled = row.value;       break;
+          case 'makeup_recs_enabled':      next.makeup_recs_enabled = row.value;      break;
+          case 'hair_recs_enabled':        next.hair_recs_enabled = row.value;        break;
+          case 'delta_commentary_enabled': next.delta_commentary_enabled = row.value; break;
         }
       }
       cache = { config: next, fetchedAt: Date.now() };
@@ -900,9 +960,48 @@ export function invalidateAppConfigCache(): void {
   cache = null;
 }
 
+// Master-only check. Kept as an alias of the top-level flag for any
+// future caller that wants only the master state — e.g. an admin
+// surface that wants to display "scans globally disabled" without
+// caring which specific call is in play.
 export async function isGeminiEnabled(): Promise<boolean> {
   const c = await fetchAppConfig();
   return c.gemini_scans_enabled;
+}
+
+// Per-call helpers — each returns true if AND ONLY IF both the master
+// flag (gemini_scans_enabled) AND the call-specific flag are true.
+// The master short-circuits: flipping master to false disables every
+// call regardless of per-call state.
+
+export async function isVisionEnabled(): Promise<boolean> {
+  const c = await fetchAppConfig();
+  return c.gemini_scans_enabled && c.vision_enabled;
+}
+
+export async function isSkinRecsEnabled(): Promise<boolean> {
+  const c = await fetchAppConfig();
+  return c.gemini_scans_enabled && c.skin_recs_enabled;
+}
+
+export async function isBeardRecsEnabled(): Promise<boolean> {
+  const c = await fetchAppConfig();
+  return c.gemini_scans_enabled && c.beard_recs_enabled;
+}
+
+export async function isMakeupRecsEnabled(): Promise<boolean> {
+  const c = await fetchAppConfig();
+  return c.gemini_scans_enabled && c.makeup_recs_enabled;
+}
+
+export async function isHairRecsEnabled(): Promise<boolean> {
+  const c = await fetchAppConfig();
+  return c.gemini_scans_enabled && c.hair_recs_enabled;
+}
+
+export async function isDeltaCommentaryEnabled(): Promise<boolean> {
+  const c = await fetchAppConfig();
+  return c.gemini_scans_enabled && c.delta_commentary_enabled;
 }
 ```
 
@@ -918,46 +1017,92 @@ own subscription teardown via the returned `Subscription.remove()`.
 
 ### 10.3 Wiring into the Gemini wrappers
 
-Each thin wrapper in `lib/gemini/*.ts` calls `isGeminiEnabled()` at
-entry:
-```ts
-// pattern, repeated at the top of every wrapper
-import { isGeminiEnabled } from '../appConfig';
+Each thin wrapper in `lib/gemini/*.ts` calls **its specific helper** at
+entry — not the generic master check. The per-call helper internally
+short-circuits on the master flag (see §10.2), so the wrapper does not
+need to compose them itself.
 
-if (!(await isGeminiEnabled())) {
+```ts
+// pattern for lib/gemini/vision.ts:
+import { isVisionEnabled } from '../appConfig';
+
+if (!(await isVisionEnabled())) {
   throw new Error('Scan is temporarily unavailable. Please try again in a bit.');
 }
 ```
+
+Wrapper → helper mapping:
+
+| Wrapper file | Helper called at entry |
+|---|---|
+| `lib/gemini/vision.ts` | `isVisionEnabled()` |
+| `lib/gemini/skin.ts` | `isSkinRecsEnabled()` |
+| `lib/gemini/beard.ts` | `isBeardRecsEnabled()` |
+| `lib/gemini/makeup.ts` | `isMakeupRecsEnabled()` |
+| `lib/gemini/hair.ts` | `isHairRecsEnabled()` |
+| `lib/gemini/delta.ts` | `isDeltaCommentaryEnabled()` |
+
 The 5-minute cache means this check is essentially free after the first
 call per window. The first call per app session pays a single Supabase
-round-trip (~50–100ms) — well under noise on a 15s scan.
+round-trip (~50–100ms) — well under noise on a 15s scan. All seven flags
+arrive in the same `app_config` SELECT, so per-call granularity does not
+add any extra round-trips.
 
 The thrown error string is the user-facing copy; `useScan.fail(msg)`
 surfaces it via the existing error path at `hooks/useScan.tsx:355-358`.
 
+The generic `isGeminiEnabled()` is retained but not called by any
+wrapper in this phase. It is reserved for any future caller that needs
+only the master state.
+
 ### 10.4 Operator runbook
 
-To kill scans:
+Two tiers of kill switch. Use the right tier for the situation.
+
+**Tier 1 — master kill (`gemini_scans_enabled`).** For
+billing-runaway emergencies. Disables every Gemini call in the app at
+once.
+
 1. Open Supabase Studio → Table Editor → `app_config`.
 2. Edit the row where `key = 'gemini_scans_enabled'`.
 3. Set `value` to `false`. Save.
 4. Within ≤5 minutes every running client sees the change (cache TTL).
    New app launches and any client that goes to foreground see it
-   immediately.
+   immediately. All six Gemini wrappers refuse.
 
-To re-enable:
-- Set `value` back to `true`. Save.
+**Tier 2 — per-call kill (`<call>_enabled`).** Surgical tool for
+"this one function is misbehaving" — e.g. `gemini-skin-recs` is
+returning garbage and you want skin to stop while vision, makeup,
+delta, etc. keep working.
 
-No code change, no deployment, no APK rebuild. The operator is the
-person with Supabase Studio access — currently the project owner.
+1. Open Supabase Studio → Table Editor → `app_config`.
+2. Edit the row for the specific call: one of
+   `vision_enabled`, `skin_recs_enabled`, `beard_recs_enabled`,
+   `makeup_recs_enabled`, `hair_recs_enabled`, `delta_commentary_enabled`.
+3. Set `value` to `false`. Save.
+4. Within ≤5 minutes every running client refuses **only that one call**.
+   The other five Gemini wrappers continue to work.
+
+To re-enable either tier:
+- Set the relevant row's `value` back to `true`. Save.
+
+The master switch short-circuits the per-call switches in code (§10.2),
+so flipping the master to false disables everything regardless of
+per-call state. Re-enabling per-call rows while the master is false has
+no effect until the master is flipped back to true.
+
+No code change, no deployment, no APK rebuild for either tier. The
+operator is the person with Supabase Studio access — currently the
+project owner.
 
 ### 10.5 Threat model
 
 | Scenario | Behaviour |
 |---|---|
 | Operator sets `gemini_scans_enabled=false` to throttle a runaway bill | Within 5 minutes, all clients refuse to invoke any Gemini wrapper. New launches refuse immediately. |
+| Operator wants to disable a single misbehaving function without bricking the entire scan flow | Set `<function>_enabled` to `false` (one of the six per-call rows). Other functions continue to work. Within 5 minutes, all clients refuse only that one call. |
 | Attacker tries to *enable* features by writing to `app_config` | RLS denies all client INSERT/UPDATE/DELETE (only SELECT policy exists). Only service role writes. |
-| Network blip prevents the client from reading `app_config` | Wrapper proceeds with `DEFAULTS` (gemini_scans_enabled=true). User can still scan. Trade-off documented in `lib/appConfig.ts` header. |
+| Network blip prevents the client from reading `app_config` | Wrapper proceeds with `DEFAULTS` (all seven flags true). User can still scan. Trade-off documented in `lib/appConfig.ts` header. |
 | Attacker tries to *disable* features for other users | Same as above — RLS blocks. |
 | Two operators flip the value concurrently | Last-write-wins; `updated_at` records who/when. Acceptable. |
 
@@ -1199,38 +1344,99 @@ ships and the next priority gets chosen.
 
 ### 14.2 Phase XIII-b — five Flash calls
 
-1. **Build & deploy the five remaining functions.**
-   - `gemini-skin-recs`, `gemini-beard-recs`, `gemini-makeup-recs`,
-     `gemini-hair-recs`, `gemini-delta-commentary`.
-   - Each follows §11 steps 5-8.
-   - **Success:** all five functions appear in `supabase functions list`.
+**Migration order: lowest blast radius first.** The five Flash calls
+migrate in this order, ordered by blast-radius-smallest-first rather
+than representativeness:
 
-2. **Update the client for all five.**
-   - Rewrite each `lib/gemini/<call>.ts` per §4.2.
-   - Delete `lib/gemini/shared.ts` (or reduce to the cardinal/fitzpatrick survivors per §5).
-   - Delete `lib/geminiUsage.ts`.
-   - Delete `app/gemini-test.tsx`.
-   - Single commit on `phase-xiii-gemini-server-flash`.
+1. **`gemini-delta-commentary`** — lowest traffic (rescans only);
+   simplest post-processing; failure leaves the new scan intact, only
+   the prose summary is missing.
+2. **`gemini-hair-recs`** — rare invocation (hair-profile edits only);
+   standalone — no `scan_id`; no post-parse normalization to move
+   server-side.
+3. **`gemini-makeup-recs`** — per-scan but regenerates rarely;
+   exercises palette-validation-with-static-fallback.
+4. **`gemini-beard-recs`** — per-scan when applicable; exercises the
+   face-shape-leak sanitizer.
+5. **`gemini-skin-recs`** — last: highest traffic, most post-parse
+   logic (concern normalization + `routine_note` fallback). By the
+   time it ships the shared scaffolding has baked through four prior
+   deploys.
 
-3. **End-to-end test on dev build.**
-   - Full scan with all sections, plus a hair-profile edit, plus a rescan (for delta).
-   - Verify each section renders correctly with no Gemini key in `.env`.
-   - Verify five new `gemini_usage` rows land per scan.
+Rationale: prove the pattern on calls where failure is cheap, then
+graduate to calls where failure is expensive.
 
-4. **Merge XIII-b → main, deploy client.**
+**Per-function template.** For each of the five calls, in the order
+above, repeat the following five steps before starting the next call:
 
-5. **Revoke the old Gemini key at Google AI Studio.**
-   - New production APK has no key — it doesn't matter to new installs.
-   - **Friends with the old APK will start seeing scan failures.** This
-     is intended. They get pushed a new build.
-   - **Success:** old key is "Deleted" in the AI Studio key list; any
-     remaining direct-Gemini call returns 403.
+  a. **Build & deploy the Edge Function.** Server-side only — no client
+     change yet. Follows §11 steps 5–8.
+  b. **Curl-verify in isolation.** Real request in, real response out, a
+     `gemini_usage` row lands. Pass/fail is binary.
+  c. **Rewrite the matching client wrapper** (`lib/gemini/<call>.ts`)
+     per §4.2 as its own focused commit on
+     `phase-xiii-gemini-server-flash`.
+  d. **Build a dev APK, run a real end-to-end scan**, confirm behaviour
+     for the call just migrated.
+  e. **Merge to main; observe for a bake window** before starting the
+     next function.
 
-6. **Distribute the new APK to friends.**
-   - EAS internal distribution link.
-   - **Success:** friends update and resume scanning. Cost-tracking shows
-     `gemini_usage` rows coming from server side only — no inserts
-     authored by user JWTs anymore.
+Bake window duration is calibrated to test-user volume: under low-volume
+friend-testing it can be hours; under broader rollout it should be 24–48h.
+
+The five wrapper commits — one per function — land sequentially on
+`phase-xiii-gemini-server-flash`, each merged to `main` before the next
+function's deploy begins. The order is non-negotiable: a failure in step
+(d) for an earlier call must be resolved before a later call's deploy
+starts, so the bake window of any in-flight call is never overlapped
+with another in-flight call.
+
+**Why per-function commits, not one bulk commit.** Per-function commits
+enable surgical rollback — if the skin-recs wrapper regresses, revert
+that one commit without disturbing the other four. They enable
+per-function latency and error-rate baselines against `main`, because
+each function's bake window is isolated. And they interact correctly
+with the per-call kill-switch flags introduced in Revision 3: if
+`<call>_enabled` flips false, only that one wrapper refuses, because
+only that wrapper's commit introduced the edge-function dependency for
+that call.
+
+**Final cleanup commit.** After all five wrappers have landed and
+stabilized (the fifth function — `gemini-skin-recs` — has completed its
+bake window), ship one final commit on
+`phase-xiii-gemini-server-flash` that:
+
+- Extracts `cardinal` and `fitzpatrickToDepthTier` into neutral utility
+  modules per §5 (e.g. `lib/utils/numbers.ts`, `lib/utils/fitzpatrick.ts`),
+  and updates all client callers to import from the new paths.
+- Deletes `lib/gemini/shared.ts`.
+- Deletes `lib/geminiUsage.ts`.
+- Deletes `app/gemini-test.tsx`.
+
+The cleanup is held until last so the survivors-extraction is not
+entangled with any of the five behavioural migrations. If one of the
+wrapper migrations needs reverting, the deletion stays out of the
+blast radius.
+
+**Revoke the old Gemini key at Google AI Studio.** Performed AFTER all
+five client wrappers have shipped and stabilized, AND the final cleanup
+commit has merged. (This is the same guidance previously placed at the
+end of XIII-a — moved here because the new per-function structure means
+the Flash path doesn't stop using the old key until the fifth wrapper
+ships.)
+
+- New production APK has no key — it doesn't matter to new installs.
+- **Friends with the old APK will start seeing scan failures.** This
+  is intended. They get pushed a new build.
+- **Success:** old key is "Deleted" in the AI Studio key list; any
+  remaining direct-Gemini call returns 403.
+
+**Distribute the new APK to friends.**
+
+- EAS internal distribution link.
+- **Success:** friends update and resume scanning. Cost-tracking shows
+  `gemini_usage` rows coming from server side only — no inserts
+  authored by user JWTs anymore.
 
 ---
 
@@ -1561,6 +1767,59 @@ checklist:
 
 ---
 
+## 18. Deferred items — Block mapping
+
+Every item deferred from Phase XIII is mapped here against the Block 1–5
+scaling roadmap so it can be picked up at the right point rather than
+forever-deferred. Block definitions: **Block 1** = cannot ship to anyone
+without these; **Block 2** = cannot ship to public app store without
+these; **Block 3** = cannot scale past ~1k DAU without these;
+**Block 4** = cannot scale past ~100k DAU without these; **Block 5** =
+cannot operate professionally without these.
+
+| Deferred item | Block | Justification |
+|---|---|---|
+| Prompts moved from code to `gemini_prompts` DB table | Block 4 | A/B-testing infrastructure is a post-100k-DAU concern; server-side-but-in-code is sufficient until then. |
+| Per-user-per-hour quota | Block 3 | Per-day quota suffices until abuse patterns emerge at higher user volumes. |
+| Multi-region Edge Function deployment | Block 4 | Single-region latency is acceptable until an international user base materializes. |
+| A/B testing infrastructure for prompt variants | Block 4 | Requires the `gemini_prompts` DB table above; same trigger. |
+| Migrating `EXPO_PUBLIC_GOOGLE_PLACES_KEY` | Block 2 | Public-app-store launch requires all paid-API keys to be server-side; referer restrictions help but are not sufficient against motivated extraction. |
+| Migrating `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | N/A | OAuth client ID is not a secret by design; no migration needed at any block. |
+| Per-call structured response logging | Block 3 | Token counts + finish_reason suffice for v1 debugging; full structured logs need the aggregator from Block 3. |
+| Drop `gemini_usage_insert_own` RLS policy | Block 2 | Dead-but-harmless code cleanup; defensible to leave during friend-test but should be cleaned before public-store launch. |
+| `(user_id, call_type, created_at)` composite index | Block 3 | Quota check query degrades as `gemini_usage` rowcount approaches ~1M rows. |
+| Operator-facing cost dashboard | Block 3 | Manual SQL queries against `gemini_usage` do not scale operationally past a handful of users. |
+| `EXPO_PUBLIC_GEMINI_EDGE_ENABLED` env var | N/A | Replaced by `app_config` remote flags; never re-introduced. |
+| Expanding `app_config` beyond Phase XIII flags | Block 3+ | Schema is designed to grow; specific additions handled case-by-case as future phases require flags. |
+| Operator UI for editing `app_config` | Block 5 | Supabase Studio Table Editor is the v1 operator workflow; a purpose-built admin tool is part of operational maturity. |
+| External structured-log aggregation + alerting (§13.4) | Block 3 | `console.log` → Supabase function logs is unreadable past ~1k DAU; this is the Block 3 observability upgrade. |
+
+### 18.1 Alert thresholds (to wire when Block 3 aggregator lands)
+
+When the external log aggregator from §13.4 ships, wire these thresholds
+unchanged. They are defined here so that decisions about thresholds are
+made cold, not under the pressure of an in-flight incident.
+
+- **502 rate per function exceeding 5% over a rolling 5-minute window**
+  → **P2 alert** (function degraded; service partially impacted).
+- **Any 503 from quota-check failure (§8.1)**
+  → **P1 alert** (cost guardrail degraded; potential unbounded Gemini
+  spend if the Postgres outage persists).
+- **p95 latency drift exceeding 20% week-over-week per function**
+  → **P3 alert** (gradual regression detection).
+- **Any user hitting 429 (quota exceeded) on legitimate-pattern usage**
+  → **P3 alert** (signals quota ceiling may be miscalibrated).
+- **`gemini_usage` daily cost** (sum of `cost_usd` over rolling 24h)
+  **exceeding 3× rolling 30-day median**
+  → **P2 alert** (potential abuse or runaway loop; not an outage but
+  warrants investigation within hours).
+
+Defining these thresholds now rather than during an incident is a
+deliberate sequencing choice: an aggregator that ships without wired
+alerts is decoration, not observability.
+
+---
+
 ## Appendix A — files this design touches
 
 **Created server-side:**
@@ -1578,18 +1837,18 @@ checklist:
 - `supabase/functions/_shared/quota.ts`
 - `supabase/functions/_shared/types.ts`
 - `supabase/functions/_shared/normalize.ts`
-- `supabase/migrations/phase_13_app_config.sql` — new `public.app_config` table for the kill-switch flag (§10.1).
+- `supabase/migrations/phase_13_app_config.sql` — new `public.app_config` table seeded with the master `gemini_scans_enabled` flag plus six per-call flags (§10.1).
 
 **Created client-side:**
-- `lib/appConfig.ts` — remote-config reader, 5-min in-memory cache, `isGeminiEnabled()` helper (§10.2).
+- `lib/appConfig.ts` — remote-config reader, 5-min in-memory cache, master `isGeminiEnabled()` plus six per-call helpers `isVisionEnabled()`, `isSkinRecsEnabled()`, `isBeardRecsEnabled()`, `isMakeupRecsEnabled()`, `isHairRecsEnabled()`, `isDeltaCommentaryEnabled()` (§10.2).
 
 **Modified client-side:**
-- `lib/gemini/vision.ts` (rewritten to invoke; calls `isGeminiEnabled()` at entry)
-- `lib/gemini/skin.ts` (rewritten to invoke; calls `isGeminiEnabled()` at entry)
-- `lib/gemini/beard.ts` (rewritten to invoke; calls `isGeminiEnabled()` at entry)
-- `lib/gemini/makeup.ts` (rewritten to invoke; calls `isGeminiEnabled()` at entry)
-- `lib/gemini/hair.ts` (rewritten to invoke; calls `isGeminiEnabled()` at entry)
-- `lib/gemini/delta.ts` (rewritten to invoke; calls `isGeminiEnabled()` at entry)
+- `lib/gemini/vision.ts` (rewritten to invoke; calls `isVisionEnabled()` at entry)
+- `lib/gemini/skin.ts` (rewritten to invoke; calls `isSkinRecsEnabled()` at entry)
+- `lib/gemini/beard.ts` (rewritten to invoke; calls `isBeardRecsEnabled()` at entry)
+- `lib/gemini/makeup.ts` (rewritten to invoke; calls `isMakeupRecsEnabled()` at entry)
+- `lib/gemini/hair.ts` (rewritten to invoke; calls `isHairRecsEnabled()` at entry)
+- `lib/gemini/delta.ts` (rewritten to invoke; calls `isDeltaCommentaryEnabled()` at entry)
 - `lib/gemini/index.ts` (re-exports adjusted)
 - `app/_layout.tsx` — register `AppState.addEventListener('change', ...)` that calls `invalidateAppConfigCache()` on `'active'` (§10.2). No `AppState` listener exists in the codebase today — this is the first one.
 - `lib/profileData.ts`, `app/(tabs)/routine.tsx`, `components/routine/RescanBanner.tsx` — update `cardinal` import path away from `lib/gemini/shared`.
