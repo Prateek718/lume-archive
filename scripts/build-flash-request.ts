@@ -15,13 +15,14 @@
 //   npx tsx scripts/build-flash-request.ts hair
 //   npx tsx scripts/build-flash-request.ts makeup
 //   npx tsx scripts/build-flash-request.ts beard
+//   npx tsx scripts/build-flash-request.ts skin
 
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as readline from 'node:readline';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-type FnKey = 'hair' | 'makeup' | 'beard';
+type FnKey = 'hair' | 'makeup' | 'beard' | 'skin';
 
 interface FnSpec {
   key:  FnKey;
@@ -33,6 +34,7 @@ const FN_TABLE: Record<FnKey, FnSpec> = {
   hair:   { key: 'hair',   slug: 'gemini-hair-recs',   artifactPrefix: 'hair-recs'   },
   makeup: { key: 'makeup', slug: 'gemini-makeup-recs', artifactPrefix: 'makeup-recs' },
   beard:  { key: 'beard',  slug: 'gemini-beard-recs',  artifactPrefix: 'beard-recs'  },
+  skin:   { key: 'skin',   slug: 'gemini-skin-recs',   artifactPrefix: 'skin-recs'   },
 };
 
 function parseDotenv(path: string): Record<string, string> {
@@ -197,11 +199,28 @@ async function buildBeardBody(supabase: SupabaseClient, uid: string): Promise<Re
   };
 }
 
+async function buildSkinBody(supabase: SupabaseClient, uid: string): Promise<Record<string, unknown>> {
+  const { analysis, scanId } = await fetchLatestAnalysis(supabase, uid);
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('age_range')
+    .eq('id', uid)
+    .single();
+  // matchedProducts: leave empty — server prompt accepts the empty list and
+  // the curl test doesn't need to exercise the catalog scorer end-to-end.
+  return {
+    analysis,
+    matchedProducts: [],
+    ageRange:        (userRow?.age_range as string | null) ?? null,
+    scanId,
+  };
+}
+
 async function main(): Promise<void> {
   const argFn = (process.argv[2] ?? '').toLowerCase() as FnKey;
   const spec = FN_TABLE[argFn];
   if (!spec) {
-    console.error('Usage: npx tsx scripts/build-flash-request.ts <hair|makeup|beard>');
+    console.error('Usage: npx tsx scripts/build-flash-request.ts <hair|makeup|beard|skin>');
     process.exit(1);
   }
 
@@ -234,7 +253,8 @@ async function main(): Promise<void> {
   let requestBody: Record<string, unknown>;
   if (spec.key === 'hair')        requestBody = await buildHairBody(supabase,   uid);
   else if (spec.key === 'makeup') requestBody = await buildMakeupBody(supabase, uid);
-  else                            requestBody = await buildBeardBody(supabase,  uid);
+  else if (spec.key === 'beard')  requestBody = await buildBeardBody(supabase,  uid);
+  else                            requestBody = await buildSkinBody(supabase,   uid);
 
   const scratchDir = resolve(process.cwd(), 'scratch');
   mkdirSync(scratchDir, { recursive: true });
