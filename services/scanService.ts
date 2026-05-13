@@ -11,7 +11,6 @@ import { computeAndStoreScanDelta } from './deltaService';
 import { checkMilestonesForScan } from '../lib/milestones';
 import {
   analyseWithGemini,
-  fitzpatrickToDepthTier,
   getSkinRecommendations,
   getBeardRecommendations,
   getMakeupRecommendations,
@@ -19,6 +18,7 @@ import {
   getDeltaCommentary,
 } from '../lib/gemini';
 import type { GeminiAnalysis } from '../lib/gemini';
+import { fitzpatrickToDepthTier } from '../lib/utils/fitzpatrick';
 import { fetchScanDeltaByToScanId } from './deltaService';
 import type { RescanFeedback } from '../types';
 import {

@@ -4,7 +4,7 @@
 
 import { supabase } from './supabase';
 import { MILESTONES, type MilestoneKey } from './milestones';
-import { cardinal } from './gemini/shared';
+import { cardinal } from './utils/numbers';
 import { computeStreak } from './habit';
 import { fetchDailyAdherence } from '../services/habitService';
 import PRODUCTS from '../constants/products.json';
