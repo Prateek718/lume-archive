@@ -6,14 +6,28 @@
 // edge functions ship — that ordering keeps each migration's blast radius
 // surgical and avoids re-touching this file repeatedly.
 //
+// Phase XIII-b (later) added buildBeardPrompt, buildMakeupPrompt, buildHairPrompt
+// alongside the existing buildDeltaPrompt. Each is byte-for-byte (modulo
+// whitespace) ported from its lib/gemini/<name>.ts counterpart; signatures
+// reshape to take the corresponding GeminiXxxRequest type so the function
+// index.ts files call them uniformly.
+//
 // TODO — deferred prompt builders (added in their function's own cycle):
-//   - buildSkinPrompt   (lib/gemini/skin.ts:24-151)   → gemini-skin-recs
-//   - buildBeardPrompt  (lib/gemini/beard.ts:24-121)  → gemini-beard-recs
-//   - buildMakeupPrompt (lib/gemini/makeup.ts:24-98)  → gemini-makeup-recs
-//   - buildHairPrompt   (lib/gemini/hair.ts:24-214)   → gemini-hair-recs
+//   - buildSkinPrompt (lib/gemini/skin.ts:24-151) → gemini-skin-recs
 
-import type { GeminiVisionRequest, DeltaScanContext } from "./types.ts";
+import type {
+  DeltaScanContext,
+  GeminiBeardRecsRequest,
+  GeminiHairRecsRequest,
+  GeminiMakeupRecsRequest,
+  GeminiVisionRequest,
+  HairProfile,
+} from "./types.ts";
 import { cardinal, ordinal } from "./helpers.ts";
+
+function isBaldProfile(profile: HairProfile | null | undefined): boolean {
+  return profile?.hair_length === "bald";
+}
 
 // ─── VOICE_ANCHOR (lib/gemini/shared.ts:171) ─────────────────────────────────
 export const VOICE_ANCHOR = `You are Lumé — an unhurried, editorial observer of Indian skin and faces. Your tone is that of a thoughtful print magazine, not a dermatology dashboard. You notice specifics before you classify. You frame observations as traits to work with, not flaws to fix. You never use the words "prescription," "AI," or marketing superlatives like "amazing" or "perfect." Your writing has quiet authority — confident enough to be specific, humble enough to acknowledge limits.`;
@@ -529,4 +543,378 @@ ${schema}
 
 ${fewShot}
 `.trim();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildBeardPrompt — moved verbatim from lib/gemini/beard.ts:24-121.
+// Signature reshaped to take GeminiBeardRecsRequest so index.ts calls match
+// the request-object convention used by the other builders.
+// ═══════════════════════════════════════════════════════════════════════════════
+export function buildBeardPrompt(req: GeminiBeardRecsRequest): string {
+  const { analysis, beardGoal } = req;
+
+  const beardBlock = `
+BEARD ROUTINE.
+
+Pick steps from these stable step_ids ONLY: beard_wash, beard_oil, beard_balm.
+Each step needs: { step_id, label, product (generic descriptor), order, clinical_reasoning }.
+
+Steps + emphasis depend on beard_goal:
+  fuller   → [beard_wash, beard_oil]
+             Conditioning + volumising oils (argan, jojoba). Reasoning should
+             frame patience honestly — beard fullness is largely genetic; the oil
+             keeps existing hairs healthy and the skin underneath calm so growth
+             that does happen is supported. Do NOT promise new follicle growth.
+  sharper  → [beard_wash, beard_oil, beard_balm]
+             Balm carries the styling/edge-shaping reasoning. Mention shaping
+             with a comb or trimmer for the line work — products alone do not
+             make edges sharp.
+  shorter  → [beard_wash]
+             Minimal routine. Light wash 2-3× a week, optional lightweight oil
+             if skin is dry. Frame as low-maintenance upkeep.
+  longer   → [beard_wash, beard_oil]
+             Conditioning oil to keep length soft and reduce breakage as it
+             grows. Reasoning should set patience (length takes months) and
+             advise against frequent trimming.
+  none     → [beard_wash]
+             Default maintenance only. Wash + optional light oil if dry.
+
+beard_styles: 2-3 RECOMMENDED styles only. No "avoid" entries.
+Each: { "name", "why" (max 18 words, imperative, no trait-naming opening), "maintenance": "low"|"medium"|"high" }
+
+beard_shape_intro: Optional. 1-2 sentence personalized bridge connecting scan
+observations to the suggested beard shape. Example: "Given the patchiness on
+your cheeks and the clean line of your jaw, here's a shape that suits you."
+Sets up the suggestion without revealing the suggestion itself. Reference
+scan-specific traits (density, patchiness, jaw, etc.) but NOT face_shape directly.
+
+Rules for beard_shape_intro:
+  - 1-2 sentences max, ~140 chars total.
+  - References specifics from analysis (beard_density, zones with patchiness, etc.).
+  - Does NOT mention face_shape categorically (oval, round, square, heart, oblong, diamond, triangle).
+  - Voice: editorial, sets up a suggestion that hasn't been revealed yet.
+  - End with "...here's a shape that suits you." or a similar transitional phrase.
+  - If you cannot ground it in specific scan traits without naming face_shape, return null.
+
+clinical_reasoning — REQUIRED on every step. 1-2 sentences tying the step to
+beard_density, beard_condition, or zones from the analysis. Never generic.
+`;
+
+  const schemaBlock = `
+OUTPUT JSON SHAPE (return ONLY valid JSON, no markdown, no preamble):
+{
+  "advice":             "max 2 sentences, first stands alone as preview, imperative",
+  "beard_shape_intro":  "1-2 sentence bridge or null",
+  "steps": [
+    { "step_id": "beard_wash" | "beard_oil" | "beard_balm", "label": "...", "product": "...", "order": 1|2|3, "category": "<canonical>", "clinical_reasoning": "..." }
+  ],
+  "beard_styles": [
+    { "name": "...", "why": "max 18 words", "maintenance": "low"|"medium"|"high" }
+  ]
+}`;
+
+  const beardExample = `
+FEW-SHOT — medium-density beard, beard_goal "sharper":
+
+{
+  "advice": "Sharpen the lines first — the cheeks are full enough that a defined edge does most of the work. Wash, condition, then shape with balm before any trim.",
+  "beard_shape_intro": "Given the medium density across the cheeks and the clean line of your jaw, here's a shape that suits you.",
+  "steps": [
+    { "step_id": "beard_wash", "label": "Wash",   "product": "Beard wash",  "category": "beard_wash", "order": 1, "clinical_reasoning": "Medium density traps sebum at the skin underneath. A weekly beard-specific wash keeps the skin calm without stripping the hair." },
+    { "step_id": "beard_oil",  "label": "Nourish","product": "Beard oil",   "category": "beard_oil",  "order": 2, "clinical_reasoning": "Argan-based oil softens medium-density hair and conditions the underlying skin so the line work reads cleaner." },
+    { "step_id": "beard_balm", "label": "Style",  "product": "Beard balm",  "category": "beard_balm", "order": 3, "clinical_reasoning": "A light beard balm holds shape across the cheek line. Pair with a comb or trimmer once a week — products alone do not sharpen edges." }
+  ],
+  "beard_styles": [
+    { "name": "Defined corporate beard", "why": "Crisp cheek line and a square jaw line read intentional in any setting.", "maintenance": "medium" },
+    { "name": "Short stubble fade",      "why": "Faded jaw line softens the corner without losing definition.",            "maintenance": "low" }
+  ]
+}`;
+
+  return `${VOICE_ANCHOR}
+
+${EDITORIAL_RULES}
+
+USER CONTEXT:
+beard_goal: ${beardGoal ?? "none (default — light maintenance only)"}
+Analysis JSON: ${JSON.stringify(analysis)}
+
+CANONICAL CATEGORY ENUM — every "category" field must be one of:
+${CANONICAL_CATEGORY_LIST}
+
+step_id values are stable keys for adherence tracking — they must match the documented format EXACTLY.
+${beardBlock}
+${schemaBlock}
+${beardExample}
+`.trim();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildMakeupPrompt — moved verbatim from lib/gemini/makeup.ts:24-98.
+// ═══════════════════════════════════════════════════════════════════════════════
+export function buildMakeupPrompt(req: GeminiMakeupRecsRequest): string {
+  const { analysis } = req;
+
+  const makeupBlock = `
+MAKEUP OUTPUT — single-screen layout.
+
+If analysis includes fitzpatrick_scale and skin_undertone, produce a \`palette\` object:
+  - undertone:    echo from analysis ("warm" | "cool" | "neutral")
+  - depth_tier:   derived from Fitzpatrick (handled in code — set to "medium" as a placeholder, it will be overwritten)
+  - hero_line:    max 5 words, pattern "A {warmth}, {depth} palette." e.g. "A warm, medium palette."
+  - trait_chips:  exactly 3 short tags, lowercase, 2-3 words each. [undertone label, depth label, flattering family]
+  - prose:        2-3 sentences. First states the palette's character. Second names 2-3 families that harmonise. Optional third names what to avoid. Imperative, no trait-naming openings.
+  - swatches:     EXACTLY 6 swatch objects covering a useful palette spread. Each object MUST have:
+      - hex:          a 7-char "#RRGGBB" string. Hex must read true to the named category — foundation/concealer should sit in skin-tone family for the user's depth and undertone, lip in red/brown/pink family, blush in peach/rose family, eye/highlighter/bronzer in their natural family.
+      - category:     one of "foundation" | "lip" | "blush" | "eye" | "highlighter" | "bronzer". Include a foundation and a lip in every palette; pick the other 4 from across the categories so the strip reads varied (do NOT return six lipsticks). A typical mix: 1 foundation, 1 concealer-or-bronzer, 1 blush, 1-2 lip, 1-2 eye/highlighter.
+      - name:         3-5 words, searchable on Nykaa. Pattern: "{Warmth} {Family} {Category}" — e.g. "Warm Beige Foundation", "Terracotta Brick Lipstick", "Peach Rose Blush". Avoid brand names.
+      - description:  2-3 sentences, italic-serif body voice. Why THIS shade flatters THIS user's undertone+depth. Reference the undertone/family explicitly. No clinical jargon.
+      - search_query: a Nykaa-friendly search string. Pattern: "{name} india" — e.g. "warm beige foundation india", "terracotta brick lipstick india". Lowercase. Used to deep-link to Nykaa search.
+  - shade_families: four strings, each 10-15 words:
+      foundation: descriptor pointing at shade codes to look for (e.g. "W3 or warm medium golden").
+      lip:        warm vs cool family guidance.
+      blush:      warm vs cool family guidance.
+      concealer:  one shade lighter than foundation, undertone-matched.
+
+If either fitzpatrick_scale or skin_undertone is missing, set palette: null.
+
+techniques: 2 short, concrete techniques — imperative voice, no trait-naming openings.
+`;
+
+  const schemaBlock = `
+OUTPUT JSON SHAPE (return ONLY valid JSON, no markdown, no preamble):
+{
+  "advice":     "max 2 sentences, first stands alone as preview, imperative",
+  "techniques": ["...", "..."],
+  "palette":    { ... } | null
+}`;
+
+  const makeupExample = `
+FEW-SHOT — warm, medium palette makeup output:
+
+{
+  "advice": "Lead with the undertone — warmth harmonises with the skin, coolness fights it. Keep every shade in the warm family and the whole look reads intentional.",
+  "techniques": ["Tap cream products on with fingers for a lived-in finish", "Set only the T-zone, leave cheeks dewy"],
+  "palette": {
+    "undertone":  "warm",
+    "depth_tier": "medium",
+    "hero_line":  "A warm, medium palette.",
+    "trait_chips": ["warm undertone", "medium depth", "yellow-gold flatters"],
+    "prose": "The palette reads warm — gold, peach, brick, terracotta. Cool pinks and silvers fight this undertone and flatten the face. Keep every product in the warm family and the look self-harmonises.",
+    "swatches": [
+      { "hex": "#C58A6E", "category": "foundation",  "name": "Warm Medium Foundation",   "description": "A warm-medium base that matches the undertone without going pink. Sits true on the skin and disappears at the jawline.",                              "search_query": "warm medium foundation w3 india" },
+      { "hex": "#A05A3D", "category": "bronzer",     "name": "Warm Terracotta Bronzer",  "description": "A red-brown bronze that warms the temples and cheekbones without going orange. Skip cool taupe — it goes ashy on this undertone.",                       "search_query": "warm terracotta bronzer india" },
+      { "hex": "#E08F77", "category": "blush",       "name": "Peach Rose Blush",         "description": "Peach-rose lifts the warm undertone and reads natural in daylight. Mauves and cool pinks fight the warmth and flatten the cheek.",                          "search_query": "peach rose blush india" },
+      { "hex": "#9C3A2D", "category": "lip",         "name": "Terracotta Brick Lipstick","description": "Brick terracotta is the workhorse — warm, grown-up, photographs well. Avoid blue-based reds and cool berries; they fight this skin.",                  "search_query": "terracotta brick lipstick india" },
+      { "hex": "#B86A4E", "category": "lip",         "name": "Caramel Nude Lipstick",    "description": "A warm caramel nude for everyday — sits one shade richer than the lip's natural colour. Cool nudes turn grey on warm skin.",                                "search_query": "caramel nude lipstick india" },
+      { "hex": "#D9A87A", "category": "highlighter", "name": "Champagne Gold Highlighter","description": "Champagne-gold flatters the warm undertone on the high cheekbone. Silver and pearl-white highlighters look chalky against this depth.",                  "search_query": "champagne gold highlighter india" }
+    ],
+    "shade_families": {
+      "foundation": "Warm-toned bases. Look for W3 or 'warm medium golden' in any brand's range. Skip cool or pink labels.",
+      "lip":        "Warm brick, terracotta, brown-red, caramel. Skip cool berry, plum, blue-based red.",
+      "blush":      "Peach, coral, warm rose. Skip mauve and cool pink — they fight the warm undertone.",
+      "concealer":  "One shade lighter than foundation, matched to warm undertone. A cool concealer on warm skin reads grey."
+    }
+  }
+}`;
+
+  return `${VOICE_ANCHOR}
+
+${EDITORIAL_RULES}
+
+USER CONTEXT:
+Analysis JSON: ${JSON.stringify(analysis)}
+${makeupBlock}
+${schemaBlock}
+${makeupExample}
+`.trim();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// buildHairPrompt — moved verbatim from lib/gemini/hair.ts:24-214.
+// ═══════════════════════════════════════════════════════════════════════════════
+export function buildHairPrompt(req: GeminiHairRecsRequest): string {
+  const { profile, faceShape, gender, city, budget, matchedProducts } = req;
+
+  const bald = isBaldProfile(profile);
+
+  const washLabel: Record<string, string> = {
+    daily:            "Daily",
+    every_2_3_days:   "Every 2–3 days",
+    once_a_week:      "Once a week",
+    less_than_weekly: "Less than once a week",
+  };
+
+  const userCtx = bald
+    ? [
+        "Hair length: Bald / Shaved",
+        `Scalp type: ${profile.scalp_type}`,
+        profile.scalp_concern ? `Scalp concern: ${profile.scalp_concern}` : null,
+        faceShape ? `Face shape: ${faceShape}` : null,
+        city ? `City: ${city} — factor in local climate, humidity, and pollution.` : null,
+        budget === "affordable"
+          ? "Budget: Affordable — recommend products under ₹500"
+          : "Budget: Premium — recommend products ₹500 and above",
+        `Gender: ${gender}`,
+      ].filter(Boolean).join("\n")
+    : [
+        `Hair length: ${profile.hair_length ?? "not specified"}`,
+        `Scalp type: ${profile.scalp_type}`,
+        `Primary concern: ${Array.isArray(profile.primary_concern) && profile.primary_concern.length > 0 ? profile.primary_concern.join(", ") : "none"}`,
+        `Hair texture: ${profile.texture ?? "not specified"}`,
+        `Wash frequency: ${profile.wash_frequency ? (washLabel[profile.wash_frequency] ?? profile.wash_frequency) : "not specified"}`,
+        `Oils hair regularly: ${profile.oils_regularly != null ? (profile.oils_regularly ? "Yes" : "No") : "not specified"}`,
+        `Chemical treatments: ${profile.chemically_treated ?? "none"}`,
+        faceShape ? `Face shape: ${faceShape}` : null,
+        city ? `City: ${city} — factor in local climate, humidity, and pollution.` : null,
+        budget === "affordable"
+          ? "Budget: Affordable — recommend products under ₹500"
+          : "Budget: Premium — recommend products ₹500 and above",
+        `Gender: ${gender}`,
+      ].filter(Boolean).join("\n");
+
+  const matchedSection = matchedProducts.length > 0
+    ? `Ingredient categories pre-selected for this user:\n${matchedProducts.map((p) =>
+        `- ${p.category}${p.actives && p.actives.length > 0 ? ` (actives: ${p.actives.join(", ")})` : ""}`,
+      ).join("\n")}\n\nFor each, write a one-sentence personalised reason referencing their ${
+        bald ? "scalp type and concern" : "scalp type, concern, hair texture, wash frequency, and oiling habit"
+      }. Describe the category only — do not name a brand.`
+    : "";
+
+  const hairExample = `
+FEW-SHOT — oily scalp, medium length, dandruff, wavy, washes every 2-3 days, Delhi:
+
+{
+  "advice": "Lead with a ketoconazole shampoo twice a week — dandruff is a fungal story, not a dryness one, and zinc pyrithione alone will plateau. Condition through the mid-lengths only to keep the roots from re-oiling by day two.",
+  "styles": ["Curtain bangs", "Shag haircut", "Textured layers"],
+  "styles_detailed": [
+    { "name": "Curtain bangs",    "why": "Frame the face without adding weight to already-dense mid-lengths.",       "maintenance": "medium", "climate_note": "Delhi winter dryness can flatten the fringe — air-dry, don't blow-dry." },
+    { "name": "Shag haircut",     "why": "Remove bulk from the ends to let the wave pattern show.",                  "maintenance": "low",    "climate_note": null },
+    { "name": "Textured layers",  "why": "Dry-cut layers carry the natural wave through medium length.",             "maintenance": "low",    "climate_note": "Low-product style for Delhi summer heat." }
+  ],
+  "condition_explanation": "Oily scalp washed every 2-3 days accumulates enough sebum to feed Malassezia, which drives the visible flakes. The wave pattern on medium hair hides oily roots for about a day before flattening.",
+  "routine": [
+    { "step_id": "hair_shampoo",     "label": "Cleanse",   "product": "Anti-dandruff shampoo", "category": "hair_shampoo",     "cadence": "every_wash", "level": "simple",   "order": 1, "clinical_reasoning": "Oily scalp with active dandruff in Delhi's dry winter. Ketoconazole 2% targets the fungal root of the flakes without over-stripping." },
+    { "step_id": "hair_conditioner", "label": "Condition", "product": "Lightweight conditioner", "category": "hair_conditioner", "cadence": "every_wash", "level": "simple",   "order": 2, "clinical_reasoning": "Wavy mid-lengths dehydrate faster than the roots. A silicone-free lightweight conditioner on lengths only keeps the scalp from re-oiling by day two." },
+    { "step_id": "hair_oil",         "label": "Nourish",   "product": "Scalp oil",              "category": "hair_oil",         "cadence": "weekly",     "level": "balanced", "order": 3, "clinical_reasoning": "Once-weekly rosemary-infused oil stimulates circulation without overloading the already-oily scalp." }
+  ],
+  "products": [
+    { "category": "hair_shampoo",     "name": "Anti-dandruff shampoo",   "brand": "category", "reason": "Ketoconazole 2% dissolves Malassezia on an oily, flaky scalp. Key ingredient: Ketoconazole — shuts down the fungus driving the flakes.", "match_score": 92 },
+    { "category": "hair_conditioner", "name": "Lightweight conditioner", "brand": "category", "reason": "Silicone-free formula for wavy mid-lengths that need hydration without buildup. Key ingredient: Glycerin — humectant for wave definition in dry Delhi air.", "match_score": 80 }
+  ]
+}`;
+
+  if (bald) {
+    return `${VOICE_ANCHOR}
+
+This user is bald or keeps their head shaved. Focus entirely on scalp health, not hair styling.
+
+${userCtx}
+
+${matchedSection}
+
+${EDITORIAL_RULES}
+
+step_id — required on every routine step. Canonical IDs only:
+  hair_shampoo, hair_conditioner, hair_oil, hair_serum, hair_mask
+
+cadence — required on every routine step, one of: "every_wash" | "weekly" | "monthly".
+
+CANONICAL CATEGORY ENUM — every "category" field must be one of:
+${CANONICAL_CATEGORY_LIST}
+
+clinical_reasoning — REQUIRED on every step. 1-2 sentences tying the step to this user's specific scalp observations. Never generic.
+
+Return ONLY valid JSON matching this shape exactly:
+{
+  "advice": "max 2 sentences, first stands alone as preview, imperative",
+  "styles": [],
+  "styles_detailed": [],
+  "condition_explanation": "max 2 sentences explaining why this scalp needs this care",
+  "routine": [
+    { "step_id": "hair_shampoo",     "label": "Cleanse", "product": "Gentle scalp shampoo", "category": "hair_shampoo",     "cadence": "every_wash", "level": "simple",   "order": 1, "clinical_reasoning": "..." },
+    { "step_id": "hair_conditioner", "label": "Hydrate", "product": "Scalp moisturiser",    "category": "hair_conditioner", "cadence": "every_wash", "level": "simple",   "order": 2, "clinical_reasoning": "..." },
+    { "step_id": "hair_serum",       "label": "Treat",   "product": "Scalp serum",          "category": "hair_serum",       "cadence": "weekly",     "level": "full",     "order": 4, "clinical_reasoning": "..." }
+  ],
+  "products": [
+    { "category": "<canonical>", "name": "<generic descriptor>", "brand": "category", "reason": "one sentence, clinical voice, end with 'Key ingredient: <ingredient> — <8-word benefit>'", "match_score": <integer 60-100> }
+  ]
+}
+
+products.name is a generic category descriptor. products.brand is ALWAYS the literal string "category".
+styles and styles_detailed must both be empty arrays — no hairstyles for a bald user.
+routine: exactly 3 steps for scalp care. Use generic product category names only.
+${hairExample}`.trim();
+  }
+
+  const womanStyles = "Bob cut, Lob haircut, Pixie cut, Bangs, Shag haircut, Wolf cut, Blunt cut, Curtain bangs, Butterfly haircut, Bixie cut, French bob, Balayage, Updo, Bun, Ponytail, Beach waves, Feathered hair, Wedge haircut, Layer haircut, Razor cut, Textured layers";
+  const manStyles   = "Undercut, Crew cut, Pompadour, Quiff, Caesar cut, Ivy League haircut, Side part, Comb over, Buzz cut, Man bun, Mohawk, Faux hawk, Taper fade, Afro, Dreadlocks, Cornrows, Curtain haircut, Edgar cut, Wolf cut, Shag haircut";
+
+  const isWoman = gender === "woman" || gender === "women" || gender === "female";
+
+  return `${VOICE_ANCHOR}
+
+${userCtx}
+
+${matchedSection}
+
+${EDITORIAL_RULES}
+
+STYLE LIST — suggest exactly 3 styles ONLY from this list:
+${isWoman ? womanStyles : manStyles}
+
+Never return men's styles for a woman user. Never mix men and women styles. Never invent style names not in the list.
+
+step_id — required on every routine step. Canonical IDs only:
+  hair_shampoo, hair_conditioner, hair_oil, hair_serum, hair_mask
+
+cadence — required on every routine step, one of: "every_wash" | "weekly" | "monthly".
+
+CANONICAL CATEGORY ENUM — every "category" field must be one of:
+${CANONICAL_CATEGORY_LIST}
+
+clinical_reasoning — REQUIRED on every step. 1-2 sentences tying the step to this user's specific hair/scalp observations. Never generic.
+
+HAIR PRODUCTS — two-layer framework (max 3 products total):
+
+FOUNDATION (always):
+  1. shampoo
+     - scalp_type = oily   → clarifying
+     - scalp_type = dry    → moisturising sulphate-free
+     - scalp_type = normal → balanced
+     - primary_concern includes "dandruff" → REPLACE with anti_dandruff (ketoconazole or zinc pyrithione)
+  2. conditioner
+     - hair_length = very_short OR buzz_cut → SKIP
+     - texture = straight  → lightweight
+     - texture = wavy      → moisturising
+     - texture = curly/coily → deep conditioning
+     - chemically_treated != none → colour_safe
+
+TREATMENT (only if concern exists):
+  primary_concern includes "hairfall": ADD scalp_serum. Note in reason: "Hairfall persisting 3+ months despite a good routine needs a trichologist."
+  primary_concern includes "frizz":    ADD leave_in_conditioner or hair_serum (argan). Note in reason: "In ${city ?? "your city"} humidity this manages frizz — it will not eliminate it."
+  primary_concern includes "damage" OR chemically_treated != none: ADD hair_mask (weekly). Note: "Use once a week — daily masks cause protein overload."
+  scalp_type = dry: ADD scalp_oil (lightweight, 1x per week). Note: "Daily oiling blocks follicles — 1x per week is enough."
+
+styles_detailed — return 2-3 RECOMMENDED styles only. No "avoid" entries. Each:
+  { "name": "<named haircut from the style list>", "why": "max 18 words, imperative, no trait-naming opening", "maintenance": "low"|"medium"|"high", "climate_note": "..." or null }
+
+Return ONLY valid JSON matching this shape exactly:
+{
+  "advice": "max 2 sentences, first stands alone, imperative",
+  "styles": ["Style 1", "Style 2", "Style 3"],
+  "styles_detailed": [ ... ],
+  "condition_explanation": "max 2 sentences explaining why this hair needs this care",
+  "routine": [
+    { "step_id": "hair_shampoo",     "label": "Cleanse",   "product": "Shampoo",     "category": "hair_shampoo",     "cadence": "every_wash", "level": "simple",   "order": 1, "clinical_reasoning": "..." },
+    { "step_id": "hair_conditioner", "label": "Condition", "product": "Conditioner", "category": "hair_conditioner", "cadence": "every_wash", "level": "simple",   "order": 2, "clinical_reasoning": "..." },
+    { "step_id": "hair_oil",         "label": "Nourish",   "product": "Hair oil",    "category": "hair_oil",         "cadence": "weekly",     "level": "balanced", "order": 3, "clinical_reasoning": "..." }
+  ],
+  "products": [
+    { "category": "<canonical>", "name": "<generic descriptor>", "brand": "category", "reason": "one sentence, end with 'Key ingredient: <ingredient> — <8-word benefit>'", "match_score": <integer 60-100> }
+  ]
+}
+
+products.name is a generic descriptor. products.brand is ALWAYS "category". Use 'Shampoo' not 'Anti-dandruff Shampoo'; use 'Hair oil' not 'Argan Oil Treatment'.
+routine: 3-4 steps. Use generic product category names only.
+${hairExample}`.trim();
 }
