@@ -130,3 +130,144 @@ export interface GeminiDeltaCommentaryResponse {
   concern_notes: { [concernKey: string]: string };
   closing_line:  string;
 }
+
+// ─── Beard primitives (mirror types/index.ts:44-49, 238-255) ─────────────────
+export type BeardGoal = "fuller" | "sharper" | "shorter" | "longer" | "none";
+
+export interface BeardRoutineStep {
+  step_id:             "beard_wash" | "beard_oil" | "beard_balm";
+  label:               string;
+  product:             string;
+  order:               number;
+  category:            string;
+  clinical_reasoning:  string;
+}
+
+export interface BeardStyle {
+  name:        string;
+  why:         string;
+  maintenance: "low" | "medium" | "high";
+}
+
+// ─── Beard recs request / response (§1.3 of architecture doc) ────────────────
+export interface GeminiBeardRecsRequest {
+  analysis:  GeminiVisionResponse;
+  beardGoal: BeardGoal | null;
+  scanId:    string | null;
+}
+
+export interface GeminiBeardRecsResponse {
+  advice:             string;
+  beard_shape_intro:  string | null;
+  steps:              BeardRoutineStep[];
+  beard_styles:       BeardStyle[];
+}
+
+// ─── Makeup primitives (mirror types/index.ts:261-284) ───────────────────────
+export interface MakeupSwatch {
+  hex:          string;
+  category:     "foundation" | "lip" | "blush" | "eye" | "highlighter" | "bronzer";
+  name:         string;
+  description:  string;
+  search_query: string;
+}
+
+export interface MakeupPalette {
+  undertone:     Undertone;
+  depth_tier:    DepthTier;
+  hero_line:     string;
+  trait_chips:   string[];
+  prose:         string;
+  swatches:      MakeupSwatch[] | string[];
+  shade_families: {
+    foundation:  string;
+    lip:         string;
+    blush:       string;
+    concealer:   string;
+  };
+}
+
+// ─── Makeup recs request / response (§1.4 of architecture doc) ───────────────
+export interface GeminiMakeupRecsRequest {
+  analysis: GeminiVisionResponse;
+  scanId:   string | null;
+}
+
+export interface GeminiMakeupRecsResponse {
+  advice:     string;
+  techniques: string[];
+  palette:    MakeupPalette | null;
+}
+
+// ─── Hair primitives (mirror types/index.ts:113-178) ─────────────────────────
+export interface HairProfile {
+  hair_length:          "bald" | "very_short" | "short" | "medium" | "long";
+  scalp_type:           "oily" | "normal" | "dry" | "combination";
+  scalp_concern?:       "dry_flaky" | "oily_shiny" | "sensitive" | "none";
+  sun_exposure?:        boolean;
+  primary_concern?:     string[];
+  texture?:             "straight" | "wavy" | "curly" | "coily";
+  wash_frequency?:      "daily" | "every_2_3_days" | "once_a_week" | "less_than_weekly";
+  oils_regularly?:      boolean;
+  chemically_treated?:  "none" | "color" | "straightening" | "perming" | "multiple";
+}
+
+export interface MatchedProduct {
+  id?:           string;
+  category:      string;
+  name:          string;
+  brand:         string;
+  attributes:    string[];
+  price_inr?:    number;
+  price_tier?:   "entry" | "mid" | "premium";
+  actives?:      string[];
+  why_this_one?: string;
+  retailer_urls?: { nykaa?: string; amazon?: string; brand_direct?: string };
+}
+
+export interface HairStyle {
+  name:         string;
+  why:          string;
+  maintenance:  "low" | "medium" | "high";
+  climate_note: string | null;
+}
+
+export interface HairRoutineStep {
+  step_id:             string;
+  label:               string;
+  product:             string;
+  cadence:             "every_wash" | "weekly" | "monthly";
+  level:               "simple" | "balanced" | "full";
+  order:               number;
+  category?:           string;
+  clinical_reasoning?: string;
+}
+
+export interface HairProductPick {
+  category:    string;
+  name:        string;
+  brand:       string;
+  reason:      string;
+  match_score: number;
+  attributes?: string[];
+}
+
+// ─── Hair recs request / response (§1.5 of architecture doc) ─────────────────
+export interface GeminiHairRecsRequest {
+  profile:         HairProfile;
+  faceShape:       string | null;
+  gender:          string;
+  city:            string | null;
+  budget:          "affordable" | "premium";
+  matchedProducts: MatchedProduct[];
+  scanId:          string | null;
+}
+
+export interface GeminiHairRecsResponse {
+  advice:                string;
+  styles:                string[];
+  styles_detailed:       HairStyle[];
+  condition_explanation: string;
+  routine:               HairRoutineStep[];
+  products:              HairProductPick[];
+}
