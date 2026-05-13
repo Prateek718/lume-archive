@@ -33,7 +33,7 @@ export interface ScanObservation {
   trait_chips:  string[];
 }
 
-// ─── Cost-tracking primitives (mirror lib/geminiUsage.ts) ────────────────────
+// ─── Cost-tracking primitives ────────────────────────────────────────────────
 export type CallType =
   | "vision"
   | "skin_recs"
