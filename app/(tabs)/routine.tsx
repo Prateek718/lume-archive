@@ -27,7 +27,7 @@ import {
 } from '../../components/routine';
 import { Palette } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
-import { cardinal } from '../../lib/gemini/shared';
+import { cardinal } from '../../lib/utils/numbers';
 import { buildWeekStrip, computeStreak, type DayAdherence } from '../../lib/habit';
 import {
   fetchDailyAdherence,

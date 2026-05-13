@@ -9,7 +9,7 @@
 
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Palette } from '../../constants/theme';
-import { cardinal } from '../../lib/gemini/shared';
+import { cardinal } from '../../lib/utils/numbers';
 
 export type RescanBannerStage = 'locked' | 'ready' | 'overdue' | 'hidden';
 

@@ -2,8 +2,8 @@
 // is dispatched via EdgeRuntime.waitUntil so it never extends user-visible
 // scan latency (§7.2 of the architecture doc).
 //
-// PRICING + computeCost are duplicated from lib/geminiUsage.ts:6-33 so the
-// client copy can be deleted without breaking server costs.
+// PRICING + computeCost live here so cost accounting stays on the server;
+// the client no longer needs a copy.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import type { CallType, ModelName } from "./types.ts";
