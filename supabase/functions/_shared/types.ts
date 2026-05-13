@@ -271,3 +271,31 @@ export interface GeminiHairRecsResponse {
   routine:               HairRoutineStep[];
   products:              HairProductPick[];
 }
+
+// ─── Skin primitives (mirror types/index.ts:213-236) ─────────────────────────
+export interface RoutineStep {
+  step_id:             string;
+  label:               string;
+  product:             string;
+  order:               number;
+  level?:              string;
+  time_of_day?:        ("am" | "pm")[];
+  target_concern?:     string;
+  clinical_reasoning?: string;
+  category?:           string;
+  cadence?:            "daily" | "every_wash" | "weekly" | "monthly";
+}
+
+// ─── Skin recs request / response (§1.2 of architecture doc) ─────────────────
+export interface GeminiSkinRecsRequest {
+  analysis:        GeminiVisionResponse;
+  matchedProducts: MatchedProduct[];
+  ageRange:        string | null;
+  scanId:          string | null;
+}
+
+export interface GeminiSkinRecsResponse {
+  advice:       string;
+  routine_note: string;
+  steps:        RoutineStep[];
+}
