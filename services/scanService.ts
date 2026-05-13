@@ -432,35 +432,24 @@ function buildProductRecommendations(
 // Race risk is bounded — only one orchestrator writes per scan, but the
 // three section calls finish out of order, so each one needs the latest
 // recommendations object before merging.
+// Phase XIII-b: atomic per-section upsert. The previous read-modify-write
+// pattern raced when sections finished close together — the second writer
+// could overlay a stale sibling section and clobber the first writer's
+// payload. The RPC wraps the update in a single statement so PostgreSQL's
+// row-level lock serializes concurrent section writes for the same scan.
+// See supabase/migrations/phase_13b_atomic_recs_upsert.sql.
 async function writeRecommendationSection(
   scanId:  string,
   section: 'skin' | 'beard' | 'makeup',
   payload: SkinRecommendation | BeardRecommendation | MakeupRecommendation,
 ): Promise<void> {
-  const { data: row, error: readErr } = await supabase
-    .from('scans')
-    .select('recommendations')
-    .eq('id', scanId)
-    .single();
-  if (readErr) {
-    console.warn(`[scanService] writeRecommendationSection read failed for ${section}:`, readErr.message);
-  }
-  const existing = (row?.recommendations as Recommendations | null) ?? null;
-  const next: Recommendations = {
-    observation: existing?.observation as Recommendations['observation'],
-    skin:        existing?.skin    ?? ({ advice: '', steps: [] } as SkinRecommendation),
-    beard:       existing?.beard   ?? null,
-    makeup:      existing?.makeup  ?? null,
-    products:    existing?.products ?? [],
-    [section]:   payload,
-  } as Recommendations;
-
-  const { error: writeErr } = await supabase
-    .from('scans')
-    .update({ recommendations: next })
-    .eq('id', scanId);
-  if (writeErr) {
-    console.warn(`[scanService] writeRecommendationSection write failed for ${section}:`, writeErr.message);
+  const { error } = await supabase.rpc('upsert_scan_recommendation_section', {
+    p_scan_id: scanId,
+    p_section: section,
+    p_payload: payload as unknown as Record<string, unknown>,
+  });
+  if (error) {
+    console.warn(`[scanService] writeRecommendationSection RPC failed for ${section}:`, error.message);
   }
 }
 
